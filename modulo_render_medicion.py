@@ -9,17 +9,92 @@ from modulo_marcas_medicion import _es_amarillo, _es_espacio, _es_ewlw, _es_quie
 class RenderMedicion:
     """Recibe escena y operaciones geométricas explícitas; no conoce widgets de medición."""
 
-    def __init__(self, escena, escala, grosor, perpendicular):
+    def __init__(self, escena, escala):
         self.scene = escena
         self._escala_vista = escala
-        self._grosor_tick_zoom = grosor
-        self._perp_tick = perpendicular
         self._items_puntos = []
         self._items_lineas = []
         self._items_textos = []
         self._items_anomalias = []
         self._inactivos = {}
         self._datos_inactivos = {}
+
+    def _perp_tick(
+        self,
+        coords: list[tuple[float, float]],
+        idx: int,
+        largo_px_pantalla: float = 22.0,
+    ) -> tuple[tuple[float, float], tuple[float, float]]:
+        """
+        Calcula los dos extremos de la línea perpendicular al radio en el
+        punto coords[idx].
+
+        La dirección del radio se estima a partir de los vecinos:
+          - Punto interior: promedio de los vectores anterior y posterior.
+          - Extremo: vector hacia el único vecino.
+
+        largo_px_pantalla: largo visual en píxeles de pantalla (independiente del zoom).
+        """
+        n = len(coords)
+        x, y = coords[idx]
+
+        # Vector tangente al radio
+        if n == 1:
+            tx, ty = 1.0, 0.0      # sin vecinos: horizontal por defecto
+        elif idx == 0:
+            nx, ny = coords[1]
+            tx, ty = nx - x, ny - y
+        elif idx == n - 1:
+            px, py = coords[idx - 1]
+            tx, ty = x - px, y - py
+        else:
+            px, py = coords[idx - 1]
+            nx, ny = coords[idx + 1]
+            tx, ty = nx - px, ny - py
+
+        # Normalizar
+        mag = math.hypot(tx, ty)
+        if mag < 1e-9:
+            tx, ty = 1.0, 0.0
+        else:
+            tx, ty = tx / mag, ty / mag
+
+        # Perpendicular (rotar 90°)
+        perp_x, perp_y = -ty, tx
+
+        # Escalar al largo deseado en píxeles de pantalla
+        mitad = largo_px_pantalla * 0.5 * self._escala_vista()
+        return (
+            (x + perp_x * mitad, y + perp_y * mitad),
+            (x - perp_x * mitad, y - perp_y * mitad),
+        )
+
+    # -------------------------------------------------------------------------
+    # Dibujo
+    # -------------------------------------------------------------------------
+
+    def _grosor_tick_zoom(self) -> float:
+        """Calcula el ancho del tick perpendicular según el nivel de zoom.
+
+        Principio: los límites de anillo se muestran SIEMPRE (no se filtran).
+        Lo que se adapta con el zoom es su grosor: muy fino al alejar para
+        evitar el "muro rojo" cuando hay miles de anillos juntos en pocos
+        píxeles, normal al acercar para mejor visibilidad.
+
+        El ancho del pen se interpreta en píxeles de PANTALLA porque los
+        pens son cosmetic.
+        """
+        escala = self._escala_vista()
+        if escala < 0.3:    # muy acercado
+            return 3.0
+        elif escala < 1.5:  # acercado
+            return 2.5
+        elif escala < 3.5:  # medio
+            return 1.8
+        elif escala < 7.0:  # alejado
+            return 1.2
+        else:               # muy alejado
+            return 0.8
 
     @property
     def hay_inactivos(self):
@@ -153,38 +228,20 @@ class RenderMedicion:
                             )
                         self._ultimo_bbox_label_activo = bbox_nuevo
 
-        self._dibujar_anomalias(coords, marcas, datacion, anomalias)
+        self.dibujar_anomalias(puntos, ppm, datacion, anomalias)
 
 
-    def _dibujar_anomalias(self, coords, marcas, datacion, anomalias):
+    def dibujar_anomalias(self, puntos, ppm, datacion, anomalias):
         """Dibuja marcas de color sobre los ticks de anillos con anomalía registrada."""
         for item in self._items_anomalias:
             self.scene().removeItem(item)
         self._items_anomalias.clear()
 
-        if not anomalias or not coords:
+        if not anomalias or not puntos or datacion is None:
             return
-
-        # Construir mapa anio→indice
-        anio_a_idx = {}
-        if datacion is None:
-            return
-        anio_medula, anio_corteza, medula_a_corteza = datacion
-
-        anillos_validos = 0
-        for i, coord in enumerate(coords):
-            val = marcas[i] if i > 0 else False
-            val_sale_a = marcas[i + 1] if i + 1 < len(marcas) else False
-            if (i > 0
-                    and not _es_amarillo(val)
-                    and not _es_ewlw(val)
-                    and not _es_espacio(val_sale_a)):
-                anillos_validos += 1
-            if medula_a_corteza:
-                anio = (anio_medula + anillos_validos - 1) if i > 0 else (anio_medula - 1)
-            else:
-                anio = (anio_corteza - anillos_validos + 1) if i > 0 else anio_corteza
-            anio_a_idx[anio] = i
+        coords = tuple(p.coordenada for p in puntos)
+        anios, cierres = anios_por_punto(puntos, ppm, *datacion)
+        anio_a_idx = {anios[i]: i for i in sorted(cierres)}
 
         escala = self._escala_vista()
         for anio, tipo in anomalias.items():
