@@ -28,7 +28,7 @@ from dpi.ui.configuracion import ultima_carpeta
 import dpi.ciencia.transformacion as _tr
 from dpi.medicion.modelo import ModeloSesionMedicion, RadioMedicion, TipoMarca
 import pandas as pd
-from dpi.infraestructura.imagen import detectar_dpi, preparar_banda_rgb
+from dpi.infraestructura.imagen import leer_imagen_bgr, detectar_dpi, preparar_banda_rgb
 from dpi.formatos.wid import leer_wid
 from dpi.formatos.deteccion import leer_dendro_auto
 from dpi.formatos.pos import leer_pos, escribir_pos
@@ -508,7 +508,7 @@ class PestanaImagen(QWidget):
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         QApplication.processEvents()
         try:
-            img_cv = cv2.imread(ruta)
+            img_cv = leer_imagen_bgr(ruta)
         except Exception as exc:
             QApplication.restoreOverrideCursor()
             self.label_estado.setText(f"⚠ Error al leer la imagen: {exc}")

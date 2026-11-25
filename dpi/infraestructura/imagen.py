@@ -163,3 +163,12 @@ def preparar_banda_rgb(img, banda, brillo, contraste):
         del gray
 
     return rgb
+
+
+def leer_imagen_bgr(ruta):
+    """Decodifica una imagen o informa un error explícito."""
+    import cv2
+    imagen = cv2.imread(ruta)
+    if imagen is None:
+        raise ValueError('No se pudo abrir la imagen')
+    return imagen
