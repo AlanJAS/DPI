@@ -3,6 +3,24 @@ import numpy as np
 import pandas as pd
 import modulo_transformacion as _tr
 
+
+def serie_medicion(anios, anchos):
+    return pd.Series(anchos, index=anios).clip(lower=0.01)
+
+
+def transformar_medicion(anios, anchos, metodo):
+    return _tr.transformar(serie_medicion(anios, anchos), metodo)
+
+
+def correlacion_global(anios_a, anchos_a, anios_b, anchos_b, metodo):
+    if len(anios_a) < 5 or len(anios_b) < 5:
+        return None
+    r, _ = _tr.r_pearson(serie_medicion(anios_a, anchos_a),
+                         serie_medicion(anios_b, anchos_b),
+                         metodo=metodo, min_overlap=5)
+    return float(r) if np.isfinite(r) else None
+
+
 def correlacion_deslizante(anios_a, anchos_a, anios_b, anchos_b, ventana: int, metodo):
     """
     Correlación deslizante estilo COFECHA.
@@ -21,8 +39,8 @@ def correlacion_deslizante(anios_a, anchos_a, anios_b, anchos_b, ventana: int, m
     if len(anios_a) < MIN_VENTANA or len(anios_b) < MIN_VENTANA:
         return [], []
 
-    da = _tr.transformar(pd.Series(anchos_a, index=anios_a).clip(lower=0.01), metodo)
-    db = _tr.transformar(pd.Series(anchos_b, index=anios_b).clip(lower=0.01), metodo)
+    da = transformar_medicion(anios_a, anchos_a, metodo)
+    db = transformar_medicion(anios_b, anchos_b, metodo)
     overlap = sorted(da.index.intersection(db.index))
     n_ov = len(overlap)
     if n_ov < MIN_VENTANA:

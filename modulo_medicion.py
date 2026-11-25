@@ -19,7 +19,8 @@ import cv2
 import numpy as np
 from modulo_dialogos_archivo import ultima_carpeta
 import modulo_transformacion as _tr
-from modulo_grafico_medicion import correlacion_deslizante
+from modulo_grafico_medicion import (correlacion_deslizante, correlacion_global,
+                                     transformar_medicion)
 from modulo_modelo_medicion import ModeloMedicion, PuntoMedicion
 import pandas as pd
 import pyqtgraph as pg
@@ -1853,19 +1854,11 @@ class PestanaImagen(QWidget):
         return combo.currentData() or _tr.DIFFLOG
 
     def _transformar_corr(self, anios, anchos):
-        """Aplica al par (años, anchos) la transformación seleccionada."""
-        s = pd.Series(anchos, index=anios).clip(lower=0.01)
-        return _tr.transformar(s, self.metodo_correlacion())
+        return transformar_medicion(anios, anchos, self.metodo_correlacion())
 
     def _r_global(self, anios_a, anchos_a, anios_b, anchos_b):
-        """r de Pearson en el solape completo, con el método seleccionado."""
-        if len(anios_a) < 5 or len(anios_b) < 5:
-            return None
-        r, _ = _tr.r_pearson(
-            pd.Series(anchos_a, index=anios_a).clip(lower=0.01),
-            pd.Series(anchos_b, index=anios_b).clip(lower=0.01),
-            metodo=self.metodo_correlacion(), min_overlap=5)
-        return float(r) if np.isfinite(r) else None
+        return correlacion_global(anios_a, anchos_a, anios_b, anchos_b,
+                                  self.metodo_correlacion())
 
     def _r_deslizante(self, anios_a, anchos_a, anios_b, anchos_b, ventana: int):
         return correlacion_deslizante(anios_a, anchos_a, anios_b, anchos_b,
