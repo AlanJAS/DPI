@@ -506,49 +506,49 @@ class PestanaImagen(QWidget):
         t1 = time.perf_counter()
  
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        QApplication.processEvents()
         try:
-            img_cv = leer_imagen_bgr(ruta)
-        except Exception as exc:
+            QApplication.processEvents()
+            try:
+                img_cv = leer_imagen_bgr(ruta)
+            except Exception as exc:
+                self.label_estado.setText(f"⚠ Error al leer la imagen: {exc}")
+                return
+ 
+            if img_cv is None:
+                self.label_estado.setText("⚠ Error: no se pudo abrir la imagen.")
+                return
+ 
+            h, w = img_cv.shape[:2]
+            mp = (w * h) / 1e6
+            print("[CARGA] cv2.imread %dx%d (%.1f MP) en %.2fs",
+                        w, h, mp, time.perf_counter() - t1)
+            t2 = time.perf_counter()
+ 
+            img_rgb = cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB)
+            QApplication.processEvents()
+            print("[CARGA] cvtColor en %.2fs", time.perf_counter() - t2)
+            t3 = time.perf_counter()
+ 
+            q_img = QImage(img_rgb.data, w, h, w * 3, QImage.Format.Format_RGB888).copy()
+            del img_rgb
+            QApplication.processEvents()
+            print("[CARGA] QImage en %.2fs", time.perf_counter() - t3)
+            t4 = time.perf_counter()
+ 
+            self.item_imagen = QGraphicsPixmapItem(QPixmap.fromImage(q_img))
+            self.item_imagen.setTransformationMode(
+                Qt.TransformationMode.FastTransformation
+            )
+            del q_img
+            self.escena.addItem(self.item_imagen)
+            self.escena.setSceneRect(0, 0, w, h)
+            print("[CARGA] Pixmap + escena en %.2fs", time.perf_counter() - t4)
+            t5 = time.perf_counter()
+ 
+            self._img_bgr_original = img_cv
+        finally:
             QApplication.restoreOverrideCursor()
-            self.label_estado.setText(f"⚠ Error al leer la imagen: {exc}")
-            return
- 
-        if img_cv is None:
-            QApplication.restoreOverrideCursor()
-            self.label_estado.setText("⚠ Error: no se pudo abrir la imagen.")
-            return
- 
-        h, w = img_cv.shape[:2]
-        mp = (w * h) / 1e6
-        print("[CARGA] cv2.imread %dx%d (%.1f MP) en %.2fs",
-                    w, h, mp, time.perf_counter() - t1)
-        t2 = time.perf_counter()
- 
-        img_rgb = cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB)
-        QApplication.processEvents()
-        print("[CARGA] cvtColor en %.2fs", time.perf_counter() - t2)
-        t3 = time.perf_counter()
- 
-        q_img = QImage(img_rgb.data, w, h, w * 3, QImage.Format.Format_RGB888).copy()
-        del img_rgb
-        QApplication.processEvents()
-        print("[CARGA] QImage en %.2fs", time.perf_counter() - t3)
-        t4 = time.perf_counter()
- 
-        self.item_imagen = QGraphicsPixmapItem(QPixmap.fromImage(q_img))
-        self.item_imagen.setTransformationMode(
-            Qt.TransformationMode.FastTransformation
-        )
-        del q_img
-        self.escena.addItem(self.item_imagen)
-        self.escena.setSceneRect(0, 0, w, h)
-        print("[CARGA] Pixmap + escena en %.2fs", time.perf_counter() - t4)
-        t5 = time.perf_counter()
- 
-        self._img_bgr_original = img_cv
-        QApplication.restoreOverrideCursor()
- 
+
         restaurado = self._cargar_estado()
         if restaurado:
             self.label_estado.setText(
