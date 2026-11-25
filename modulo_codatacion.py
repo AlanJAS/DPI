@@ -452,37 +452,8 @@ class PanelCodatacion(QWidget):
             QMessageBox.warning(self, "Carga con errores", msg)
 
     def _leer_como_columnas_o_tabular(self, ruta: str, base_nombre: str) -> dict:
-        """Si el archivo tiene múltiples columnas de valor, cada una como serie separada."""
-        try:
-            df_multi = leer_columna_multi(ruta)
-        except Exception:
-            df, sid = leer_tabular(ruta)
-            return {sid: df}
-
-        cols = list(df_multi.columns)
-        if len(cols) == 0:
-            df, sid = leer_tabular(ruta)
-            return {sid: df}
-
-        if len(cols) == 1:
-            col = cols[0]
-            df_serie = pd.DataFrame(
-                {"Ancho_mm": pd.to_numeric(df_multi[col], errors="coerce")},
-                index=df_multi.index,
-            ).dropna()
-            return {base_nombre: df_serie}
-
-        resultado = {}
-        for col in cols:
-            df_serie = pd.DataFrame(
-                {"Ancho_mm": pd.to_numeric(df_multi[col], errors="coerce")},
-                index=df_multi.index,
-            ).dropna()
-            if df_serie.empty:
-                continue
-            nombre = f"{base_nombre}_{col}"
-            resultado[nombre] = df_serie
-        return resultado
+        from modulo_formatos import leer_como_columnas_o_tabular
+        return leer_como_columnas_o_tabular(ruta, base_nombre)
 
     def cargar_cronologias_externas(self):
         """Carga cronologías externas con prefijo 📚."""
@@ -1192,25 +1163,9 @@ class PanelCodatacion(QWidget):
             return
         ruta = _asegurar_extension(ruta, fmt)
         _ultima_carpeta(ruta)
-        ext = os.path.splitext(ruta)[1].lower()
-        s = pd.to_numeric(serie, errors="coerce").dropna()
-        df_export = pd.DataFrame({
-            "Anio": s.index.astype(int),
-            "Valor": s.values,
-        })
+        from modulo_formatos import exportar_serie_2col
         try:
-            if ext == ".rwl":
-                # Tucson: los índices adimensionales se guardan ×1000, la
-                # convención de ARSTAN (índice 0.873 → 873).
-                escribir_tucson(s, ruta, codigo=str(nombre_archivo))
-            elif _es_planilla(ext):
-                _escribir_excel(df_export, ruta)
-            elif ext == ".csv":
-                df_export.to_csv(ruta, index=False, sep=";", decimal=",",
-                                 float_format="%.6f")
-            else:
-                df_export.to_csv(ruta, index=False, sep="\t", decimal=",",
-                                 float_format="%.6f")
+            n_anios = exportar_serie_2col(serie, ruta, nombre_archivo)
             if estandarizada:
                 nota = ("Valores ESTANDARIZADOS por modo COFECHA "
                         "(índice residual adimensional, no anchos en mm).")
@@ -1219,7 +1174,7 @@ class PanelCodatacion(QWidget):
             QMessageBox.information(
                 self, "✅ Serie exportada",
                 f"Archivo guardado:\n{ruta}\n\n{nota}\n"
-                f"Años: {len(df_export)}")
+                f"Años: {n_anios}")
         except Exception as exc:
             QMessageBox.critical(self, "Error", f"No se pudo guardar:\n{exc}")
 

@@ -688,6 +688,21 @@ def _guardar_lineas_tucson(ruta, lineas):
         f.write("\n".join(lineas) + "\n")
 
 
+def exportar_serie_2col(serie, ruta, codigo):
+    """Exporta una serie de índices y devuelve el número de años escritos."""
+    ext = os.path.splitext(ruta)[1].lower()
+    s = pd.to_numeric(serie, errors="coerce").dropna()
+    df = pd.DataFrame({"Anio": s.index.astype(int), "Valor": s.values})
+    if ext == ".rwl":
+        escribir_tucson(s, ruta, codigo=str(codigo))
+    elif _es_planilla(ext):
+        _escribir_excel(df, ruta)
+    else:
+        df.to_csv(ruta, index=False, sep=";" if ext == ".csv" else "\t",
+                  decimal=",", float_format="%.6f")
+    return len(df)
+
+
 def escribir_tucson(serie: pd.Series, ruta: str, codigo: str = "CRONO",
                      factor: float = 1000.0, decimales_mm: bool = True):
     _guardar_lineas_tucson(ruta, _lineas_tucson(serie, codigo, factor))
@@ -906,3 +921,37 @@ def escribir_excel_merge(series_dict: dict[str, pd.DataFrame], ruta: str) -> Non
 
     # Exportar: incluir el index (Año) como primera columna
     combinado.to_excel(ruta, sheet_name="Series", index=True)
+
+
+def leer_como_columnas_o_tabular( ruta: str, base_nombre: str) -> dict:
+    """Si el archivo tiene múltiples columnas de valor, cada una como serie separada."""
+    try:
+        df_multi = leer_columna_multi(ruta)
+    except Exception:
+        df, sid = leer_tabular(ruta)
+        return {sid: df}
+
+    cols = list(df_multi.columns)
+    if len(cols) == 0:
+        df, sid = leer_tabular(ruta)
+        return {sid: df}
+
+    if len(cols) == 1:
+        col = cols[0]
+        df_serie = pd.DataFrame(
+            {"Ancho_mm": pd.to_numeric(df_multi[col], errors="coerce")},
+            index=df_multi.index,
+        ).dropna()
+        return {base_nombre: df_serie}
+
+    resultado = {}
+    for col in cols:
+        df_serie = pd.DataFrame(
+            {"Ancho_mm": pd.to_numeric(df_multi[col], errors="coerce")},
+            index=df_multi.index,
+        ).dropna()
+        if df_serie.empty:
+            continue
+        nombre = f"{base_nombre}_{col}"
+        resultado[nombre] = df_serie
+    return resultado
