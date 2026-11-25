@@ -37,7 +37,7 @@ from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QSettings, QSignalBlocker
 
 from estilos import SECUNDARIO_QSS
 import dpi.infraestructura.json_seguro as _js
-from modulo_autodeteccion import (
+from dpi.medicion.autodeteccion import (
     cargar_perfiles, guardar_perfiles,
     extraer_perfil, detectar_limites, posiciones_a_coordenadas,
  )
@@ -678,7 +678,7 @@ class PestanaImagen(QWidget):
         el perfil no estaba. Si falla hay que decirlo, porque es trabajo suyo
         el que se pierde.
         """
-        from modulo_autodeteccion import guardar_perfiles, RUTA_PERFILES
+        from dpi.medicion.autodeteccion import guardar_perfiles, RUTA_PERFILES
         try:
             guardar_perfiles(self._perfiles_especie)
         except Exception as exc:
@@ -702,7 +702,7 @@ class PestanaImagen(QWidget):
 
     def _nueva_especie(self):
         """Crea un perfil de especie nuevo a partir del nombre que ingrese el usuario."""
-        from modulo_autodeteccion import PERFIL_DEFECTO
+        from dpi.medicion.autodeteccion import PERFIL_DEFECTO
         nombre, ok = QInputDialog.getText(self, "Nueva especie", "Nombre de la especie:")
         if not ok or not nombre.strip():
             return

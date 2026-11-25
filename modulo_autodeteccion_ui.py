@@ -1,7 +1,7 @@
 """Diálogos de configuración y previsualización de autodetección."""
 import math
 import numpy as np
-from modulo_autodeteccion import detectar_limites
+from dpi.medicion.autodeteccion import detectar_limites
 from scipy.signal import savgol_filter
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
