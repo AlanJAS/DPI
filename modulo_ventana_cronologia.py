@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButt
 from PyQt6.QtCore import Qt, QEvent
 from estilos import color_secundario
 import estilos_graficos as _gr
+from modulo_comparacion_nucleo import resumir_desfases
 from modulo_datacion import score_compuesto, _serie_transformada_para_comparar
 from modulo_formatos import _es_planilla, _asegurar_extension
 from modulo_formatos import leer_tucson_multi, leer_formato_compacto, leer_wid, leer_tabular
@@ -1066,57 +1067,9 @@ class VentanaCronologia(QWidget):
                     s_a, s_b, max_shift_val, min_overlap_val,
                 )
 
+                resultados.append(resumir_desfases(nombre, shifts, rs, glks, tbps, ns, s_a, s_b))
                 if not shifts:
-                    # Serie sin solape suficiente → registrar igualmente
-                    # para que el usuario sepa cuáles quedaron fuera
-                    resultados.append({
-                        "nombre_serie": nombre,
-                        "shifts": [], "rs": [], "glks": [],
-                        "tbps": [], "ns": [],
-                        "mejor_shift": 0,
-                        "mejor_score": float("nan"),
-                        "mejor_r": float("nan"),
-                        "mejor_glk": float("nan"),
-                        "mejor_tbp": float("nan"),
-                        "mejor_n": 0,
-                        "score_shift0": float("nan"),
-                    })
                     continue
-
-                # Score compuesto por shift + selección del mejor
-                scores = [score_compuesto(r, g, t)
-                          for r, g, t in zip(rs, glks, tbps)]
-                scores_validos = [
-                    (i, s) for i, s in enumerate(scores) if np.isfinite(s)]
-                if scores_validos:
-                    idx_mejor = max(scores_validos, key=lambda x: x[1])[0]
-                else:
-                    idx_mejor = int(np.argmax(rs))
-
-                # Score en shift=0 (para calcular Δ vs el mejor).
-                # Si shift=0 no está en la lista (no hubo overlap
-                # suficiente sin shift), Δ queda NaN.
-                if 0 in shifts:
-                    idx0 = shifts.index(0)
-                    score_shift0 = scores[idx0]
-                else:
-                    score_shift0 = float("nan")
-
-                resultados.append({
-                    "nombre_serie": nombre,
-                    "shifts": shifts, "rs": rs, "glks": glks,
-                    "tbps": tbps, "ns": ns,
-                    "mejor_shift": shifts[idx_mejor],
-                    "mejor_score": scores[idx_mejor],
-                    "mejor_r": rs[idx_mejor],
-                    "mejor_glk": glks[idx_mejor],
-                    "mejor_tbp": tbps[idx_mejor],
-                    "mejor_n": ns[idx_mejor],
-                    "score_shift0": score_shift0,
-                    # Series transformadas para el gráfico de detalle
-                    "serie_a": s_a,
-                    "serie_b": s_b,
-                })
 
                 # Refrescar UI para evitar congelamiento percibido en
                 # series largas o muchas series. processEvents() es

@@ -54,6 +54,11 @@ def comparar_serie(nombre, serie: SeriePreparada, referencia: SeriePreparada,
         serie_a_raw=s_a_glk, serie_b_raw=s_b_glk,
     )
 
+    return resumir_desfases(nombre, shifts, rs, glks, tbps, ns, s_a_raw, s_b_raw)
+
+
+def resumir_desfases(nombre, shifts, rs, glks, tbps, ns, s_a_raw, s_b_raw):
+    """Resultado común para vistas de comparación, sin alterar el barrido."""
     if not shifts:
         return resultado_sin_overlap(nombre)
 

@@ -16,6 +16,14 @@ class Comparacion(unittest.TestCase):
         self.assertAlmostEqual(r['mejor_r'], 1.)
         self.assertIs(r['serie_a'], a)
 
+    def test_resumen_comun(self):
+        from modulo_comparacion_nucleo import resumir_desfases
+        a = pd.Series([1.,2.], index=[2000,2001])
+        resultado = resumir_desfases('A', [0, 1], [0.1, 0.9], [0.5, 0.9], [1., 8.], [20, 20], a, a)
+        self.assertEqual(resultado['mejor_shift'], 1)
+        self.assertIs(resultado['serie_a'], a)
+        self.assertEqual(resumir_desfases('A', [], [], [], [], [], a, a)['shifts'], [])
+
     def test_serie_vacia(self):
         a = pd.Series(dtype=float)
         self.assertEqual(comparar_serie('A', SeriePreparada(a,a,a), SeriePreparada(a,a,a))['shifts'], [])
