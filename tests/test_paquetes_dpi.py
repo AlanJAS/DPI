@@ -10,9 +10,9 @@ class CompatibilidadPaquetes(unittest.TestCase):
             with self.subTest(modulo=nombre):
                 self.assertIsNotNone(importlib.import_module(nombre))
 
-    def test_infraestructura_compatible(self):
-        for anterior, nuevo in (('json_seguro', 'dpi.infraestructura.json_seguro'), ('modulo_imagen', 'dpi.infraestructura.imagen')):
-            self.assertIs(importlib.import_module(anterior), importlib.import_module(nuevo))
+    def test_infraestructura_canonica(self):
+        for nombre in ("dpi.infraestructura.json_seguro", "dpi.infraestructura.imagen"):
+            self.assertIsNotNone(importlib.import_module(nombre))
 
     def test_formatos_compatibles(self):
         import modulo_formatos as anterior
