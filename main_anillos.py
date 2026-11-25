@@ -642,21 +642,17 @@ def _instalar_traduccion_espanol(app: QApplication) -> None:
             app._traducciones_qt.append(tr)
 
 
-if __name__ == "__main__":
-    logging.basicConfig(
-        level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
-    app = QApplication(sys.argv)
+def configurar_aplicacion(app):
+    """Configuración común para arranque directo y lanzador con splash."""
     app.setApplicationName(APP_SIGLA)
     app.setApplicationDisplayName(APP_NOMBRE)
     app.setApplicationVersion(VERSION)
     if ruta_icono():
         app.setWindowIcon(icono_app())
-    # Identificador de escritorio. En Wayland el compositor no puede leer el
-    # ícono desde la ventana como hacía X11: busca un archivo .desktop cuyo
-    # nombre coincida con este identificador y saca el ícono de ahí. Sin esta
-    # línea el ícono sale en la ventana pero no en el dock.
     app.setDesktopFileName("moicedrus-dpi")
     _instalar_traduccion_espanol(app)
-    ventana = VentanaAnillos()
-    ventana.show()
-    sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    from run_dpi import ejecutar
+    sys.exit(ejecutar())

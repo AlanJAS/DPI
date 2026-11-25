@@ -104,7 +104,8 @@ def main():
     from modulo_codatacion import PanelCodatacion  # noqa
 
     splash_msg(splash, "Preparando ventana principal...")
-    from main_anillos import VentanaAnillos
+    from main_anillos import VentanaAnillos, configurar_aplicacion
+    configurar_aplicacion(app)
     ventana = VentanaAnillos()
     ventana.show()
     splash.finish(ventana)
@@ -118,6 +119,7 @@ def _ruta_registro_error():
 
 def ejecutar():
     """Conserva el código de salida de Qt y señala errores de arranque."""
+    logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
     try:
         return main()
     except Exception:
