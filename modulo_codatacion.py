@@ -1750,25 +1750,21 @@ class PanelCodatacion(QWidget):
         self._texto_hover.hide()
 
         # m_diff = serie que se MUEVE; t_diff = cronología/referencia FIJA
-        m_diff, t_diff, n_m, n_t = self._preparar_diferencias_log(mover, referencia)
+        n_m, n_t = mover, referencia
+        datos_a = self.series_datos[n_m]["Ancho_mm"]
+        datos_b = self.series_datos[n_t]["Ancho_mm"]
+        m_diff = self._transformar_para_correlacion(datos_a, n_m.startswith("📚"))
+        t_diff = self._transformar_para_correlacion(datos_b, n_t.startswith("📚"))
 
         if (len(m_diff) < OVERLAP_MINIMO_ANALISIS or
                 len(t_diff) < OVERLAP_MINIMO_ANALISIS):
             return self.grafico_offset.setTitle(
                 f"Error: Se requieren >{OVERLAP_MINIMO_ANALISIS} años.")
 
-        serie_a_raw = pd.to_numeric(
-            self.series_datos[n_m]["Ancho_mm"], errors="coerce").dropna()
-        serie_b_raw = pd.to_numeric(
-            self.series_datos[n_t]["Ancho_mm"], errors="coerce").dropna()
-
-        # Series para GLK/t-BP respetando el modo COFECHA (transformadas si
-        # está activo; crudas si no). Así estos estadísticos también miran
-        # el botón modo COFECHA, igual que r.
-        serie_a_glk = self._serie_para_glk(
-            self.series_datos[n_m]["Ancho_mm"], es_crono=n_m.startswith("📚"))
-        serie_b_glk = self._serie_para_glk(
-            self.series_datos[n_t]["Ancho_mm"], es_crono=n_t.startswith("📚"))
+        serie_a_raw = pd.to_numeric(datos_a, errors="coerce").dropna()
+        serie_b_raw = pd.to_numeric(datos_b, errors="coerce").dropna()
+        serie_a_glk = self._serie_para_glk(datos_a, es_crono=n_m.startswith("📚"))
+        serie_b_glk = self._serie_para_glk(datos_b, es_crono=n_t.startswith("📚"))
 
         # Guardar para la tabla de detalle (año de término, alineamiento,
         # aplicar desfase). n_m es la primera serie marcada (la que se data).
