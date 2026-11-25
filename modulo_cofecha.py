@@ -29,8 +29,9 @@ import pandas as pd
 
 import modulo_cofecha_nucleo as _nuc
 
-from modulo_codatacion import (
+from modulo_cronologia import (
     _spline_cook,
+    estandarizar_serie,
     _residualizar_indice,
     _detrend_serie_indice,
     RIGIDEZ_SPLINE_DEFECTO,
@@ -92,56 +93,6 @@ def nivel_critico(n: int, alfa: float = 0.01) -> float:
 # ---------------------------------------------------------------------------
 # Estandarización de la colección
 # ---------------------------------------------------------------------------
-
-def estandarizar_serie(serie_mm: pd.Series,
-                        rigidez_spline: int = RIGIDEZ_SPLINE_DEFECTO,
-                        aplicar_log: bool = True,
-                        aplicar_ar: bool = True,
-                        max_orden_ar: int = 3):
-    """Estandariza una serie como COFECHA y devuelve (índice, orden AR).
-
-    Pasos: spline de Cook (quita la tendencia de crecimiento) → índice de
-    razón → log opcional → modelo autorregresivo.
-    """
-    s = pd.to_numeric(serie_mm, errors="coerce").dropna().astype(float)
-    if s.empty:
-        return s, 0
-
-    idx = _detrend_serie_indice(s, "spline", rigidez=rigidez_spline)
-    if idx.empty:
-        return idx, 0
-
-    # ORDEN: spline -> índice -> AR -> logaritmo.
-    #
-    # Es el que describe el manual de la Dendrochronology Program Library
-    # (Holmes 1994): (1) spline y división, (2) "la persistencia de la serie
-    # suavizada se elimina por modelado autorregresivo", (3) "se toma el
-    # logaritmo de cada valor tras sumar una constante de un sexto de la
-    # media". DPI aplicaba el logaritmo ANTES del AR.
-    #
-    # La prueba que lo zanja es el ORDEN DEL MODELO AR, que es un entero y no
-    # admite interpretación. Comparado con las 36 series de cos8.rwl contra la
-    # corrida real de COFECHA:
-    #
-    #   AR sobre el índice (manual):  25 de 36 órdenes coinciden  (69 %)
-    #   AR sobre el logaritmo:        19 de 36                    (53 %)
-    #
-    # Y en el archivo de dos series 88B.rwl, el orden sobre el índice acierta
-    # los dos (2 y 1) mientras que sobre el logaritmo falla los dos (1 y 3).
-    orden = 0
-    if aplicar_ar:
-        idx, orden = _residualizar_indice(idx, max_orden=max_orden_ar,
-                                          devolver_orden=True)
-
-    if aplicar_log:
-        media = float(idx.mean())
-        c = media / 6.0 if media > 0 else 1e-3
-        idx = pd.Series(
-            np.log(np.maximum(idx.to_numpy(dtype=float) + c, 1e-10)),
-            index=idx.index)
-
-    return idx, orden
-
 
 def _biweight(mat: np.ndarray, c: float = 9.0) -> np.ndarray:
     """Media biweight robusta por filas (ignora NaN)."""

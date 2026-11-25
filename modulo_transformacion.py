@@ -35,6 +35,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 from modulo_estadistica import pearson
+from modulo_cronologia import estandarizar_serie
 
 DIFFLOG = "difflog"
 COFECHA = "cofecha"
@@ -71,9 +72,6 @@ def transformar(serie: pd.Series, metodo: str = DIFFLOG,
     s = s.sort_index()
 
     if metodo == COFECHA:
-        # Import diferido: modulo_cofecha importa modulo_codatacion, y este
-        # módulo lo usan ambos. Hacerlo acá evita el ciclo de importación.
-        from modulo_cofecha import estandarizar_serie
         idx, _orden = estandarizar_serie(
             s, rigidez_spline=rigidez_spline, aplicar_log=aplicar_log,
             aplicar_ar=aplicar_ar, max_orden_ar=max_orden_ar)
