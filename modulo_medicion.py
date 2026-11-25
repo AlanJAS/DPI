@@ -235,7 +235,8 @@ class ExportadorDendro:
 # WORKER — cómputo pesado en hilo separado con barra de progreso
 # =============================================================================
 
-def _calcular_ewlw_posiciones(sig_prog, gray, coords, saltos, banda):
+def _calcular_ewlw_posiciones(sig_prog, gray, coords, saltos, banda,
+                              cancel_flag=None):
     """
     Detecta EW/LW procesando el perfil de intensidad gris PIXEL A PIXEL
     a lo largo de cada anillo completo. Inserta un límite en TODOS los anillos.
@@ -244,10 +245,12 @@ def _calcular_ewlw_posiciones(sig_prog, gray, coords, saltos, banda):
       1. Extrae el perfil continuo de intensidad gris px a px a lo largo
          del camino (promediando en banda perpendicular en cada punto).
       2. Suaviza con Savitzky-Golay.
-      3. Encuentra la segunda derivada mínima (máxima tasa de cambio).
-      4. El punto de inflexión es el límite EW/LW.
+      3. Encuentra la primera derivada más negativa.
+      4. El punto de mayor oscurecimiento es el límite EW/LW.
 
     Corre en hilo secundario. Devuelve lista de (insert_at, px, py).
+    Si cancel_flag no es None, cancela entre anillos y devuelve resultados
+    parciales; al completar emite el progreso final de la ruta cancelable.
     """
     from scipy.signal import savgol_filter
 
@@ -268,6 +271,9 @@ def _calcular_ewlw_posiciones(sig_prog, gray, coords, saltos, banda):
     n_anillos = len(anillos)
 
     for a_num, anillo_idxs in enumerate(anillos):
+        if cancel_flag is not None and cancel_flag.get("stop"):
+            return inserciones
+
         if sig_prog is not None:
             pct = int(a_num * 100 / max(1, n_anillos))
             sig_prog.emit(pct, f"Anillo {a_num + 1}/{n_anillos}")
@@ -378,133 +384,10 @@ def _calcular_ewlw_posiciones(sig_prog, gray, coords, saltos, banda):
         px_ins, py_ins, insert_at = perfil_pos[idx_min_d1]
         inserciones.append((insert_at, px_ins, py_ins))
 
-    return inserciones
-
-
-def _calcular_ewlw_posiciones_cancelable(sig_prog, gray, coords, saltos, banda,
-                                          cancel_flag):
-    """Idéntica a _calcular_ewlw_posiciones pero chequea cancel_flag['stop']
-    al inicio de cada anillo para abortar limpiamente sin terminate().
-
-    Si se cancela, devuelve las inserciones encontradas hasta ese punto
-    (parcialmente), lo cual permite ver el progreso parcial si el usuario
-    quiere quedárselo. Si prefiere descartar, no las aplicará desde el
-    diálogo (eso se maneja en _on_ewlw).
-    """
-    from scipy.signal import savgol_filter
-
-    h, w = gray.shape
-    n = len(coords)
-    inserciones = []
-
-    anillos = []
-    ini = 0
-    for i in range(1, n):
-        if saltos[i] is False:
-            anillos.append(list(range(ini, i + 1)))
-            ini = i
-    if ini < n - 1:
-        anillos.append(list(range(ini, n)))
-
-    n_anillos = len(anillos)
-
-    for a_num, anillo_idxs in enumerate(anillos):
-        # Punto de cancelación cooperativa — chequea ANTES de cada anillo.
-        # Mucho más seguro que QThread.terminate() porque deja terminar
-        # cualquier numpy/scipy en curso sin corromper memoria.
-        if cancel_flag.get("stop"):
-            return inserciones  # devolver lo parcial
-
-        if sig_prog is not None:
-            pct = int(a_num * 100 / max(1, n_anillos))
-            sig_prog.emit(pct, f"Anillo {a_num + 1}/{n_anillos}")
-
-        if len(anillo_idxs) < 2:
-            continue
-
-        if any(saltos[j] == "ew_lw"
-               for j in anillo_idxs[1:] if j < len(saltos)):
-            continue
-
-        perfil_vals = []
-        perfil_pos  = []
-
-        for k in range(1, len(anillo_idxs)):
-            ip = anillo_idxs[k - 1]
-            ic = anillo_idxs[k]
-            if ic >= n:
-                break
-            val_k = saltos[ic] if ic < len(saltos) else False
-            if val_k is True or val_k in ("espacio", "quiebre_ini"):
-                continue
-
-            x0, y0 = coords[ip]
-            x1, y1 = coords[ic]
-            seg_len = math.hypot(x1 - x0, y1 - y0)
-            if seg_len < 1:
-                continue
-
-            ux  = (x1 - x0) / seg_len
-            uy  = (y1 - y0) / seg_len
-            perp_x, perp_y = -uy, ux
-
-            n_s  = max(2, int(round(seg_len)))
-            ts   = np.linspace(0.0, 1.0, n_s)
-            xs_c = x0 + ts * (x1 - x0)
-            ys_c = y0 + ts * (y1 - y0)
-
-            offs  = np.arange(-banda, banda + 1, dtype=np.float32)
-            xs_b  = xs_c[np.newaxis, :] + offs[:, np.newaxis] * perp_x
-            ys_b  = ys_c[np.newaxis, :] + offs[:, np.newaxis] * perp_y
-
-            xs_b  = np.clip(xs_b, 0, w - 1).astype(np.int32)
-            ys_b  = np.clip(ys_b, 0, h - 1).astype(np.int32)
-
-            vals_col = gray[ys_b, xs_b].mean(axis=0)
-
-            for j in range(n_s):
-                perfil_vals.append(float(vals_col[j]))
-                perfil_pos.append((float(xs_c[j]), float(ys_c[j]), ic))
-
-        if len(perfil_vals) < 10:
-            continue
-
-        arr = np.array(perfil_vals, dtype=np.float32)
-
-        win_ideal = max(5, int(len(arr) * 0.10))
-        win = win_ideal if win_ideal % 2 == 1 else win_ideal + 1
-        win = min(win, len(arr) if len(arr) % 2 == 1 else len(arr) - 1)
-        arr_smooth = savgol_filter(arr, win, 2) if win >= 5 else arr.copy()
-
-        d1 = np.gradient(arr_smooth)
-
-        m_ini = max(1, int(len(arr) * 0.15))
-        m_fin = max(1, int(len(arr) * 0.05))
-        if m_ini + m_fin >= len(arr):
-            m_ini, m_fin = 1, 1
-
-        d1_sub = d1[m_ini: len(arr) - m_fin]
-        if len(d1_sub) == 0:
-            continue
-
-        idx_min_d1 = int(np.argmin(d1_sub)) + m_ini
-
-        if d1[idx_min_d1] >= 0:
-            media = float(arr_smooth.mean())
-            sub = arr_smooth[m_ini: len(arr) - m_fin]
-            cruces = np.where(np.diff(np.sign(sub - media)) < 0)[0]
-            if len(cruces) > 0:
-                idx_min_d1 = cruces[0] + m_ini
-            else:
-                idx_min_d1 = m_ini + len(sub) // 2
-
-        px_ins, py_ins, insert_at = perfil_pos[idx_min_d1]
-        inserciones.append((insert_at, px_ins, py_ins))
-
     # Emitir 100% al completar para que el usuario vea que el worker
     # terminó. Sin esto la barra queda pegada al 99% mientras el main
     # thread aplica los resultados, dando sensación de "crash".
-    if sig_prog is not None:
+    if cancel_flag is not None and sig_prog is not None:
         try:
             sig_prog.emit(100, "Procesando resultados...")
         except Exception:
@@ -512,6 +395,12 @@ def _calcular_ewlw_posiciones_cancelable(sig_prog, gray, coords, saltos, banda,
 
     return inserciones
 
+
+def _calcular_ewlw_posiciones_cancelable(sig_prog, gray, coords, saltos, banda,
+                                          cancel_flag):
+    """Compatibilidad con la ruta cancelable anterior."""
+    return _calcular_ewlw_posiciones(
+        sig_prog, gray, coords, saltos, banda, cancel_flag=cancel_flag)
 
 
 def _calcular_anchos_ewlw_por_anillo(coords, saltos, ppm):
@@ -7649,7 +7538,7 @@ class PestanaImagen(QWidget):
                     raise RuntimeError(
                         "No se pudo leer la imagen desde el disco para detectar EW/LW.")
             gray = _cv2.cvtColor(img_bgr, _cv2.COLOR_BGR2GRAY).astype(np.float32)
-            return _calcular_ewlw_posiciones_cancelable(
+            return _calcular_ewlw_posiciones(
                 sig_prog, gray, c, s, b, cancel_flag)
 
         worker = _Worker(_tarea_ewlw, img_cached, coords, saltos, banda, ruta)
