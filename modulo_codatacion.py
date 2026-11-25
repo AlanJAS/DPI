@@ -1566,7 +1566,8 @@ class PanelCodatacion(QWidget):
         serie_b_raw = self._serie_para_glk(
             self.series_datos[n_t]["Ancho_mm"], es_crono=n_t.startswith("📚"))
 
-        years, rs, glks, tbps, ns = _stats_movil(
+        from dpi.ciencia.comparacion_nucleo import verificar_cofecha
+        (years, rs, glks, tbps, ns), r_global, stats = verificar_cofecha(
             m_diff, t_diff, overlap, mitad, serie_a_raw, serie_b_raw)
 
         self._stats_movil_years = years
@@ -1576,8 +1577,7 @@ class PanelCodatacion(QWidget):
         self._stats_movil_n = ns
         self._mitad_ventana_actual = mitad
 
-        r_global = _r_pearson(m_diff.loc[overlap].values, t_diff.loc[overlap].values)
-        self._stats_actuales = estadisticos_cofechado(serie_a_raw, serie_b_raw)
+        self._stats_actuales = stats
         self._nombre_referencia = n_m
         self._nombre_problema = n_t
 

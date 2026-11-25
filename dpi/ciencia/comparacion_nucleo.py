@@ -187,3 +187,11 @@ def clave_cache_comparacion(nombres, *, revision, series, nombre_crono,
     partes.append((nombre_crono, firma_dataframe(cronologia), repr(meta or {})))
     partes.append(("__cofecha__",) + tuple(cofecha))
     return tuple(partes)
+
+
+def verificar_cofecha(a, b, overlap, mitad, cruda_a, cruda_b):
+    """Estadísticos móviles y globales del mismo par de series."""
+    from dpi.ciencia.estadistica import _stats_movil, pearson, estadisticos_cofechado
+    movil = _stats_movil(a, b, overlap, mitad, cruda_a, cruda_b)
+    r = pearson(a.loc[overlap].values, b.loc[overlap].values)
+    return movil, r, estadisticos_cofechado(cruda_a, cruda_b)
