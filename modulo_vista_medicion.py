@@ -15,6 +15,7 @@ from modulo_pith import ajustar_circulo_minimos_cuadrados, ajuste_degenerado
 from dpi.medicion.constantes import MM_POR_PULGADA, PIXELES_POR_MM_DEFECTO, MAX_PASOS_HISTORIAL
 from dpi.ui.medicion.constantes import TOLERANCIA_CLICK_PUNTO, TOLERANCIA_CLICK_SEGMENTO
 from dpi.ui.colores import INTERVALO_MARCADOR_DECADA, INTERVALO_MARCADOR_CINCUENTENA, INTERVALO_MARCADOR_CENTENA, COLOR_PUNTO_ACTIVO, COLOR_LINEA_ACTIVA, COLOR_SALTO, COLOR_GUIA, COLOR_CALIBRACION, COLOR_PUNTO_INACTIVO, COLOR_EWLW, TIPOS_ANOMALIA
+from dpi.ui.medicion.herramientas.estado import conserva_ancla
 from dpi.medicion.marcas import _es_amarillo, _es_espacio, _es_ewlw, _es_quiebre_ini, _es_salto_real
 from dpi.medicion.marcas import ModoMedicion
 
@@ -255,7 +256,7 @@ class VistaInteractiva(QGraphicsView):
         modo_anterior = self.modo_actual  # capturar antes de asignar
         self.modo_actual = nuevo_modo
         # Limpiar ancla visual al salir del modo Medir/Salto
-        if nuevo_modo not in (ModoMedicion.MEDIR, ModoMedicion.SALTO):
+        if not conserva_ancla(nuevo_modo):
             self._limpiar_anclado()
         # Al entrar a ModoMedicion.ESPACIO limpiar la línea guía de Medir
         # pero NO borrar el ancla — así al volver a Medir se reanuda
@@ -303,7 +304,7 @@ class VistaInteractiva(QGraphicsView):
             self._limpiar_seleccion_completa()
             self._mostrar_panel_seleccion(False)
 
-        if nuevo_modo not in (ModoMedicion.MEDIR, ModoMedicion.SALTO) and self._linea_guia:
+        if not conserva_ancla(nuevo_modo) and self._linea_guia:
             self.scene().removeItem(self._linea_guia)
             self._linea_guia = None
         cursores = {

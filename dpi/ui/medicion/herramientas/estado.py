@@ -36,3 +36,8 @@ class EstadoAutodeteccion:
     items: list = field(default_factory=list)
     imagen: Any = None
     indice_ancla: int | None = None
+
+
+def conserva_ancla(modo):
+    from dpi.medicion.marcas import ModoMedicion
+    return modo in (ModoMedicion.MEDIR, ModoMedicion.SALTO)
