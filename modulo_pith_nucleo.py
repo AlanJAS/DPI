@@ -171,12 +171,9 @@ def estimar_anillos_faltantes(
 
 
 def distancia_faltante_dap(coords, saltos, radio_px):
-    """Distancia restante según el criterio DAP histórico (en píxeles)."""
-    longitud_medida_px = sum(
-        math.hypot(coords[i][0]-coords[i-1][0], coords[i][1]-coords[i-1][1])
-        for i in range(1, len(coords))
-        if not saltos[i]
-    )
-
-    distancia_faltante_px = max(0.0, radio_px - longitud_medida_px)
-    return distancia_faltante_px
+    """Radio menos longitud medida, con las mismas reglas geométricas."""
+    from modulo_calculo_medicion import calcular_anillos, puntos_desde_geometria
+    if not math.isfinite(radio_px) or radio_px < 0:
+        raise ValueError('Radio DAP inválido')
+    longitud = sum(a.ancho_mm for a in calcular_anillos(puntos_desde_geometria(coords, saltos), 1))
+    return max(0.0, radio_px - longitud)
