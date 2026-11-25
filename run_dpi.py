@@ -14,14 +14,7 @@ import os
 import logging
 from pathlib import Path
 
-logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-
-def _ruta_recurso(nombre: str) -> str:
-    if getattr(sys, '_MEIPASS', None):
-        return os.path.join(sys._MEIPASS, nombre)
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), nombre)
 
 
 def crear_splash(app):
