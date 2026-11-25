@@ -5,7 +5,7 @@ from modulo_pith_ui import HerramientaPith
 from dpi.ui.medicion.render import RenderMedicion
 
 import math
-from dpi.medicion.calculo import indice_punto_mas_cercano, anchos_puntos, anios_por_punto, dist_punto_segmento
+from dpi.medicion.calculo import segmento_mas_cercano, indice_punto_mas_cercano, anchos_puntos, anios_por_punto, dist_punto_segmento
 import numpy as np
 from dpi.medicion.modelo import ModeloMedicion, PuntoMedicion, HistorialMedicion, TipoMarca
 from PyQt6.QtWidgets import QWidget, QDialog, QGraphicsView, QGraphicsScene, QPushButton, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QDoubleSpinBox, QComboBox, QToolTip, QGraphicsEllipseItem, QDialogButtonBox
@@ -704,7 +704,6 @@ class VistaInteractiva(QGraphicsView):
         return {anios[i]: coords[i] for i in sorted(cierres)}
 
     def _segmento_mas_cercano(self, x: float, y: float) -> tuple[int, float, float] | None:
-        from dpi.medicion.calculo import segmento_mas_cercano
         return segmento_mas_cercano(self.coordenadas_anillos, x, y, self._tolerancia_segmento())
 
     def _paso_espacio(self, x: float, y: float):
