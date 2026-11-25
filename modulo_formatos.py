@@ -325,7 +325,11 @@ def leer_dendro_auto(ruta: str):
         primeras_lineas = f.read(500)
 
     if "=N" in primeras_lineas and "=I" in primeras_lineas:
-        return leer_formato_compacto(ruta)
+        series = leer_formato_compacto(ruta)
+        if len(series) != 1:
+            raise ValueError("La referencia debe contener una sola serie.")
+        sid, df = next(iter(series.items()))
+        return df, sid
 
     if ext in ('.csv', '.tsv'):
         return leer_tabular(ruta)
@@ -695,11 +699,8 @@ def exportar_serie_2col(serie, ruta, codigo):
     df = pd.DataFrame({"Anio": s.index.astype(int), "Valor": s.values})
     if ext == ".rwl":
         escribir_tucson(s, ruta, codigo=str(codigo))
-    elif _es_planilla(ext):
-        _escribir_excel(df, ruta)
     else:
-        df.to_csv(ruta, index=False, sep=";" if ext == ".csv" else "\t",
-                  decimal=",", float_format="%.6f")
+        escribir_tabla(df, ruta)
     return len(df)
 
 
@@ -840,13 +841,14 @@ def _exportar_tabular(id_serie: str, anios: list, anchos: list, ruta: str,
         _escribir_excel(df, ruta)
 
 def _exportar_tucson_ewlw(id_serie: str, anios: list,
-                            anchos_ewlw: list, ruta_base: str):
+                            anchos_ewlw: list, ruta_base: str, *,
+                            sufijos=("_EW", "_LW"), extension=None):
     if not anios or len(anchos_ewlw) != len(anios):
         raise ValueError("EW/LW: cantidad de años y mediciones incompatible.")
     base, ext = os.path.splitext(ruta_base)
-    ext = ext or ".rwl"
+    ext = extension or ext or ".rwl"
     salidas = []
-    for sufijo, columna in (("_EW", 1), ("_LW", 2)):
+    for sufijo, columna in zip(sufijos, (1, 2), strict=True):
         valores = [t[columna] if t[1] is not None and t[2] is not None else np.nan
                    for t in anchos_ewlw]
         codigo = id_serie[:TUCSON_MAX_CHARS_ID-len(sufijo)] + sufijo
@@ -955,3 +957,42 @@ def leer_como_columnas_o_tabular(ruta: str, base_nombre: str) -> dict:
         nombre = f"{base_nombre}_{col}"
         resultado[nombre] = df_serie
     return resultado
+
+
+def leer_series_auto(ruta: str) -> dict:
+    """Detecta archivos de series múltiples sin leer planillas como texto."""
+    ext = os.path.splitext(ruta)[1].lower()
+    nombre = os.path.splitext(os.path.basename(ruta))[0]
+    if _es_planilla(ext) or ext in (".csv", ".tsv"):
+        return leer_como_columnas_o_tabular(ruta, nombre)
+    if ext == ".wid":
+        df, sid = leer_wid(ruta)
+        return {f"🌲{sid}": df}
+    with open(ruta, encoding="utf-8-sig", errors="replace") as archivo:
+        primeras = archivo.read(500)
+        archivo.seek(0)
+        primera = next((ln for ln in archivo if ln.strip() and not ln.lstrip().startswith("#")), "")
+    if "=N" in primeras and "=I" in primeras:
+        return leer_formato_compacto(ruta)
+    if ext in (".rwl", ".txt"):
+        if "\t" not in primera:
+            try:
+                return leer_tucson_multi(ruta)
+            except ValueError:
+                if ext == ".rwl":
+                    raise
+        return leer_como_columnas_o_tabular(ruta, nombre)
+    df, sid = leer_tabular(ruta)
+    return {sid: df}
+
+
+def escribir_tabla(df, ruta, *, separador_csv=";", decimal=",", precision="%.6f"):
+    """Escritura tabular común, con formato decimal explícito por consumidor."""
+    ext = os.path.splitext(ruta)[1].lower()
+    if _es_planilla(ext):
+        _escribir_excel(df, ruta)
+    elif ext in (".csv", ".txt", ".tsv"):
+        df.to_csv(ruta, index=False, sep=separador_csv if ext == ".csv" else "\t",
+                  decimal=decimal, float_format=precision)
+    else:
+        raise ValueError(f"Formato tabular no compatible: {ext}")

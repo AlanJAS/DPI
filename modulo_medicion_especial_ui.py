@@ -844,8 +844,8 @@ class ControlIntensidad:
         for canal, met in seleccion:
             vals = valores_intensidad(self._bi_datos, canal, met)
             if canal in ("B_R", "B_G"):
-                r_max = max(vals) if vals else 1.0
-                vals_norm = [v / r_max for v in vals]
+                r_max = max(vals, default=0.0)
+                vals_norm = [v / r_max if r_max > 0 else 0.0 for v in vals]
                 suf = canal.lower().replace("_", "div")
             else:
                 vals_norm = [v / 255.0 for v in vals]
@@ -878,17 +878,9 @@ class ControlIntensidad:
             col_label = f"{canal}_ratio" if canal in ("B_R", "B_G") else f"{canal}_{met}"
             data[col_label] = valores_intensidad(self._bi_datos, canal, met)
 
-        df = pd.DataFrame(data)
-
-        if ext == ".xlsx":
-            _escribir_excel(df, ruta)
-        elif ext == ".csv":
-            # CSV chileno: separador ; y decimal con coma
-            df.to_csv(ruta, index=False, sep=";", decimal=",",
-                      float_format="%.6f")
-        else:  # .txt
-            df.to_csv(ruta, index=False, sep="\t", decimal=",",
-                      float_format="%.6f")
+        df = pd.DataFrame(data).sort_values("Anio")
+        from modulo_formatos import escribir_tabla
+        escribir_tabla(df, ruta)
 
         n_cols = len(df.columns) - 1  # restar la columna Anio
         QMessageBox.information(

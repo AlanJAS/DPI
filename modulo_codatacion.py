@@ -418,44 +418,10 @@ class PanelCodatacion(QWidget):
         n_duplicadas = 0
         errores: list[str] = []
 
+        from modulo_formatos import leer_series_auto
         for ruta in rutas:
-            ext = os.path.splitext(ruta)[1].lower()
-            base_nombre = os.path.splitext(os.path.basename(ruta))[0]
-
             try:
-                with open(ruta, 'r', encoding='utf-8', errors='replace') as f:
-                    primeras = f.read(500)
-
-                if "=N" in primeras and "=I" in primeras:
-                    series_extraidas = leer_formato_compacto(ruta)
-                elif ext == ".wid":
-                    df, sid = leer_wid(ruta)
-                    series_extraidas = {f"🌲{sid}": df}
-                elif ext in (".rwl", ".txt"):
-                    primera_real = ""
-                    try:
-                        with open(ruta, 'r', encoding='utf-8', errors='replace') as f:
-                            for linea in f:
-                                ln = linea.rstrip("\r\n")
-                                if not ln or ln.startswith("#"):
-                                    continue
-                                primera_real = ln
-                                break
-                    except Exception:
-                        primera_real = ""
-
-                    if "\t" in primera_real:
-                        series_extraidas = self._leer_como_columnas_o_tabular(ruta, base_nombre)
-                    else:
-                        try:
-                            series_extraidas = leer_tucson_multi(ruta)
-                        except Exception:
-                            series_extraidas = self._leer_como_columnas_o_tabular(ruta, base_nombre)
-                elif ext in (".csv", ".tsv") or _es_planilla(ext):
-                    series_extraidas = self._leer_como_columnas_o_tabular(ruta, base_nombre)
-                else:
-                    df, sid = leer_tabular(ruta)
-                    series_extraidas = {sid: df}
+                series_extraidas = leer_series_auto(ruta)
 
                 for id_serie, df_serie in series_extraidas.items():
                     if id_serie in self.series_datos:

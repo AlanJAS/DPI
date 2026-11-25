@@ -1864,14 +1864,10 @@ class PestanaImagen(QWidget):
 
             # Exportar EW/LW si hay límites marcados en el radio elegido
             # (no en la vista en vivo, que puede ser distinta).
-            tiene_ewlw = any(_es_ewlw(v) for v in saltos_export)
-            if tiene_ewlw:
-                self._exportar_ewlw(
-                    codigo, ruta,
-                    coords=coords_export,
-                    saltos=saltos_export,
-                    datos_medidos=datos, med_a_cor=med_a_cor_export,
-                )
+            if anchos_ewlw and any(ew is not None and lw is not None
+                                   for _, ew, lw in anchos_ewlw):
+                _exportar_tucson_ewlw(codigo, anios, anchos_ewlw, ruta,
+                                     sufijos=("_ew", "_lw"), extension=".rwl")
 
             QMessageBox.information(self, "Éxito", f"Exportado a:\n{ruta}")
             # No asociar las anomalías del radio activo a otro radio.
