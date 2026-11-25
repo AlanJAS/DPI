@@ -307,6 +307,12 @@ class VentanaAnillos(QMainWindow):
             "tema_oscuro", str(self._modo_oscuro).lower())
 
     def closeEvent(self, event):
+        if any(self._tareas_medicion_en_curso(self._tabs_imagenes.widget(i))
+               for i in range(self._tabs_imagenes.count())):
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "Tareas en curso", "Cancele o espere a que terminen las tareas de medición antes de cerrar.")
+            event.ignore()
+            return
         cfg = QSettings("MoiCedrus", "DendroAnillos")
         cfg.setValue("tema_oscuro", str(self._modo_oscuro).lower())
         # Recordar tamaño/posición y si quedó maximizada, para reabrir la
@@ -450,8 +456,18 @@ class VentanaAnillos(QMainWindow):
             from PyQt6.QtCore import QTimer
             QTimer.singleShot(20, self._abrir_siguiente_imagen)
 
+    @staticmethod
+    def _tareas_medicion_en_curso(widget):
+        return any(worker is not None and worker.isRunning()
+                   for worker in (getattr(widget, "_ewlw_worker", None),
+                                  getattr(widget, "_bi_worker", None)))
+
     def _cerrar_pestana(self, index: int):
         widget = self._tabs_imagenes.widget(index)
+        if self._tareas_medicion_en_curso(widget):
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "Tareas en curso", "Cancele o espere a que termine la tarea antes de cerrar la pestaña.")
+            return
         # Si esta era la pestaña ACTIVA cuyos widgets estaban en el top bar,
         # sacarlos antes de borrar la pestaña para evitar que el layout
         # quede con referencias a widgets que se van a destruir.

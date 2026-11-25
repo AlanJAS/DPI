@@ -3489,7 +3489,6 @@ class PestanaImagen(QWidget):
 
         def _on_error(e):
             dlg.close()
-            self._ewlw_worker = None  # liberar referencia
             QMessageBox.critical(self, "Error EW/LW", e)
         worker.signals.error.connect(_on_error)
 
@@ -3516,7 +3515,6 @@ class PestanaImagen(QWidget):
                     dlg.close()
                 except Exception:
                     pass
-                self._ewlw_worker = None
                 self.label_estado.setText(
                     "🛑 Detección EW/LW cancelada — sin cambios aplicados."
                 )
@@ -3528,10 +3526,16 @@ class PestanaImagen(QWidget):
                     dlg.close()
                 except Exception:
                     pass
-                self._ewlw_worker = None
                 self.label_estado.setText(
                     "🍂 No se encontraron límites EW/LW."
                 )
+                return
+
+            if (self.ruta_imagen_actual != ruta
+                    or list(self.vista.coordenadas_anillos) != coords
+                    or list(self.vista.es_salto) != saltos):
+                dlg.close()
+                self.label_estado.setText("Resultados EW/LW descartados: cambió el radio.")
                 return
 
             # ── Caso 3: aplicar resultados ──
@@ -3548,33 +3552,25 @@ class PestanaImagen(QWidget):
             except Exception:
                 pass
 
-            self.vista.guardar_en_historial()
-
-            # Insertar en CHUNKS con processEvents() entre cada uno.
-            # list.insert es O(n) en el peor caso (shift de elementos),
-            # con muchas inserciones se acumula. Procesar eventos cada
-            # 100 inserts mantiene la UI viva.
-            inv = list(reversed(inserciones))  # de atrás hacia adelante
-            CHUNK = 100
-            for i in range(0, len(inv), CHUNK):
-                for insert_at, px_ins, py_ins in inv[i:i + CHUNK]:
-                    self.vista.modelo_medicion.insertar(insert_at, (px_ins, py_ins), "ew_lw")
-                # Permitir que la UI procese eventos pendientes
-                # (re-pintar diálogo, atender clicks, etc.)
-                QApplication.processEvents()
-
-            # Redibujar es el paso más pesado: crea cientos de items
-            # Qt nuevos. No se puede chunkar (necesita estado completo).
-            # Pero al menos mostramos qué estamos haciendo para que el
-            # usuario no piense que crasheó.
+            # processEvents puede haber atendido una cancelación o edición.
+            if (cancel_flag.get("stop") or self.ruta_imagen_actual != ruta
+                    or list(self.vista.coordenadas_anillos) != coords
+                    or list(self.vista.es_salto) != saltos):
+                dlg.close()
+                return
+            # Preparar todos los cambios fuera del modelo activo.
+            puntos = list(self.vista.modelo_medicion.captura())
             try:
-                if hasattr(dlg, "_lbl"):
-                    total = len(self.vista.coordenadas_anillos)
-                    dlg._lbl.setText(f"Redibujando {total} puntos…")
-                QApplication.processEvents()
-            except Exception:
-                pass
-
+                for insert_at, px_ins, py_ins in reversed(inserciones):
+                    if not 0 <= insert_at <= len(puntos):
+                        raise ValueError("Índice de inserción inválido")
+                    puntos.insert(insert_at, PuntoMedicion((px_ins, py_ins), "ew_lw"))
+            except (ValueError, TypeError, IndexError) as exc:
+                dlg.close()
+                QMessageBox.warning(self, "EW/LW", str(exc))
+                return
+            self.vista.guardar_en_historial()
+            self.vista.modelo_medicion.restaurar(puntos)
             self.vista.recalcular_todas_las_distancias()
             self.vista.progreso_modificado.emit()
 
@@ -3583,7 +3579,6 @@ class PestanaImagen(QWidget):
                 dlg.close()
             except Exception:
                 pass
-            self._ewlw_worker = None
             self.label_estado.setText(
                 f"🍂 EW/LW automático: {len(inserciones)} límites insertados. "
                 "Usa 🖐 Mover para ajustar."
@@ -3929,13 +3924,18 @@ class PestanaImagen(QWidget):
 
         def _on_error(e):
             dlg.close()
-            self._bi_worker = None
             QMessageBox.critical(self, "Error al calcular BI", e)
         worker.signals.error.connect(_on_error)
 
         def _on_resultado(resultados):
             dlg.close()
-            self._bi_worker = None  # liberar referencia
+            if (self.ruta_imagen_actual != ruta
+                    or list(self.vista.coordenadas_anillos) != coords
+                    or list(self.vista.es_salto) != saltos
+                    or self.vista.pixeles_por_mm != ppm
+                    or [d["anio"] for d in self.datos_medidos] != anios_capturados):
+                self.label_estado.setText("Resultados BI descartados: cambió el radio.")
+                return
             for k in range(min(len(resultados), n_anillos)):
                 resultados[k]["anio"] = anios_capturados[k]
             self._bi_datos = resultados
