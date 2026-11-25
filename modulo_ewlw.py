@@ -2,6 +2,8 @@
 
 import math
 import numpy as np
+from modulo_marcas_medicion import (_es_normal, _es_salto_real, _es_ewlw,
+                                     _es_quiebre, _excluye_intensidad)
 
 
 def _calcular_ewlw_posiciones(sig_prog, gray, coords, saltos, banda,
@@ -31,7 +33,7 @@ def _calcular_ewlw_posiciones(sig_prog, gray, coords, saltos, banda,
     anillos = []
     ini = 0
     for i in range(1, n):
-        if saltos[i] is False:
+        if _es_normal(saltos[i]):
             anillos.append(list(range(ini, i + 1)))
             ini = i
     if ini < n - 1:
@@ -51,7 +53,7 @@ def _calcular_ewlw_posiciones(sig_prog, gray, coords, saltos, banda,
             continue
 
         # Si ya tiene ew_lw, saltar
-        if any(saltos[j] == "ew_lw"
+        if any(_es_ewlw(saltos[j])
                for j in anillo_idxs[1:] if j < len(saltos)):
             continue
 
@@ -68,7 +70,7 @@ def _calcular_ewlw_posiciones(sig_prog, gray, coords, saltos, banda,
                 break
             val_k = saltos[ic] if ic < len(saltos) else False
             # Saltar quiebres y espacios (pero no ew_lw que ya filtramos)
-            if val_k is True or val_k in ("espacio", "quiebre_ini"):
+            if _excluye_intensidad(val_k):
                 continue
 
             x0, y0 = coords[ip]
@@ -207,7 +209,7 @@ def _calcular_anchos_ewlw_por_anillo(coords, saltos, ppm):
             coords[i][1] - coords[i-1][1],
         ) / ppm
 
-        if val is True:
+        if _es_salto_real(val):
             # Salto real: cierra anillo previo si quedó algo
             if acum > 0:
                 if acum_pre_ewlw is not None:
@@ -217,10 +219,10 @@ def _calcular_anchos_ewlw_por_anillo(coords, saltos, ppm):
                     anchos_anillo.append((acum, None, None))
             acum = 0.0
             acum_pre_ewlw = None
-        elif val == "espacio" or val == "quiebre_ini":
+        elif _es_quiebre(val):
             # No suma, no cierra
             pass
-        elif val == "ew_lw":
+        elif _es_ewlw(val):
             # Suma y marca el split: el acum hasta acá es el EW
             acum += d
             acum_pre_ewlw = acum

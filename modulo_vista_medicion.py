@@ -3,11 +3,11 @@
 import math
 from modulo_calculo_medicion import anchos_puntos
 import numpy as np
-from modulo_modelo_medicion import ModeloMedicion, PuntoMedicion, HistorialMedicion
+from modulo_modelo_medicion import ModeloMedicion, PuntoMedicion, HistorialMedicion, TipoMarca
 from PyQt6.QtWidgets import QWidget, QDialog, QGraphicsView, QGraphicsScene, QPushButton, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QDoubleSpinBox, QComboBox, QToolTip, QGraphicsEllipseItem, QDialogButtonBox
 from PyQt6.QtGui import QPainter, QPen, QColor, QBrush
 from PyQt6.QtCore import Qt, pyqtSignal, QEvent
-from modulo_pith import MODO_PITH, ajustar_circulo_minimos_cuadrados
+from modulo_pith import ajustar_circulo_minimos_cuadrados
 from constantes import MM_POR_PULGADA, PIXELES_POR_MM_DEFECTO, MAX_PASOS_HISTORIAL, TOLERANCIA_CLICK_PUNTO, TOLERANCIA_CLICK_SEGMENTO, INTERVALO_MARCADOR_DECADA, INTERVALO_MARCADOR_CINCUENTENA, INTERVALO_MARCADOR_CENTENA, COLOR_PUNTO_ACTIVO, COLOR_LINEA_ACTIVA, COLOR_SALTO, COLOR_GUIA, COLOR_CALIBRACION, COLOR_PUNTO_INACTIVO, COLOR_EWLW, TIPOS_ANOMALIA
 from modulo_marcas_medicion import _es_amarillo, _es_espacio, _es_ewlw, _es_quiebre_ini, _es_salto_real
 from modulo_marcas_medicion import MODO_ANADIR, MODO_MEDIR, MODO_CALIBRAR, MODO_MOVER, MODO_SALTO, MODO_INSERTAR, MODO_BORRAR, MODO_AUTODETECT, MODO_ANOMALIA, MODO_PITH, MODO_ESPACIO, MODO_EWLW, MODO_SELECCIONAR
@@ -1319,7 +1319,7 @@ class VistaInteractiva(QGraphicsView):
         self.guardar_en_historial()
         for i in self._puntos_seleccionados:
             if 0 <= i < len(self.es_salto):
-                self.modelo_medicion.marcar(i, True)
+                self.modelo_medicion.marcar(i, TipoMarca.SALTO)
         self._puntos_seleccionados.clear()
         self._dibujar_marcadores_seleccion()
         self.recalcular_todas_las_distancias()
@@ -1335,7 +1335,7 @@ class VistaInteractiva(QGraphicsView):
         self.guardar_en_historial()
         for i in self._puntos_seleccionados:
             if 0 <= i < len(self.es_salto):
-                self.modelo_medicion.marcar(i, "espacio")
+                self.modelo_medicion.marcar(i, TipoMarca.ESPACIO)
         self._puntos_seleccionados.clear()
         self._dibujar_marcadores_seleccion()
         self.recalcular_todas_las_distancias()
@@ -2180,7 +2180,7 @@ class VistaInteractiva(QGraphicsView):
             # Primer clic: punto A — suma distancia pero NO cierra anillo
             if self._idx_espacio_inicio is None:
                 self.guardar_en_historial()
-                self.modelo_medicion.agregar((x, y), "quiebre_ini")   # línea azul, suma, no cierra
+                self.modelo_medicion.agregar((x, y), TipoMarca.QUIEBRE_INI)   # línea azul, suma, no cierra
                 self._idx_espacio_inicio = len(coords) - 1
                 self._espacio_p1   = (x, y)
                 self._espacio_seg1 = -1
@@ -2199,7 +2199,7 @@ class VistaInteractiva(QGraphicsView):
 
             # Segundo clic: punto B — línea AMARILLA desde A, tick amarillo
             self.guardar_en_historial()
-            self.modelo_medicion.agregar((x, y), "espacio")   # línea amarilla desde A, tick amarillo
+            self.modelo_medicion.agregar((x, y), TipoMarca.ESPACIO)   # línea amarilla desde A, tick amarillo
             self._idx_espacio_inicio = None
             self._limpiar_espacio()
             self.recalcular_todas_las_distancias()
@@ -2289,20 +2289,20 @@ class VistaInteractiva(QGraphicsView):
         #   4) Segmentos intermedios si s1 < s2 → también "espacio"
 
         # 1) Insertar p2
-        self.modelo_medicion.insertar(s2 + 1, p2, False)   # p2→siguiente: reanuda normal
+        self.modelo_medicion.insertar(s2 + 1, p2, TipoMarca.NORMAL)   # p2→siguiente: reanuda normal
 
         # 2) Insertar p1 con es_salto="quiebre_ini" (suma distancia antes del quiebre)
-        self.modelo_medicion.insertar(s1 + 1, p1, "quiebre_ini")  # prev→p1: azul, suma
+        self.modelo_medicion.insertar(s1 + 1, p1, TipoMarca.QUIEBRE_INI)  # prev→p1: azul, suma
 
         # 3) Segmento p1→p2 = "espacio"
         idx_tramo = s1 + 2
         if idx_tramo < len(self.es_salto):
-            self.modelo_medicion.marcar(idx_tramo, "espacio")
+            self.modelo_medicion.marcar(idx_tramo, TipoMarca.ESPACIO)
 
         # 4) Segmentos intermedios (si s1 < s2)
         for j in range(idx_tramo + 1, s2 + 2):
             if j < len(self.es_salto) and self.es_salto[j] is False:
-                self.modelo_medicion.marcar(j, "espacio")
+                self.modelo_medicion.marcar(j, TipoMarca.ESPACIO)
 
         self.recalcular_todas_las_distancias()
         self.progreso_modificado.emit()
@@ -2369,7 +2369,7 @@ class VistaInteractiva(QGraphicsView):
         py = y1 + t * (y2 - y1)
 
         self.guardar_en_historial()
-        self.modelo_medicion.insertar(seg_idx + 1, (px, py), "ew_lw")
+        self.modelo_medicion.insertar(seg_idx + 1, (px, py), TipoMarca.EW_LW)
 
         self.recalcular_todas_las_distancias()
         self.progreso_modificado.emit()
@@ -2453,7 +2453,7 @@ class VistaInteractiva(QGraphicsView):
                 mejor_d, mejor_idx = d, i
         if mejor_d < tol and mejor_idx != -1:
             self.guardar_en_historial()
-            self.modelo_medicion.insertar(mejor_idx + 1, (x, y), False)
+            self.modelo_medicion.insertar(mejor_idx + 1, (x, y), TipoMarca.NORMAL)
             self.recalcular_todas_las_distancias()
             self.progreso_modificado.emit()
 
@@ -2705,7 +2705,7 @@ class VistaInteractiva(QGraphicsView):
         # ── Serie vacía: primer punto ────────────────────────────────────
         if not coords:
             self.guardar_en_historial()
-            self.modelo_medicion.agregar((x, y), False)
+            self.modelo_medicion.agregar((x, y), TipoMarca.NORMAL)
             self._resaltar_anclado(0)
             self.recalcular_todas_las_distancias()
             self.progreso_modificado.emit()
@@ -2759,7 +2759,7 @@ class VistaInteractiva(QGraphicsView):
             insert_pos = idx_a + 1 if d_sig < d_prev else idx_a
 
         self.guardar_en_historial()
-        self.modelo_medicion.insertar(insert_pos, (x, y), es_salto_modo)
+        self.modelo_medicion.insertar(insert_pos, (x, y), TipoMarca.SALTO if es_salto_modo else TipoMarca.NORMAL)
 
         # El nuevo ancla pasa a ser el punto recién insertado
         self._resaltar_anclado(insert_pos)
@@ -3141,7 +3141,7 @@ class VistaInteractiva(QGraphicsView):
         if idx_ancla is None:
             # Sin ancla: añadir al final
             for coord in coordenadas:
-                self.modelo_medicion.agregar(coord, False)
+                self.modelo_medicion.agregar(coord, TipoMarca.NORMAL)
         else:
             n = len(self.coordenadas_anillos)
             # Detectar dirección: ¿los nuevos puntos van después o antes del ancla?
@@ -3181,7 +3181,7 @@ class VistaInteractiva(QGraphicsView):
                     insert_at = ini_tramo
 
             for i, coord in enumerate(coordenadas):
-                self.modelo_medicion.insertar(insert_at + i, coord, False)
+                self.modelo_medicion.insertar(insert_at + i, coord, TipoMarca.NORMAL)
 
         self.recalcular_todas_las_distancias()
         self.progreso_modificado.emit()

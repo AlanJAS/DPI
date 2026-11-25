@@ -8,9 +8,8 @@ def _tipo(val):
     except ValueError:
         return None
 
-MODO_ANADIR = 1   # alias mantenido por compatibilidad interna
-
-MODO_MEDIR  = 1   # nombre nuevo: botón «Medir»
+MODO_MEDIR = 1   # botón «Medir»
+MODO_ANADIR = MODO_MEDIR   # alias histórico
 
 MODO_CALIBRAR = 2
 
@@ -62,5 +61,20 @@ def _es_ewlw(val) -> bool:
 
 def _es_amarillo(val) -> bool:
     """True si el segmento debe dibujarse en amarillo (salto o espacio)."""
-    return _tipo(val) in (TipoMarca.SALTO, TipoMarca.ESPACIO)
+    tipo = _tipo(val)
+    return tipo is not None and tipo.es_amarillo
+
+
+def _es_normal(val) -> bool:
+    return _tipo(val) is TipoMarca.NORMAL
+
+
+def _es_quiebre(val) -> bool:
+    tipo = _tipo(val)
+    return tipo is not None and tipo.es_quiebre
+
+
+def _excluye_intensidad(val) -> bool:
+    tipo = _tipo(val)
+    return tipo is not None and tipo.excluye_intensidad
 

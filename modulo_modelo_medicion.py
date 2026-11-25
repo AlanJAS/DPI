@@ -28,6 +28,16 @@ class TipoMarca(Enum):
     def es_amarillo(self):
         return self in (TipoMarca.SALTO, TipoMarca.ESPACIO)
 
+    @property
+    def es_quiebre(self) -> bool:
+        """Marcas de inicio y tramo de un quiebre intra-anillo."""
+        return self in (TipoMarca.ESPACIO, TipoMarca.QUIEBRE_INI)
+
+    @property
+    def excluye_intensidad(self) -> bool:
+        """Tramos excluidos de los perfiles de intensidad existentes."""
+        return self is TipoMarca.SALTO or self.es_quiebre
+
 
 @dataclass(frozen=True, slots=True)
 class PuntoMedicion:
@@ -83,10 +93,10 @@ class ModeloMedicion:
         puntos = [self._crear(c, m) for c, m in zip(coordenadas, marcas, strict=True)]
         self._puntos = puntos
 
-    def insertar(self, indice, coordenada, marca=False):
+    def insertar(self, indice, coordenada, marca=TipoMarca.NORMAL):
         self._puntos.insert(indice, self._crear(coordenada, marca))
 
-    def agregar(self, coordenada, marca=False):
+    def agregar(self, coordenada, marca=TipoMarca.NORMAL):
         self._puntos.append(self._crear(coordenada, marca))
 
     def borrar(self, indice):

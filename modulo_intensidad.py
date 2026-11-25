@@ -18,6 +18,8 @@ Referencia:
 import math
 import logging
 import numpy as np
+from modulo_marcas_medicion import (_es_normal, _es_salto_real,
+                                     _es_quiebre, _excluye_intensidad)
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +126,7 @@ def extraer_intensidad_por_anillo(
                         cnt + len(vals)]
 
     acum = _nuevo_acum()
-    n_anillos = sum(1 for v in es_salto if v is False)
+    n_anillos = sum(1 for v in es_salto if _es_normal(v))
     anillo_num = 0
 
     # Pre-calcular longitudes de cada anillo para el recorte por porcentaje
@@ -134,14 +136,14 @@ def extraer_intensidad_por_anillo(
         """Longitud total del anillo que empieza en idx_ini."""
         total = 0.0
         for j in range(idx_ini + 1, n):
-            if es_salto[j] is True:
+            if _es_salto_real(es_salto[j]):
                 break
             if _es_espacio_sal(es_salto[j]):
                 continue
             xp, yp = coordenadas[j - 1]
             xc, yc = coordenadas[j]
             total += math.hypot(xc-xp, yc-yp)
-            if es_salto[j] is False:
+            if _es_normal(es_salto[j]):
                 break
         return total
 
@@ -164,7 +166,7 @@ def extraer_intensidad_por_anillo(
     for i in range(1, n):
         val = es_salto[i]
 
-        if val is True:
+        if _es_salto_real(val):
             _cerrar_anillo(acum)
             acum = _nuevo_acum()
             acum_en_anillo = 0.0
@@ -189,7 +191,7 @@ def extraer_intensidad_por_anillo(
         acum_en_anillo += seg_len
 
         val_next = es_salto[i + 1] if i + 1 < n else False
-        if val_next is False or val_next is True:
+        if _es_normal(val_next) or _es_salto_real(val_next):
             _cerrar_anillo(acum)
             acum = _nuevo_acum()
             acum_en_anillo = 0.0
@@ -207,10 +209,10 @@ def extraer_intensidad_por_anillo(
 
 
 def _es_amarillo_sal(val) -> bool:
-    return val is True or val == "espacio" or val == "quiebre_ini"
+    return _excluye_intensidad(val)
 
 def _es_espacio_sal(val) -> bool:
-    return val == "espacio" or val == "quiebre_ini"
+    return _es_quiebre(val)
 
 
 # =============================================================================

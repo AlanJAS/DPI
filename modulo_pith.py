@@ -194,7 +194,7 @@ def estimar_anillos_faltantes(
 # (se gestiona desde VistaInteractiva, igual que MODO_AUTODETECT)
 # =============================================================================
 
-MODO_PITH = 9   # Nuevo modo para marcar puntos del arco
+from modulo_marcas_medicion import MODO_PITH  # alias histórico
 
 
 # =============================================================================

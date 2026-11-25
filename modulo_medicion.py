@@ -22,7 +22,7 @@ from modulo_dialogos_archivo import ultima_carpeta
 import modulo_transformacion as _tr
 from modulo_grafico_medicion import (correlacion_deslizante, correlacion_global,
                                      transformar_medicion)
-from modulo_modelo_medicion import ModeloMedicion, PuntoMedicion, RadioMedicion
+from modulo_modelo_medicion import ModeloMedicion, PuntoMedicion, RadioMedicion, TipoMarca
 import pandas as pd
 import pyqtgraph as pg
 from PIL import Image
@@ -57,7 +57,6 @@ from modulo_intensidad import (
     DialogoGuardarBI,
 )
 from modulo_pith import (
-    MODO_PITH,
     ajustar_circulo_minimos_cuadrados,
     estimar_anillos_faltantes,
     DialogoMetodoPith,
@@ -93,6 +92,7 @@ logger = logging.getLogger(__name__)
 
 from modulo_marcas_medicion import (
     _es_salto_real,
+    _es_normal,
     _es_espacio,
     _es_quiebre_ini,
     _es_ewlw,
@@ -3572,7 +3572,7 @@ class PestanaImagen(QWidget):
                 for insert_at, px_ins, py_ins in reversed(inserciones):
                     if not 0 <= insert_at <= len(puntos):
                         raise ValueError("Índice de inserción inválido")
-                    puntos.insert(insert_at, PuntoMedicion((px_ins, py_ins), "ew_lw"))
+                    puntos.insert(insert_at, PuntoMedicion((px_ins, py_ins), TipoMarca.EW_LW))
             except (ValueError, TypeError, IndexError) as exc:
                 dlg.close()
                 QMessageBox.warning(self, "EW/LW", str(exc))
@@ -3614,7 +3614,7 @@ class PestanaImagen(QWidget):
         anillos = []
         ini = 0
         for i in range(1, n):
-            if saltos[i] is False:
+            if _es_normal(saltos[i]):
                 anillos.append(list(range(ini, i + 1)))
                 ini = i
         # Ultimo anillo abierto
@@ -3712,7 +3712,7 @@ class PestanaImagen(QWidget):
             # Insertar punto "ew_lw" entre idx_seg_prev e idx_seg_curr
             # (usar idx_seg_curr como posición de inserción)
             insert_at = idx_seg_curr
-            self.vista.modelo_medicion.insertar(insert_at, (px_ins, py_ins), "ew_lw")
+            self.vista.modelo_medicion.insertar(insert_at, (px_ins, py_ins), TipoMarca.EW_LW)
             insertar_count += 1
             # Actualizar coords/saltos locales para los siguientes anillos
             coords = list(self.vista.coordenadas_anillos)
@@ -3772,7 +3772,7 @@ class PestanaImagen(QWidget):
             d = math.hypot(coords[i][0]-coords[i-1][0],
                            coords[i][1]-coords[i-1][1]) / ppm
 
-            if val is True:  # salto
+            if _es_salto_real(val):  # salto
                 acum_ew = acum_lw = 0.0
                 en_lw = False
                 continue
@@ -3783,7 +3783,7 @@ class PestanaImagen(QWidget):
                 if d > 0:
                     acum_lw = 0.0  # reiniciar LW desde aquí
                 continue
-            if val is False:
+            if _es_normal(val):
                 # Fin de anillo
                 if en_lw:
                     acum_lw += d
@@ -4052,7 +4052,7 @@ class PestanaImagen(QWidget):
             segs = []
             for i in range(1, n):
                 val = saltos[i] if i < len(saltos) else False
-                if val is True:        # salto real: descartar y reiniciar
+                if _es_salto_real(val):  # salto real: descartar y reiniciar
                     segs = []
                     continue
                 if _es_espacio(val):   # quiebre/espacio: no cuenta como segmento
@@ -4061,7 +4061,7 @@ class PestanaImagen(QWidget):
                 segs.append((i-1, i))
                 # Solo cerrar el anillo en el límite final (val is False)
                 # ew_lw NO cierra el anillo — es interno
-                if val is False:
+                if _es_normal(val):
                     if segs:
                         anillos.append(list(segs))
                     segs = []
