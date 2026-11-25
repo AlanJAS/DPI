@@ -3,8 +3,14 @@
 import numpy as np
 import pandas as pd
 from modulo_estadistica import (
-    agrupar_por_arbol, rbar_entre_arboles, correlaciones_pares, calcular_eps,
+    serie_anual, agrupar_por_arbol, rbar_entre_arboles, correlaciones_pares, calcular_eps,
 )
+
+
+def _bloques_anuales(serie):
+    s = serie_anual(serie)
+    cortes = np.flatnonzero(np.diff(s.index.to_numpy()) != 1) + 1
+    return [s.iloc[a:b] for a, b in zip([0, *cortes], [*cortes, len(s)]) if a < b]
 
 
 def _biweight_mean(values, c: float = 9.0, minimo: int = 6) -> float:
@@ -292,7 +298,10 @@ def _fit_trend(values: np.ndarray, metodo: str, ventana_mm: int | None = None,
 def _detrend_serie_indice(serie_mm: pd.Series, metodo: str,
                            ventana_mm: int | None = None,
                            rigidez: int | None = None) -> pd.Series:
-    s = pd.to_numeric(serie_mm, errors="coerce").astype(float).dropna()
+    bloques = _bloques_anuales(serie_mm)
+    if len(bloques) > 1:
+        return pd.concat([_detrend_serie_indice(b, metodo, ventana_mm=ventana_mm, rigidez=rigidez) for b in bloques])
+    s = serie_anual(serie_mm)
     if s.empty:
         return s.copy()
     if (metodo or "").lower() in {"raw", "none", "ninguno"}:
@@ -452,7 +461,13 @@ def _residualizar_indice(indice: pd.Series, max_orden: int | None = None,
     siempre AR(1), lo que dejaba autocorrelación residual en las series que
     requieren orden 2 o 3.
     """
-    s = pd.to_numeric(indice, errors="coerce").astype(float).dropna()
+    bloques = _bloques_anuales(indice)
+    if len(bloques) > 1:
+        resultados = [_residualizar_indice(b, max_orden, True, orden_fijo) for b in bloques]
+        resid = pd.concat([r for r, _ in resultados])
+        orden = max(p for _, p in resultados)
+        return (resid, orden) if devolver_orden else resid
+    s = serie_anual(indice)
     if len(s) < 4:
         return (s.copy(), 0) if devolver_orden else s.copy()
     c = s - s.mean()
@@ -732,8 +747,8 @@ def orden_ar_agrupado(indices: dict, pmax: int | None = None) -> tuple:
     num = np.zeros(pmax)
     den = np.zeros(pmax)
     largos = []
-    for v in indices.values():
-        x = pd.to_numeric(v, errors="coerce").dropna().to_numpy(dtype=float)
+    for v in (b for serie in indices.values() for b in _bloques_anuales(serie)):
+        x = v.to_numpy(dtype=float)
         if len(x) < 20:
             continue
         x = x - x.mean()

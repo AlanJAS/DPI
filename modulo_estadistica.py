@@ -93,7 +93,7 @@ def tbp_alineado(a, b, min_overlap=20, *, anios=None):
     return tbp_filtrado(ha, hb, min_overlap)[0]
 
 
-def sensibilidad_media(valores: np.ndarray) -> float:
+def sensibilidad_media(valores: np.ndarray, anios=None) -> float:
     """Sensibilidad media (mean sensitivity) de Douglass.
 
     Media de las diferencias relativas entre anillos consecutivos:
@@ -102,42 +102,31 @@ def sensibilidad_media(valores: np.ndarray) -> float:
     una serie sensible al clima, que es la que sirve para cofechar.
     """
     v = np.asarray(valores, dtype=float)
-    v = v[np.isfinite(v)]
+    if anios is None:
+        anios = np.arange(len(v))
+    _, _, pares = _pares_anuales(v, v, anios)
     if v.size < 2:
         return float("nan")
     suma = v[1:] + v[:-1]
     with np.errstate(divide="ignore", invalid="ignore"):
         d = np.abs(2.0 * (v[1:] - v[:-1]) / suma)
-    d = d[np.isfinite(d)]
+    d = d[pares & np.isfinite(d)]
     return float(np.mean(d)) if d.size else float("nan")
 
 
-def _sensibilidad_media(x):
-    return sensibilidad_media(x)
+def _sensibilidad_media(x, anios=None):
+    return sensibilidad_media(x, anios)
 
 
-def autocorrelacion_lag1(valores: np.ndarray) -> float:
-    """Autocorrelación de primer orden."""
+def autocorrelacion_lag1(valores: np.ndarray, anios=None) -> float:
+    """Pearson entre pares de años consecutivos y finitos."""
     v = np.asarray(valores, dtype=float)
-    v = v[np.isfinite(v)]
-    if v.size < 3:
-        return float("nan")
-    c = v - v.mean()
-    if np.std(c) == 0:
-        return float("nan")
-    return pearson(c[1:], c[:-1])
+    _, _, pares = _pares_anuales(v, v, anios)
+    return pearson(v[:-1][pares], v[1:][pares])
 
 
-def _autocorrelacion_ar1(x) -> float:
-    """Autocorrelación de primer orden (lag-1) de una serie.
-
-    Mide la persistencia interanual (cuánto depende un año del anterior).
-    """
-    x = np.asarray(x, dtype=float)
-    x = x[np.isfinite(x)]
-    if len(x) < 3:
-        return float("nan")
-    return pearson(x[:-1], x[1:])
+def _autocorrelacion_ar1(x, anios=None):
+    return autocorrelacion_lag1(x, anios)
 
 
 def gleichlaufigkeit(serie_a, serie_b, min_overlap: int = 10):

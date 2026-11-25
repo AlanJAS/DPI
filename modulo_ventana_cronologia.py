@@ -1347,8 +1347,8 @@ class VentanaCronologia(QWidget):
         # ── Estadística de la serie ──
         media = float(np.mean(x)) if len(x) else float("nan")
         de = float(np.std(x, ddof=1)) if len(x) > 1 else float("nan")
-        ms = _sensibilidad_media(x)
-        ar1 = _autocorrelacion_ar1(x)
+        ms = _sensibilidad_media(x, serie.index)
+        ar1 = _autocorrelacion_ar1(x, serie.index)
 
         def f(v, dec=3):
             return "—" if v is None or not np.isfinite(v) else f"{v:.{dec}f}"
