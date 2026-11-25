@@ -10,7 +10,7 @@ from PyQt6.QtCore import Qt, pyqtSignal, QEvent
 from modulo_pith import ajustar_circulo_minimos_cuadrados
 from constantes import MM_POR_PULGADA, PIXELES_POR_MM_DEFECTO, MAX_PASOS_HISTORIAL, TOLERANCIA_CLICK_PUNTO, TOLERANCIA_CLICK_SEGMENTO, INTERVALO_MARCADOR_DECADA, INTERVALO_MARCADOR_CINCUENTENA, INTERVALO_MARCADOR_CENTENA, COLOR_PUNTO_ACTIVO, COLOR_LINEA_ACTIVA, COLOR_SALTO, COLOR_GUIA, COLOR_CALIBRACION, COLOR_PUNTO_INACTIVO, COLOR_EWLW, TIPOS_ANOMALIA
 from modulo_marcas_medicion import _es_amarillo, _es_espacio, _es_ewlw, _es_quiebre_ini, _es_salto_real
-from modulo_marcas_medicion import MODO_MEDIR, MODO_CALIBRAR, MODO_MOVER, MODO_SALTO, MODO_INSERTAR, MODO_BORRAR, MODO_AUTODETECT, MODO_ANOMALIA, MODO_PITH, MODO_ESPACIO, MODO_EWLW, MODO_SELECCIONAR
+from modulo_marcas_medicion import ModoMedicion
 
 
 class VistaSplitView(QGraphicsView):
@@ -264,7 +264,7 @@ class VistaInteractiva(QGraphicsView):
         self.items_caminos_inactivos: dict = {}
 
         # Estado de interacción
-        self.modo_actual: int = MODO_MEDIR
+        self.modo_actual: ModoMedicion = ModoMedicion.MEDIR
         # Anomalías: {anio: tipo_str}
         self.anomalias: dict[int, str] = {}
         self._items_anomalias: list = []   # QGraphicsItems de marcas visuales
@@ -344,7 +344,7 @@ class VistaInteractiva(QGraphicsView):
         self._caminos_inactivos_data: dict = {}
 
         # Estado para selección por arrastre (rectángulo).
-        # Cuando el usuario hace clic+drag en MODO_SELECCIONAR sobre un
+        # Cuando el usuario hace clic+drag en ModoMedicion.SELECCIONAR sobre un
         # área vacía, dibujamos un rectángulo de selección. Al soltar,
         # todos los anillos dentro del rectángulo se agregan a la selección.
         self._sel_drag_iniciado: bool = False
@@ -354,7 +354,7 @@ class VistaInteractiva(QGraphicsView):
         self._sel_click_pos: tuple[float, float] = (0.0, 0.0)
 
         # Panel flotante (HUD) con los botones de acción. Se muestra solo
-        # en MODO_SELECCIONAR. Lo construimos perezosamente la primera vez
+        # en ModoMedicion.SELECCIONAR. Lo construimos perezosamente la primera vez
         # que se entra al modo (para no impactar la inicialización).
         self._panel_seleccion: 'QFrame | None' = None
         self._lbl_seleccion_count: 'QLabel | None' = None
@@ -363,7 +363,7 @@ class VistaInteractiva(QGraphicsView):
         self._btn_quiebre_sel = None
         self._btn_limpiar_sel = None
 
-        self.cambiar_modo(MODO_MEDIR)
+        self.cambiar_modo(ModoMedicion.MEDIR)
 
     # -------------------------------------------------------------------------
     # Historial
@@ -403,20 +403,20 @@ class VistaInteractiva(QGraphicsView):
     # Modos
     # -------------------------------------------------------------------------
 
-    def cambiar_modo(self, nuevo_modo: int):
+    def cambiar_modo(self, nuevo_modo: ModoMedicion):
         modo_anterior = self.modo_actual  # capturar antes de asignar
         self.modo_actual = nuevo_modo
         # Limpiar ancla visual al salir del modo Medir/Salto
-        if nuevo_modo not in (MODO_MEDIR, MODO_SALTO):
+        if nuevo_modo not in (ModoMedicion.MEDIR, ModoMedicion.SALTO):
             self._limpiar_anclado()
-        # Al entrar a MODO_ESPACIO limpiar la línea guía de Medir
+        # Al entrar a ModoMedicion.ESPACIO limpiar la línea guía de Medir
         # pero NO borrar el ancla — así al volver a Medir se reanuda
-        if nuevo_modo == MODO_ESPACIO:
+        if nuevo_modo == ModoMedicion.ESPACIO:
             if self._linea_guia:
                 self.scene().removeItem(self._linea_guia)
                 self._linea_guia = None
         # Limpiar selección espacio al salir del modo
-        if nuevo_modo != MODO_ESPACIO:
+        if nuevo_modo != ModoMedicion.ESPACIO:
             self._idx_espacio_inicio = None
             self._limpiar_espacio()
         # Limpiar items visuales del modo PITH al salir de ese modo.
@@ -427,7 +427,7 @@ class VistaInteractiva(QGraphicsView):
         # Esc — pero cualquier otro modo de salida los dejaba huérfanos.
         # Usamos modo_anterior (capturado antes de asignar) porque
         # self.modo_actual ya fue actualizado a nuevo_modo arriba.
-        if (modo_anterior == MODO_PITH and nuevo_modo != MODO_PITH
+        if (modo_anterior == ModoMedicion.PITH and nuevo_modo != ModoMedicion.PITH
                 and hasattr(self, "_limpiar_items_pith")):
             self._limpiar_items_pith()
         # NOTA: NO limpiamos items de calibración al cambiar de modo.
@@ -438,11 +438,11 @@ class VistaInteractiva(QGraphicsView):
         # ── Manejo del panel de la herramienta de selección ──
         # Al entrar: mostrar panel + resetear estado de drag.
         # Al salir: limpiar selección, drag activo y panel.
-        if nuevo_modo == MODO_SELECCIONAR:
+        if nuevo_modo == ModoMedicion.SELECCIONAR:
             self._sel_drag_iniciado = False
             self._sel_click_idx_candidato = None
             self._mostrar_panel_seleccion(True)
-        elif modo_anterior == MODO_SELECCIONAR:
+        elif modo_anterior == ModoMedicion.SELECCIONAR:
             # Si quedó un rectángulo de drag en la escena, removerlo
             if self._sel_drag_rect_item is not None:
                 try:
@@ -455,26 +455,25 @@ class VistaInteractiva(QGraphicsView):
             self._limpiar_seleccion_completa()
             self._mostrar_panel_seleccion(False)
 
-        if nuevo_modo not in (MODO_MEDIR, MODO_SALTO) and self._linea_guia:
+        if nuevo_modo not in (ModoMedicion.MEDIR, ModoMedicion.SALTO) and self._linea_guia:
             self.scene().removeItem(self._linea_guia)
             self._linea_guia = None
-        if nuevo_modo not in (MODO_MEDIR, MODO_SALTO) and self._linea_guia:
+        if nuevo_modo not in (ModoMedicion.MEDIR, ModoMedicion.SALTO) and self._linea_guia:
             self.scene().removeItem(self._linea_guia)
             self._linea_guia = None
         cursores = {
-            MODO_MEDIR:       Qt.CursorShape.CrossCursor,
-            MODO_MEDIR:      Qt.CursorShape.CrossCursor,
-            MODO_CALIBRAR:    Qt.CursorShape.CrossCursor,
-            MODO_SALTO:       Qt.CursorShape.CrossCursor,
-            MODO_MOVER:       Qt.CursorShape.OpenHandCursor,
-            MODO_INSERTAR:    Qt.CursorShape.ArrowCursor,
-            MODO_BORRAR:      Qt.CursorShape.ArrowCursor,
-            MODO_AUTODETECT:  Qt.CursorShape.CrossCursor,
-            MODO_ANOMALIA:    Qt.CursorShape.PointingHandCursor,
-            MODO_PITH:        Qt.CursorShape.CrossCursor,
-            MODO_ESPACIO:     Qt.CursorShape.CrossCursor,
-            MODO_EWLW:        Qt.CursorShape.CrossCursor,
-            MODO_SELECCIONAR: Qt.CursorShape.PointingHandCursor,
+            ModoMedicion.MEDIR:       Qt.CursorShape.CrossCursor,
+            ModoMedicion.CALIBRAR:    Qt.CursorShape.CrossCursor,
+            ModoMedicion.SALTO:       Qt.CursorShape.CrossCursor,
+            ModoMedicion.MOVER:       Qt.CursorShape.OpenHandCursor,
+            ModoMedicion.INSERTAR:    Qt.CursorShape.ArrowCursor,
+            ModoMedicion.BORRAR:      Qt.CursorShape.ArrowCursor,
+            ModoMedicion.AUTODETECT:  Qt.CursorShape.CrossCursor,
+            ModoMedicion.ANOMALIA:    Qt.CursorShape.PointingHandCursor,
+            ModoMedicion.PITH:        Qt.CursorShape.CrossCursor,
+            ModoMedicion.ESPACIO:     Qt.CursorShape.CrossCursor,
+            ModoMedicion.EWLW:        Qt.CursorShape.CrossCursor,
+            ModoMedicion.SELECCIONAR: Qt.CursorShape.PointingHandCursor,
         }
         self.setCursor(cursores.get(nuevo_modo, Qt.CursorShape.ArrowCursor))
 
@@ -507,7 +506,7 @@ class VistaInteractiva(QGraphicsView):
         # Las marcas de la calibración previa se reemplazan por las nuevas.
         self._limpiar_items_calibracion()
 
-        self.cambiar_modo(MODO_CALIBRAR)
+        self.cambiar_modo(ModoMedicion.CALIBRAR)
         self._objetivo_calibracion_mm = objetivo_mm
         # Forzar foco en la vista para que el primer click se registre
         # directamente como mousePressEvent en la vista.
@@ -1406,7 +1405,7 @@ class VistaInteractiva(QGraphicsView):
         toma precedencia.
         """
         if ev.type() == QEvent.Type.ShortcutOverride:
-            if self.modo_actual == MODO_SELECCIONAR:
+            if self.modo_actual == ModoMedicion.SELECCIONAR:
                 if ev.key() in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace):
                     ev.accept()
                     return True
@@ -1426,21 +1425,21 @@ class VistaInteractiva(QGraphicsView):
             return
         if boton != Qt.MouseButton.LeftButton:
             return super().mousePressEvent(event)
-        if self.modo_actual == MODO_MOVER:
+        if self.modo_actual == ModoMedicion.MOVER:
             self._iniciar_mover(x, y, event)
             return
         acciones = {
-            MODO_INSERTAR: self._insertar_en_segmento,
-            MODO_BORRAR: self._borrar_punto_cercano,
-            MODO_SELECCIONAR: self._iniciar_seleccion_mouse,
-            MODO_CALIBRAR: self._paso_calibracion,
-            MODO_MEDIR: self._paso_medir,
-            MODO_SALTO: self._paso_medir,
-            MODO_AUTODETECT: self._paso_autodetect,
-            MODO_ANOMALIA: self._paso_anomalia,
-            MODO_PITH: self._paso_pith,
-            MODO_ESPACIO: self._paso_espacio,
-            MODO_EWLW: self._paso_ewlw,
+            ModoMedicion.INSERTAR: self._insertar_en_segmento,
+            ModoMedicion.BORRAR: self._borrar_punto_cercano,
+            ModoMedicion.SELECCIONAR: self._iniciar_seleccion_mouse,
+            ModoMedicion.CALIBRAR: self._paso_calibracion,
+            ModoMedicion.MEDIR: self._paso_medir,
+            ModoMedicion.SALTO: self._paso_medir,
+            ModoMedicion.AUTODETECT: self._paso_autodetect,
+            ModoMedicion.ANOMALIA: self._paso_anomalia,
+            ModoMedicion.PITH: self._paso_pith,
+            ModoMedicion.ESPACIO: self._paso_espacio,
+            ModoMedicion.EWLW: self._paso_ewlw,
         }
         accion = acciones.get(self.modo_actual)
         if accion is None:
@@ -1448,14 +1447,14 @@ class VistaInteractiva(QGraphicsView):
         accion(x, y)
 
     def _salto_rapido(self, x, y):
-        if self.modo_actual in (MODO_MEDIR, MODO_SALTO, MODO_INSERTAR,
-                                MODO_BORRAR, MODO_ANOMALIA):
+        if self.modo_actual in (ModoMedicion.MEDIR, ModoMedicion.SALTO, ModoMedicion.INSERTAR,
+                                ModoMedicion.BORRAR, ModoMedicion.ANOMALIA):
             modo_previo = self.modo_actual
-            self.modo_actual = MODO_SALTO
+            self.modo_actual = ModoMedicion.SALTO
             self._paso_medir(x, y)
-            # _paso_medir ya restaura MODO_MEDIR tras un salto;
+            # _paso_medir ya restaura ModoMedicion.MEDIR tras un salto;
             # si el modo previo era especial (anomalía, etc.) lo respetamos
-            if modo_previo not in (MODO_MEDIR, MODO_SALTO):
+            if modo_previo not in (ModoMedicion.MEDIR, ModoMedicion.SALTO):
                 self.modo_actual = modo_previo
                 try:
                     self._pestana._botones_modo[modo_previo].setChecked(True)
@@ -1463,7 +1462,7 @@ class VistaInteractiva(QGraphicsView):
                     pass
 
     def _iniciar_seleccion_mouse(self, x, y):
-        # En MODO_SELECCIONAR hay dos comportamientos según dónde se
+        # En ModoMedicion.SELECCIONAR hay dos comportamientos según dónde se
         # haga clic:
         #   - Sobre un anillo (a tolerancia): se guarda como candidato
         #     a toggle, que se ejecutará al soltar (mouseRelease) si
@@ -2161,7 +2160,7 @@ class VistaInteractiva(QGraphicsView):
                 self._resaltar_anclado(len(self.coordenadas_anillos) - 1)
                 self._pestana.label_estado.setText(
                     "↔ Quiebre marcado. Haz clic en el límite final del anillo.")
-                self._pestana.set_modo(MODO_MEDIR)
+                self._pestana.set_modo(ModoMedicion.MEDIR)
             except Exception:
                 pass
             return
@@ -2262,7 +2261,7 @@ class VistaInteractiva(QGraphicsView):
         try:
             self._pestana.label_estado.setText(
                 "↔ Quiebre insertado. Tramo amarillo no cuenta. Ctrl+Z para deshacer.")
-            self._pestana.set_modo(MODO_MEDIR)
+            self._pestana.set_modo(ModoMedicion.MEDIR)
         except Exception:
             pass
 
@@ -2342,7 +2341,7 @@ class VistaInteractiva(QGraphicsView):
 
     def keyPressEvent(self, event):
         """Enter confirma el modo pith; Esc lo cancela."""
-        if self.modo_actual == MODO_PITH:
+        if self.modo_actual == ModoMedicion.PITH:
             if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
                 try:
                     self._pestana._confirmar_estimacion_pith()
@@ -2352,12 +2351,12 @@ class VistaInteractiva(QGraphicsView):
             if event.key() == Qt.Key.Key_Escape:
                 self._limpiar_items_pith()
                 try:
-                    self._pestana.set_modo(MODO_MEDIR)
+                    self._pestana.set_modo(ModoMedicion.MEDIR)
                     self._pestana.label_estado.setText("Estimación cancelada.")
                 except Exception:
                     pass
                 return
-        if self.modo_actual == MODO_ESPACIO:
+        if self.modo_actual == ModoMedicion.ESPACIO:
             if event.key() == Qt.Key.Key_Escape:
                 self._idx_espacio_inicio = None
                 self._limpiar_espacio()
@@ -2367,7 +2366,7 @@ class VistaInteractiva(QGraphicsView):
                     pass
                 return
         # Modo selección múltiple: atajos de teclado
-        if self.modo_actual == MODO_SELECCIONAR:
+        if self.modo_actual == ModoMedicion.SELECCIONAR:
             # Delete o Backspace → borrar los seleccionados
             if event.key() in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace):
                 self._ejecutar_borrar_seleccionados()
@@ -2376,7 +2375,7 @@ class VistaInteractiva(QGraphicsView):
             if event.key() == Qt.Key.Key_Escape:
                 self._limpiar_seleccion_completa()
                 try:
-                    self._pestana.set_modo(MODO_MEDIR)
+                    self._pestana.set_modo(ModoMedicion.MEDIR)
                 except Exception:
                     pass
                 return
@@ -2587,7 +2586,7 @@ class VistaInteractiva(QGraphicsView):
             self._limpiar_items_calibracion()
 
         self._objetivo_calibracion_mm = None
-        self._pestana.set_modo(MODO_MEDIR)
+        self._pestana.set_modo(ModoMedicion.MEDIR)
         self.progreso_modificado.emit()
 
     def _actualizar_etiqueta_calibracion(self, dist_px: float, dist_mm: float):
@@ -2653,7 +2652,7 @@ class VistaInteractiva(QGraphicsView):
             detectando dirección automáticamente.
         """
         coords = self.coordenadas_anillos
-        es_salto_modo = self.modo_actual == MODO_SALTO
+        es_salto_modo = self.modo_actual == ModoMedicion.SALTO
 
         # ── Serie vacía: primer punto ────────────────────────────────────
         if not coords:
@@ -2721,7 +2720,7 @@ class VistaInteractiva(QGraphicsView):
 
         if es_salto_modo:
             self._limpiar_anclado()
-            self._pestana.set_modo(MODO_MEDIR)
+            self._pestana.set_modo(ModoMedicion.MEDIR)
 
         self.progreso_modificado.emit()
 
@@ -2735,7 +2734,7 @@ class VistaInteractiva(QGraphicsView):
         if self._actualizar_seleccion_mouse(x, y):
             return
         # ── Preview de arco en modo pith con 2 puntos ──
-        if self.modo_actual == MODO_PITH and len(self._puntos_pith) == 2:
+        if self.modo_actual == ModoMedicion.PITH and len(self._puntos_pith) == 2:
             self._preview_pith_mouse(x, y)
 
         self._actualizar_cursor_mouse(x, y)
@@ -2748,13 +2747,13 @@ class VistaInteractiva(QGraphicsView):
         self._actualizar_guia_mouse(event, x, y)
 
     def _actualizar_seleccion_mouse(self, x, y):
-        # ── Selección por arrastre (MODO_SELECCIONAR) ──
+        # ── Selección por arrastre (ModoMedicion.SELECCIONAR) ──
         # Si comenzamos un drag desde un área vacía, dibujamos el
         # rectángulo de selección que sigue al mouse.
         # Si comenzamos sobre un punto pero el mouse se aleja del punto
         # de partida (umbral 4 px de pantalla), convertimos el "posible
         # toggle" en un drag-rectangle (cancela el candidato).
-        if self.modo_actual == MODO_SELECCIONAR:
+        if self.modo_actual == ModoMedicion.SELECCIONAR:
             mouse_se_movio = (
                 math.hypot(x - self._sel_click_pos[0],
                            y - self._sel_click_pos[1])
@@ -2792,21 +2791,21 @@ class VistaInteractiva(QGraphicsView):
 
     def _actualizar_cursor_mouse(self, x, y):
         # Cursor dinámico según modo
-        if self.modo_actual == MODO_ESPACIO:
+        if self.modo_actual == ModoMedicion.ESPACIO:
             sobre_linea = self._segmento_mas_cercano(x, y) is not None
             self.setCursor(
                 Qt.CursorShape.CrossCursor if sobre_linea
                 else Qt.CursorShape.ArrowCursor
             )
 
-        elif self.modo_actual == MODO_BORRAR:
+        elif self.modo_actual == ModoMedicion.BORRAR:
             hovering = any(
                 math.hypot(px - x, py - y) < self._tolerancia_punto()
                 for px, py in self.coordenadas_anillos
             )
             self.setCursor(Qt.CursorShape.CrossCursor if hovering else Qt.CursorShape.ArrowCursor)
 
-        elif self.modo_actual == MODO_INSERTAR:
+        elif self.modo_actual == ModoMedicion.INSERTAR:
             tol = self._tolerancia_segmento()
             hovering = any(
                 self._dist_punto_segmento(
@@ -2832,10 +2831,10 @@ class VistaInteractiva(QGraphicsView):
     def _actualizar_paneo_mouse(self, event):
         # Pan con botón central (independiente del modo)
         if self._is_panning and self._last_pan_pos and not (
-            self.modo_actual == MODO_MOVER and self._punto_arrastrado_idx is not None
+            self.modo_actual == ModoMedicion.MOVER and self._punto_arrastrado_idx is not None
         ):
             if event.buttons() & Qt.MouseButton.MiddleButton or (
-                self.modo_actual == MODO_MOVER and event.buttons() & Qt.MouseButton.LeftButton
+                self.modo_actual == ModoMedicion.MOVER and event.buttons() & Qt.MouseButton.LeftButton
             ):
                 delta = event.pos() - self._last_pan_pos
                 self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - delta.x())
@@ -2844,7 +2843,7 @@ class VistaInteractiva(QGraphicsView):
                 return True
 
         # Pan de la imagen (modo mover, sin punto seleccionado)
-        if self.modo_actual == MODO_MOVER and self._is_panning and self._last_pan_pos:
+        if self.modo_actual == ModoMedicion.MOVER and self._is_panning and self._last_pan_pos:
             delta = event.pos() - self._last_pan_pos
             self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - delta.x())
             self.verticalScrollBar().setValue(self.verticalScrollBar().value() - delta.y())
@@ -2855,7 +2854,7 @@ class VistaInteractiva(QGraphicsView):
 
     def _actualizar_arrastre_mouse(self, x, y):
         # Arrastre de punto
-        if self.modo_actual == MODO_MOVER and self._punto_arrastrado_idx is not None:
+        if self.modo_actual == ModoMedicion.MOVER and self._punto_arrastrado_idx is not None:
             self.modelo_medicion.mover(self._punto_arrastrado_idx, (x, y))
             self.recalcular_todas_las_distancias()
             return True
@@ -2864,7 +2863,7 @@ class VistaInteractiva(QGraphicsView):
 
     def _actualizar_guia_mouse(self, event, x, y):
         # Línea guía hacia el cursor
-        if self.modo_actual == MODO_ESPACIO and self.coordenadas_anillos:
+        if self.modo_actual == ModoMedicion.ESPACIO and self.coordenadas_anillos:
             # Línea guía desde el punto A ya insertado en el camino
             if self._idx_espacio_inicio is not None:
                 x_ant, y_ant = self._espacio_p1
@@ -2881,12 +2880,12 @@ class VistaInteractiva(QGraphicsView):
                 self.scene().removeItem(self._linea_guia)
                 self._linea_guia = None
 
-        elif self.modo_actual in (MODO_MEDIR, MODO_SALTO, MODO_ANOMALIA,
-                                   MODO_INSERTAR, MODO_BORRAR) and self.coordenadas_anillos:
+        elif self.modo_actual in (ModoMedicion.MEDIR, ModoMedicion.SALTO, ModoMedicion.ANOMALIA,
+                                   ModoMedicion.INSERTAR, ModoMedicion.BORRAR) and self.coordenadas_anillos:
             # Botón derecho presionado → previsualizar salto
             es_salto_preview = bool(event.buttons() & Qt.MouseButton.RightButton)
-            modo_guia = MODO_SALTO if es_salto_preview else self.modo_actual
-            if modo_guia not in (MODO_MEDIR, MODO_SALTO):
+            modo_guia = ModoMedicion.SALTO if es_salto_preview else self.modo_actual
+            if modo_guia not in (ModoMedicion.MEDIR, ModoMedicion.SALTO):
                 # En otros modos solo mostrar guía si hay ancla activa
                 if self._idx_anclado is None:
                     return
@@ -2896,7 +2895,7 @@ class VistaInteractiva(QGraphicsView):
             else:
                 self._limpiar_anclado()   # ancla inválida tras deshacer → resetear
                 x_ant, y_ant = self.coordenadas_anillos[-1]
-            pen = self._pen_salto if modo_guia == MODO_SALTO else self._pen_guia
+            pen = self._pen_salto if modo_guia == ModoMedicion.SALTO else self._pen_guia
             if self._linea_guia is None:
                 self._linea_guia = self.scene().addLine(x_ant, y_ant, x, y, pen)
             else:
@@ -2904,11 +2903,11 @@ class VistaInteractiva(QGraphicsView):
                 self._linea_guia.setPen(pen)
 
     def mouseReleaseEvent(self, event):
-        # ── Selección por arrastre (MODO_SELECCIONAR) ──
+        # ── Selección por arrastre (ModoMedicion.SELECCIONAR) ──
         # Si terminamos un drag-rectangle: encontrar todos los anillos
         # dentro del área y agregarlos a la selección.
         # Si fue solo un click sobre un punto (sin arrastre): toggle.
-        if (self.modo_actual == MODO_SELECCIONAR
+        if (self.modo_actual == ModoMedicion.SELECCIONAR
                 and event.button() == Qt.MouseButton.LeftButton):
             if self._sel_drag_iniciado and self._sel_drag_rect_item is not None:
                 # Calcular los bounds del rectángulo final
@@ -2950,17 +2949,17 @@ class VistaInteractiva(QGraphicsView):
             self._last_pan_pos = None
             # Restaurar cursor según el modo activo
             cursores = {
-                MODO_MEDIR:    Qt.CursorShape.CrossCursor,
-                MODO_SALTO:    Qt.CursorShape.CrossCursor,
-                MODO_MOVER:    Qt.CursorShape.OpenHandCursor,
-                MODO_INSERTAR: Qt.CursorShape.ArrowCursor,
-                MODO_BORRAR:   Qt.CursorShape.ArrowCursor,
-                MODO_ANOMALIA: Qt.CursorShape.PointingHandCursor,
+                ModoMedicion.MEDIR:    Qt.CursorShape.CrossCursor,
+                ModoMedicion.SALTO:    Qt.CursorShape.CrossCursor,
+                ModoMedicion.MOVER:    Qt.CursorShape.OpenHandCursor,
+                ModoMedicion.INSERTAR: Qt.CursorShape.ArrowCursor,
+                ModoMedicion.BORRAR:   Qt.CursorShape.ArrowCursor,
+                ModoMedicion.ANOMALIA: Qt.CursorShape.PointingHandCursor,
             }
             self.setCursor(cursores.get(self.modo_actual, Qt.CursorShape.ArrowCursor))
             return
 
-        if self.modo_actual == MODO_MOVER:
+        if self.modo_actual == ModoMedicion.MOVER:
             if self._is_panning:
                 self._is_panning = False
                 self.setCursor(Qt.CursorShape.OpenHandCursor)
@@ -2995,7 +2994,7 @@ class VistaInteractiva(QGraphicsView):
         for item in self._items_autodetect:
             self.scene().removeItem(item)
         self._items_autodetect.clear()
-        self.cambiar_modo(MODO_AUTODETECT)
+        self.cambiar_modo(ModoMedicion.AUTODETECT)
         # Forzar foco en la vista y procesar eventos pendientes — sin esto
         # el primer click se pierde porque el botón "🔍 Auto-detectar" del
         # top bar retiene el foco hasta el siguiente evento.
@@ -3070,7 +3069,7 @@ class VistaInteractiva(QGraphicsView):
         self._items_autodetect.clear()
         self._puntos_autodetect.clear()
         self._idx_ancla_autodetect = None
-        self.cambiar_modo(MODO_MEDIR)
+        self.cambiar_modo(ModoMedicion.MEDIR)
 
     def colocar_puntos_autodetectados(
         self,

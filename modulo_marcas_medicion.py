@@ -24,20 +24,6 @@ class ModoMedicion(IntEnum):
     SELECCIONAR = 12
 
 
-MODO_MEDIR = ModoMedicion.MEDIR
-MODO_CALIBRAR = ModoMedicion.CALIBRAR
-MODO_MOVER = ModoMedicion.MOVER
-MODO_SALTO = ModoMedicion.SALTO
-MODO_INSERTAR = ModoMedicion.INSERTAR
-MODO_BORRAR = ModoMedicion.BORRAR
-MODO_AUTODETECT = ModoMedicion.AUTODETECT
-MODO_ANOMALIA = ModoMedicion.ANOMALIA
-MODO_PITH = ModoMedicion.PITH
-MODO_ESPACIO = ModoMedicion.ESPACIO
-MODO_EWLW = ModoMedicion.EWLW
-MODO_SELECCIONAR = ModoMedicion.SELECCIONAR
-
-
 def _es_salto_real(val) -> bool:
     """True solo si el segmento es un salto que rompe la cuenta."""
     return _tipo(val) is TipoMarca.SALTO

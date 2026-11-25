@@ -90,24 +90,13 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 from modulo_marcas_medicion import (
+    ModoMedicion,
     _es_salto_real,
     _es_normal,
     _es_espacio,
     _es_quiebre_ini,
     _es_ewlw,
     _es_amarillo,
-    MODO_MEDIR,
-    MODO_CALIBRAR,
-    MODO_MOVER,
-    MODO_SALTO,
-    MODO_INSERTAR,
-    MODO_BORRAR,
-    MODO_AUTODETECT,
-    MODO_ANOMALIA,
-    MODO_PITH,
-    MODO_ESPACIO,
-    MODO_EWLW,
-    MODO_SELECCIONAR,
 )
 
 from modulo_ewlw import (
@@ -427,31 +416,31 @@ class PestanaImagen(QWidget):
         self._botones_modo = {}
 
         _btn_colores = {
-            MODO_MEDIR:    ("#2ecc71", "#27ae60"),  # verde
-            MODO_SALTO:    ("#f39c12", "#d68910"),  # ámbar
-            MODO_ESPACIO:  ("#9b59b6", "#8e44ad"),  # púrpura
-            MODO_INSERTAR: ("#3498db", "#2980b9"),  # azul
-            MODO_MOVER:    ("#1abc9c", "#16a085"),  # turquesa
-            MODO_BORRAR:   ("#e74c3c", "#c0392b"),  # rojo
-            MODO_SELECCIONAR: ("#FFEB3B", "#FBC02D"),  # amarillo
+            ModoMedicion.MEDIR:    ("#2ecc71", "#27ae60"),  # verde
+            ModoMedicion.SALTO:    ("#f39c12", "#d68910"),  # ámbar
+            ModoMedicion.ESPACIO:  ("#9b59b6", "#8e44ad"),  # púrpura
+            ModoMedicion.INSERTAR: ("#3498db", "#2980b9"),  # azul
+            ModoMedicion.MOVER:    ("#1abc9c", "#16a085"),  # turquesa
+            ModoMedicion.BORRAR:   ("#e74c3c", "#c0392b"),  # rojo
+            ModoMedicion.SELECCIONAR: ("#FFEB3B", "#FBC02D"),  # amarillo
         }
 
         botones_visibles = [
-            ("📍 Medir",       MODO_MEDIR,        "Ctrl+A", "Clic izq: añadir anillo · Clic der: salto · Scroll: zoom"),
-            ("🎯 Seleccionar", MODO_SELECCIONAR,  "Ctrl+R", "Seleccionar múltiples anillos para borrar / convertir a salto / quiebre"),
-            ("🔀 Salto",       MODO_SALTO,        "Ctrl+D", "Añadir salto (discontinuidad)"),
-            ("⊘ Quiebre",      MODO_ESPACIO,      "Ctrl+E", "Marcar quiebre intra-anillo\nNo cuenta como anillo"),
-            ("➕ Insertar",     MODO_INSERTAR,     "Ctrl+W", "Insertar punto en segmento existente"),
-            ("🖐 Mover",        MODO_MOVER,        "Ctrl+S", "Mover punto"),
-            ("✕ Borrar",       MODO_BORRAR,       "Ctrl+X", "Borrar punto con clic"),
+            ("📍 Medir",       ModoMedicion.MEDIR,        "Ctrl+A", "Clic izq: añadir anillo · Clic der: salto · Scroll: zoom"),
+            ("🎯 Seleccionar", ModoMedicion.SELECCIONAR,  "Ctrl+R", "Seleccionar múltiples anillos para borrar / convertir a salto / quiebre"),
+            ("🔀 Salto",       ModoMedicion.SALTO,        "Ctrl+D", "Añadir salto (discontinuidad)"),
+            ("⊘ Quiebre",      ModoMedicion.ESPACIO,      "Ctrl+E", "Marcar quiebre intra-anillo\nNo cuenta como anillo"),
+            ("➕ Insertar",     ModoMedicion.INSERTAR,     "Ctrl+W", "Insertar punto en segmento existente"),
+            ("🖐 Mover",        ModoMedicion.MOVER,        "Ctrl+S", "Mover punto"),
+            ("✕ Borrar",       ModoMedicion.BORRAR,       "Ctrl+X", "Borrar punto con clic"),
         ]
         for texto, modo, atajo, tooltip in botones_visibles:
             bg, bg_hover = _btn_colores[modo]
             btn = QPushButton(texto)
             btn.setCheckable(True)
-            # MODO_SELECCIONAR usa color amarillo claro: el texto blanco no
+            # ModoMedicion.SELECCIONAR usa color amarillo claro: el texto blanco no
             # contrasta bien, así que aplicamos texto NEGRO en lugar de blanco.
-            color_texto = "#222" if modo == MODO_SELECCIONAR else "white"
+            color_texto = "#222" if modo == ModoMedicion.SELECCIONAR else "white"
             btn.setStyleSheet(
                 f"QPushButton{{background-color:{bg}; color:{color_texto}; font-weight:bold; "
                 f"padding:4px 10px; border-radius:4px;}}"
@@ -465,7 +454,7 @@ class PestanaImagen(QWidget):
             self._botones_modo[modo] = btn
             barra.addWidget(btn)
             QShortcut(QKeySequence(atajo), self).activated.connect(lambda m=modo: self.set_modo(m))
-        self._botones_modo[MODO_MEDIR].setChecked(True)
+        self._botones_modo[ModoMedicion.MEDIR].setChecked(True)
 
         barra.addSpacing(6)
 
@@ -491,11 +480,11 @@ class PestanaImagen(QWidget):
         btn_ewlw_marcar.setCheckable(True)
         btn_ewlw_marcar.setToolTip("Marcar límite Earlywood/Latewood (Ctrl+L)")
         btn_ewlw_marcar.clicked.connect(
-            lambda: (self.set_modo(MODO_EWLW), self._popup_ewlw.hide()))
+            lambda: (self.set_modo(ModoMedicion.EWLW), self._popup_ewlw.hide()))
         self.grupo_modos.addButton(btn_ewlw_marcar)
-        self._botones_modo[MODO_EWLW] = btn_ewlw_marcar
+        self._botones_modo[ModoMedicion.EWLW] = btn_ewlw_marcar
         QShortcut(QKeySequence("Ctrl+L"), self).activated.connect(
-            lambda: self.set_modo(MODO_EWLW))
+            lambda: self.set_modo(ModoMedicion.EWLW))
         pe_layout.addWidget(btn_ewlw_marcar)
 
         self.btn_ewlw_auto = QPushButton("🔍 Auto-detectar EW/LW")
@@ -553,11 +542,11 @@ class PestanaImagen(QWidget):
         self.btn_anomalia.setCheckable(True)
         self.btn_anomalia.setToolTip("Modo anomalías (Ctrl+Q)")
         self.btn_anomalia.clicked.connect(
-            lambda: (self.set_modo(MODO_ANOMALIA), self._popup_herram.hide()))
+            lambda: (self.set_modo(ModoMedicion.ANOMALIA), self._popup_herram.hide()))
         self.grupo_modos.addButton(self.btn_anomalia)
-        self._botones_modo[MODO_ANOMALIA] = self.btn_anomalia
+        self._botones_modo[ModoMedicion.ANOMALIA] = self.btn_anomalia
         QShortcut(QKeySequence("Ctrl+Q"), self).activated.connect(
-            lambda: self.set_modo(MODO_ANOMALIA))
+            lambda: self.set_modo(ModoMedicion.ANOMALIA))
         fila_anom.addWidget(self.btn_anomalia)
         self.combo_tipo_anomalia = QComboBox()
         self.combo_tipo_anomalia.setToolTip("Tipo de anomalía a marcar")
@@ -578,7 +567,7 @@ class PestanaImagen(QWidget):
         self.btn_pith.clicked.connect(
             lambda: (self._iniciar_estimacion_pith(), self._popup_herram.hide()))
         self.grupo_modos.addButton(self.btn_pith)
-        self._botones_modo[MODO_PITH] = self.btn_pith
+        self._botones_modo[ModoMedicion.PITH] = self.btn_pith
         QShortcut(QKeySequence("Ctrl+P"), self).activated.connect(self._iniciar_estimacion_pith)
         fila_pith.addWidget(self.btn_pith)
         self.btn_deshacer_pith = QPushButton("↩ Deshacer estimación")
@@ -773,7 +762,7 @@ class PestanaImagen(QWidget):
         )
         self.btn_autodetect.clicked.connect(self._toggle_autodetect)
         self.grupo_modos.addButton(self.btn_autodetect)
-        self._botones_modo[MODO_AUTODETECT] = self.btn_autodetect
+        self._botones_modo[ModoMedicion.AUTODETECT] = self.btn_autodetect
         self.btn_autodetect.hide()  # Se agrega desde main_anillos a barra_top
 
         self.btn_exportar = QPushButton("💾 Exp")
@@ -1325,24 +1314,24 @@ class PestanaImagen(QWidget):
     # Modos de interacción
     # -------------------------------------------------------------------------
 
-    def set_modo(self, modo: int):
-        # Caso especial: si estamos en MODO_SELECCIONAR con selección
+    def set_modo(self, modo: ModoMedicion):
+        # Caso especial: si estamos en ModoMedicion.SELECCIONAR con selección
         # activa y el usuario hace clic en alguno de los botones de
         # acción de la barra (Borrar / Salto / Quiebre), se ejecuta la
         # operación en BULK sobre la selección en vez de cambiar el modo
         # — exactamente lo que pidió el usuario para evitar duplicar
         # botones en el panel flotante.
-        if (self.vista.modo_actual == MODO_SELECCIONAR
+        if (self.vista.modo_actual == ModoMedicion.SELECCIONAR
                 and self.vista._puntos_seleccionados):
-            if modo == MODO_BORRAR:
+            if modo == ModoMedicion.BORRAR:
                 self.vista._ejecutar_borrar_seleccionados()
-                modo = MODO_MEDIR  # tras la acción volver a MEDIR
-            elif modo == MODO_SALTO:
+                modo = ModoMedicion.MEDIR  # tras la acción volver a MEDIR
+            elif modo == ModoMedicion.SALTO:
                 self.vista._ejecutar_convertir_a_salto()
-                modo = MODO_MEDIR
-            elif modo == MODO_ESPACIO:
+                modo = ModoMedicion.MEDIR
+            elif modo == ModoMedicion.ESPACIO:
                 self.vista._ejecutar_convertir_a_quiebre()
-                modo = MODO_MEDIR
+                modo = ModoMedicion.MEDIR
 
         btn = self._botones_modo.get(modo)
         if btn:
@@ -1431,8 +1420,8 @@ class PestanaImagen(QWidget):
                 "🔍 Auto-detección: clic en la MÉDULA, luego en la CORTEZA."
             )
         else:
-            self.vista.cambiar_modo(MODO_MEDIR)
-            self._botones_modo[MODO_MEDIR].setChecked(True)
+            self.vista.cambiar_modo(ModoMedicion.MEDIR)
+            self._botones_modo[ModoMedicion.MEDIR].setChecked(True)
             self.label_estado.setText("Modo añadir activado.")
 
     def _ejecutar_autodeteccion(
@@ -3118,7 +3107,7 @@ class PestanaImagen(QWidget):
         self._pith_metodo_calculo = dlg.metodo_calculo  # 'rg', 'bai', 'promedio'
 
         if self._pith_metodo == "arco":
-            self.set_modo(MODO_PITH)
+            self.set_modo(ModoMedicion.PITH)
             self.label_estado.setText(
                 "🎯 Paso 1/3: Haz clic en un EXTREMO del arco del anillo más interno."
             )
@@ -3180,7 +3169,7 @@ class PestanaImagen(QWidget):
              contando hacia la corteza.
         """
         resultado = self.vista._confirmar_pith()
-        self.set_modo(MODO_MEDIR)
+        self.set_modo(ModoMedicion.MEDIR)
         self.btn_pith.setChecked(False)
 
         if resultado is None:

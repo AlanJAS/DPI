@@ -191,10 +191,10 @@ def estimar_anillos_faltantes(
 
 # =============================================================================
 # MODO INTERACTIVO: MARCA DE PUNTOS EN EL LIENZO
-# (se gestiona desde VistaInteractiva, igual que MODO_AUTODETECT)
+# (se gestiona desde VistaInteractiva, igual que ModoMedicion.AUTODETECT)
 # =============================================================================
 
-from modulo_marcas_medicion import MODO_PITH  # alias histórico
+from modulo_marcas_medicion import ModoMedicion
 
 
 # =============================================================================
