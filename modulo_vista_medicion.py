@@ -46,6 +46,9 @@ import dpi.ui.medicion.herramientas.marcado as marcado
 import dpi.ui.medicion.herramientas.autodetectar as autodetectar
 
 
+from dpi.ui.medicion.herramientas.despacho import acciones_click
+
+
 class VistaInteractiva(QGraphicsView):
     """
     Vista de imagen con herramientas de marcado de anillos.
@@ -109,19 +112,7 @@ class VistaInteractiva(QGraphicsView):
 
         # Estado de interacción
         self.modo_actual: ModoMedicion = ModoMedicion.MEDIR
-        self._acciones_click = {
-            ModoMedicion.INSERTAR: self._insertar_en_segmento,
-            ModoMedicion.BORRAR: self._borrar_punto_cercano,
-            ModoMedicion.SELECCIONAR: self._iniciar_seleccion_mouse,
-            ModoMedicion.CALIBRAR: self._paso_calibracion,
-            ModoMedicion.MEDIR: self._paso_medir,
-            ModoMedicion.SALTO: self._paso_medir,
-            ModoMedicion.AUTODETECT: self._paso_autodetect,
-            ModoMedicion.ANOMALIA: self._paso_anomalia,
-            ModoMedicion.PITH: self._paso_pith,
-            ModoMedicion.ESPACIO: self._paso_espacio,
-            ModoMedicion.EWLW: self._paso_ewlw,
-        }
+        self._acciones_click = acciones_click(self)
         # Anomalías: {anio: tipo_str}
         self._punto_arrastrado_idx: int | None = None
         self._is_panning: bool = False
