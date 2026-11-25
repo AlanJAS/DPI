@@ -23,23 +23,7 @@ from dpi.formatos.pos import leer_pos, escribir_pos
 
 
 
-def asegurar_extension(ruta: str, filtro: str) -> str:
-    """Garantiza que la ruta tenga una extensión coherente con el filtro
-    elegido en el diálogo de guardado.
-
-    El diálogo NO nativo de Qt no siempre agrega la extensión: si el usuario
-    escribe solo el nombre, el archivo queda SIN extensión y los programas no
-    lo reconocen (un .xlsx sin extensión se ve como un .zip). Esta función
-    extrae las extensiones del filtro y agrega la primera si falta.
-    """
-    import re
-    exts = re.findall(r"\*(\.[A-Za-z0-9]+)", filtro or "")
-    if not exts:
-        return ruta
-    ruta_lower = ruta.lower()
-    if any(ruta_lower.endswith(e.lower()) for e in exts):
-        return ruta
-    return ruta + exts[0]
+from dpi.formatos.exportacion import exportar_serie_2col, asegurar_extension
 
 
 from dpi.formatos.tucson import _registros_tucson, _precision_registros, detectar_precision_tucson, leer_tucson_multi, leer_archivo_tucson, _lineas_tucson, _guardar_lineas_tucson, escribir_tucson, exportar_tucson_ewlw, _escribir_tucson, _escribir_tucson_serie, escribir_tucson_merge, escribir_rwl_intensidad
@@ -79,25 +63,3 @@ from dpi.formatos.cronologias import _ruta_metadatos_cronologia, _restaurar_clav
 # Campos cuyo diccionario está indexado por AÑO. JSON obliga a que las claves
 # sean texto, así que al releer hay que devolverlas a entero: los consumidores
 # hacen `pd.Series(...)` y luego ordenan y comparan el índice como número.
-
-
-
-
-
-
-
-
-
-
-
-
-def exportar_serie_2col(serie, ruta, codigo):
-    """Exporta una serie de índices y devuelve el número de años escritos."""
-    ext = os.path.splitext(ruta)[1].lower()
-    s = pd.to_numeric(serie, errors="coerce").dropna()
-    df = pd.DataFrame({"Anio": s.index.astype(int), "Valor": s.values})
-    if ext == ".rwl":
-        escribir_tucson(s, ruta, codigo=str(codigo))
-    else:
-        escribir_tabla(df, ruta)
-    return len(df)
