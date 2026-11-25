@@ -1455,108 +1455,83 @@ class VistaInteractiva(QGraphicsView):
     def mousePressEvent(self, event):
         pos = self.mapToScene(event.pos())
         x, y = pos.x(), pos.y()
-
-        # ── Botón central (scroll): paneo inmediato ───────────────────────
-        if event.button() == Qt.MouseButton.MiddleButton:
+        boton = event.button()
+        if boton == Qt.MouseButton.MiddleButton:
             self._is_panning = True
             self._last_pan_pos = event.pos()
             self.setCursor(Qt.CursorShape.ClosedHandCursor)
             return
-
-        # ── Botón derecho: salto rápido (solo en modos de medición) ───────
-        if event.button() == Qt.MouseButton.RightButton:
-            if self.modo_actual in (MODO_MEDIR, MODO_SALTO, MODO_INSERTAR,
-                                    MODO_BORRAR, MODO_ANOMALIA):
-                modo_previo = self.modo_actual
-                self.modo_actual = MODO_SALTO
-                self._paso_medir(x, y)
-                # _paso_medir ya restaura MODO_MEDIR tras un salto;
-                # si el modo previo era especial (anomalía, etc.) lo respetamos
-                if modo_previo not in (MODO_MEDIR, MODO_SALTO):
-                    self.modo_actual = modo_previo
-                    try:
-                        self._pestana._botones_modo[modo_previo].setChecked(True)
-                    except Exception:
-                        pass
+        if boton == Qt.MouseButton.RightButton:
+            self._salto_rapido(x, y)
             return
-
-        # ── Botón izquierdo: comportamiento normal por modo ───────────────
-        if event.button() != Qt.MouseButton.LeftButton:
+        if boton != Qt.MouseButton.LeftButton:
             return super().mousePressEvent(event)
-
         if self.modo_actual == MODO_MOVER:
             self._iniciar_mover(x, y, event)
             return
+        acciones = {
+            MODO_INSERTAR: self._insertar_en_segmento,
+            MODO_BORRAR: self._borrar_punto_cercano,
+            MODO_SELECCIONAR: self._iniciar_seleccion_mouse,
+            MODO_CALIBRAR: self._paso_calibracion,
+            MODO_MEDIR: self._paso_medir,
+            MODO_SALTO: self._paso_medir,
+            MODO_AUTODETECT: self._paso_autodetect,
+            MODO_ANOMALIA: self._paso_anomalia,
+            MODO_PITH: self._paso_pith,
+            MODO_ESPACIO: self._paso_espacio,
+            MODO_EWLW: self._paso_ewlw,
+        }
+        accion = acciones.get(self.modo_actual)
+        if accion is None:
+            return super().mousePressEvent(event)
+        accion(x, y)
 
-        if self.modo_actual == MODO_INSERTAR:
-            self._insertar_en_segmento(x, y)
-            return
-
-        if self.modo_actual == MODO_BORRAR:
-            self._borrar_punto_cercano(x, y)
-            return
-
-        if self.modo_actual == MODO_SELECCIONAR:
-            # En MODO_SELECCIONAR hay dos comportamientos según dónde se
-            # haga clic:
-            #   - Sobre un anillo (a tolerancia): se guarda como candidato
-            #     a toggle, que se ejecutará al soltar (mouseRelease) si
-            #     no hubo arrastre.
-            #   - Sobre área vacía: se inicia un rectángulo de selección
-            #     que se completará al soltar. Todos los anillos dentro
-            #     del rectángulo se agregan a la selección.
-            # Esto permite seleccionar varios anillos rápidamente
-            # arrastrando un área (request del usuario).
-            idx = self._indice_punto_mas_cercano(x, y)
-            self._sel_click_pos = (x, y)
-            if idx is not None:
-                # Posible toggle de un punto — lo decidiremos en release
-                self._sel_click_idx_candidato = idx
-                self._sel_drag_iniciado = False
-                self._sel_drag_start = (x, y)
-            else:
-                # Click en área vacía → iniciar drag rectangle
-                self._sel_click_idx_candidato = None
-                self._sel_drag_iniciado = True
-                self._sel_drag_start = (x, y)
-                # Si había un rectángulo previo (caso raro), removerlo
-                if self._sel_drag_rect_item is not None:
-                    try:
-                        self.scene().removeItem(self._sel_drag_rect_item)
-                    except Exception:
-                        pass
-                    self._sel_drag_rect_item = None
-            return
-
-        if self.modo_actual == MODO_CALIBRAR:
-            self._paso_calibracion(x, y)
-            return
-
-        if self.modo_actual in (MODO_MEDIR, MODO_SALTO):
+    def _salto_rapido(self, x, y):
+        if self.modo_actual in (MODO_MEDIR, MODO_SALTO, MODO_INSERTAR,
+                                MODO_BORRAR, MODO_ANOMALIA):
+            modo_previo = self.modo_actual
+            self.modo_actual = MODO_SALTO
             self._paso_medir(x, y)
-            return
+            # _paso_medir ya restaura MODO_MEDIR tras un salto;
+            # si el modo previo era especial (anomalía, etc.) lo respetamos
+            if modo_previo not in (MODO_MEDIR, MODO_SALTO):
+                self.modo_actual = modo_previo
+                try:
+                    self._pestana._botones_modo[modo_previo].setChecked(True)
+                except Exception:
+                    pass
 
-        if self.modo_actual == MODO_AUTODETECT:
-            self._paso_autodetect(x, y)
-            return
-
-        if self.modo_actual == MODO_ANOMALIA:
-            self._paso_anomalia(x, y)
-            return
-
-        if self.modo_actual == MODO_PITH:
-            self._paso_pith(x, y)
-            return
-
-        if self.modo_actual == MODO_ESPACIO:
-            self._paso_espacio(x, y)
-            return
-
-        if self.modo_actual == MODO_EWLW:
-            self._paso_ewlw(x, y)
-            return
-
-        super().mousePressEvent(event)
+    def _iniciar_seleccion_mouse(self, x, y):
+        # En MODO_SELECCIONAR hay dos comportamientos según dónde se
+        # haga clic:
+        #   - Sobre un anillo (a tolerancia): se guarda como candidato
+        #     a toggle, que se ejecutará al soltar (mouseRelease) si
+        #     no hubo arrastre.
+        #   - Sobre área vacía: se inicia un rectángulo de selección
+        #     que se completará al soltar. Todos los anillos dentro
+        #     del rectángulo se agregan a la selección.
+        # Esto permite seleccionar varios anillos rápidamente
+        # arrastrando un área (request del usuario).
+        idx = self._indice_punto_mas_cercano(x, y)
+        self._sel_click_pos = (x, y)
+        if idx is not None:
+            # Posible toggle de un punto — lo decidiremos en release
+            self._sel_click_idx_candidato = idx
+            self._sel_drag_iniciado = False
+            self._sel_drag_start = (x, y)
+        else:
+            # Click en área vacía → iniciar drag rectangle
+            self._sel_click_idx_candidato = None
+            self._sel_drag_iniciado = True
+            self._sel_drag_start = (x, y)
+            # Si había un rectángulo previo (caso raro), removerlo
+            if self._sel_drag_rect_item is not None:
+                try:
+                    self.scene().removeItem(self._sel_drag_rect_item)
+                except Exception:
+                    pass
+                self._sel_drag_rect_item = None
 
     def _paso_anomalia(self, x: float, y: float):
         """
@@ -2827,7 +2802,22 @@ class VistaInteractiva(QGraphicsView):
     def mouseMoveEvent(self, event):
         pos = self.mapToScene(event.pos())
         x, y = pos.x(), pos.y()
+        if self._actualizar_seleccion_mouse(x, y):
+            return
+        # ── Preview de arco en modo pith con 2 puntos ──
+        if self.modo_actual == MODO_PITH and len(self._puntos_pith) == 2:
+            self._preview_pith_mouse(x, y)
 
+        self._actualizar_cursor_mouse(x, y)
+        self._actualizar_tooltip_mouse(event)
+        super().mouseMoveEvent(event)
+        if self._actualizar_paneo_mouse(event):
+            return
+        if self._actualizar_arrastre_mouse(x, y):
+            return
+        self._actualizar_guia_mouse(event, x, y)
+
+    def _actualizar_seleccion_mouse(self, x, y):
         # ── Selección por arrastre (MODO_SELECCIONAR) ──
         # Si comenzamos un drag desde un área vacía, dibujamos el
         # rectángulo de selección que sigue al mouse.
@@ -2866,12 +2856,11 @@ class VistaInteractiva(QGraphicsView):
                     self._sel_drag_rect_item.setZValue(951)
                 else:
                     self._sel_drag_rect_item.setRect(xa, ya, xb - xa, yb - ya)
-                return
+                return True
 
-        # ── Preview de arco en modo pith con 2 puntos ──
-        if self.modo_actual == MODO_PITH and len(self._puntos_pith) == 2:
-            self._preview_pith_mouse(x, y)
+        return False
 
+    def _actualizar_cursor_mouse(self, x, y):
         # Cursor dinámico según modo
         if self.modo_actual == MODO_ESPACIO:
             sobre_linea = self._segmento_mas_cercano(x, y) is not None
@@ -2899,6 +2888,7 @@ class VistaInteractiva(QGraphicsView):
             )
             self.setCursor(Qt.CursorShape.CrossCursor if hovering else Qt.CursorShape.ArrowCursor)
 
+    def _actualizar_tooltip_mouse(self, event):
         # Tooltip en puntos
         item = self.itemAt(event.pos())
         if isinstance(item, QGraphicsEllipseItem) and hasattr(item, "anio_texto"):
@@ -2909,8 +2899,7 @@ class VistaInteractiva(QGraphicsView):
             QToolTip.hideText()
             self._item_hover_prev = None
 
-        super().mouseMoveEvent(event)
-
+    def _actualizar_paneo_mouse(self, event):
         # Pan con botón central (independiente del modo)
         if self._is_panning and self._last_pan_pos and not (
             self.modo_actual == MODO_MOVER and self._punto_arrastrado_idx is not None
@@ -2922,7 +2911,7 @@ class VistaInteractiva(QGraphicsView):
                 self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - delta.x())
                 self.verticalScrollBar().setValue(self.verticalScrollBar().value() - delta.y())
                 self._last_pan_pos = event.pos()
-                return
+                return True
 
         # Pan de la imagen (modo mover, sin punto seleccionado)
         if self.modo_actual == MODO_MOVER and self._is_panning and self._last_pan_pos:
@@ -2930,15 +2919,21 @@ class VistaInteractiva(QGraphicsView):
             self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - delta.x())
             self.verticalScrollBar().setValue(self.verticalScrollBar().value() - delta.y())
             self._last_pan_pos = event.pos()
-            return
+            return True
 
+        return False
+
+    def _actualizar_arrastre_mouse(self, x, y):
         # Arrastre de punto
         if self.modo_actual == MODO_MOVER and self._punto_arrastrado_idx is not None:
             self.modelo_medicion.mover(self._punto_arrastrado_idx, (x, y))
             self.redibujar_todo()
             self.recalcular_todas_las_distancias()
-            return
+            return True
 
+        return False
+
+    def _actualizar_guia_mouse(self, event, x, y):
         # Línea guía hacia el cursor
         if self.modo_actual == MODO_ESPACIO and self.coordenadas_anillos:
             # Línea guía desde el punto A ya insertado en el camino
