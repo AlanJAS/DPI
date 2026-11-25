@@ -1,6 +1,9 @@
 """Ciclo de vida de tareas de medición en Qt."""
 from threading import Event
 import traceback
+import logging
+
+logger = logging.getLogger(__name__)
 from PyQt6.QtCore import QObject, QThread, Qt, pyqtSignal, pyqtSlot
 from PyQt6.QtWidgets import QDialog, QPushButton, QVBoxLayout, QLabel, QProgressBar
 
@@ -93,19 +96,30 @@ class GestorTareasMedicion(QObject):
             return
         resultado, error, cancelar = self._callbacks
         dialogo = self._dialogo
+        fue_cancelado = self._cancelacion.is_set()
+        valor, fallo = worker.resultado, worker.error
+        # Liberar antes de notificar: el callback puede iniciar otra tarea.
+        self._worker = None
+        self._callbacks = None
+        self._dialogo = None
         try:
             dialogo.done(0)
-            if self._cancelacion.is_set():
-                cancelar()
-            elif worker.error is not None:
-                error(worker.error)
-            else:
-                resultado(worker.resultado)
-        except Exception:
-            error(traceback.format_exc())
         finally:
-            self._worker = None
-            self._callbacks = None
-            self._dialogo = None
             worker.deleteLater()
             dialogo.deleteLater()
+        if fue_cancelado:
+            callback, args = cancelar, ()
+        elif fallo is not None:
+            callback, args = error, (fallo,)
+        else:
+            callback, args = resultado, (valor,)
+        try:
+            callback(*args)
+        except Exception:
+            if callback is error:
+                logger.exception("Error en el callback de fallo de tarea")
+            else:
+                try:
+                    error(traceback.format_exc())
+                except Exception:
+                    logger.exception("Error al notificar fallo de tarea")

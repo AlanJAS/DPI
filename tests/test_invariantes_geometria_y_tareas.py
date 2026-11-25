@@ -57,3 +57,29 @@ class CicloTareasQt(unittest.TestCase):
         self.assertEqual(salidas[-1],('cancelado',None))
         self.assertFalse(gestor.en_curso)
         padre.close()
+
+    def test_callback_puede_encadenar_tareas(self):
+        os.environ.setdefault('QT_QPA_PLATFORM','offscreen')
+        from PyQt6.QtWidgets import QApplication, QWidget
+        from PyQt6.QtCore import QEventLoop, QTimer
+        from modulo_worker_medicion import GestorTareasMedicion
+        app = QApplication.instance() or QApplication([])
+        padre = QWidget()
+        gestor = GestorTareasMedicion(padre)
+        loop = QEventLoop()
+        salidas = []
+        def error(e):
+            salidas.append(e)
+            loop.quit()
+        def segunda(x):
+            salidas.append(x)
+            loop.quit()
+        def primera(x):
+            salidas.append(x)
+            salidas.append(gestor.iniciar('Segunda', lambda p,c: 2, segunda, error, loop.quit))
+        gestor.iniciar('Primera', lambda p,c: 1, primera, error, loop.quit)
+        QTimer.singleShot(5000, loop.quit)
+        loop.exec()
+        self.assertEqual(salidas, [1, True, 2])
+        self.assertFalse(gestor.en_curso)
+        padre.close()
