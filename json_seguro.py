@@ -57,18 +57,28 @@ def a_json_clave(k):
     return str(k)
 
 
+def _convertir_pares(pares, convertir_clave):
+    resultado = {}
+    for clave, valor in pares:
+        clave = convertir_clave(clave)
+        if clave in resultado:
+            raise ValueError(f"Clave JSON duplicada: {clave!r}")
+        resultado[clave] = a_json(valor)
+    return resultado
+
+
 def a_json(obj):
     """Convierte recursivamente a tipos que `json` sepa escribir."""
     if isinstance(obj, dict):
-        return {a_json_clave(k): a_json(v) for k, v in obj.items()}
+        return _convertir_pares(obj.items(), a_json_clave)
     if isinstance(obj, (list, tuple, set)):
         return [a_json(v) for v in obj]
     if isinstance(obj, pd.Series):
-        return {a_json_clave(k): a_json(v) for k, v in obj.items()}
+        return _convertir_pares(obj.items(), a_json_clave)
     if isinstance(obj, pd.Index):
         return [a_json(v) for v in obj]
     if isinstance(obj, pd.DataFrame):
-        return {str(c): a_json(obj[c]) for c in obj.columns}
+        return _convertir_pares(zip(obj.columns, (obj.iloc[:, i] for i in range(len(obj.columns)))), a_json_clave)
     if isinstance(obj, np.ndarray):
         return a_json(obj.tolist())
     if isinstance(obj, np.generic):        # np.float32, np.int64, np.bool_…
@@ -125,7 +135,10 @@ def restaurar_claves_int(d: dict) -> dict:
     nuevo = {}
     for k, v in d.items():
         try:
-            nuevo[int(k)] = v
+            clave = int(k)
         except (TypeError, ValueError):
-            nuevo[k] = v
+            clave = k
+        if clave in nuevo:
+            raise ValueError(f"Clave restaurada duplicada: {clave!r}")
+        nuevo[clave] = v
     return nuevo
