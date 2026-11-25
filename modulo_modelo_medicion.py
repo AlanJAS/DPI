@@ -111,6 +111,20 @@ class ModeloMedicion:
     def marcar(self, indice, marca):
         self._puntos[indice] = replace(self._puntos[indice], tipo=marca)
 
+    def editar_puntos(self, indices, tipo=None):
+        """Borra o cambia marcas en bloque, validando antes de modificar."""
+        indices = sorted(set(indices), reverse=True)
+        if tipo is not None:
+            tipo = TipoMarca.desde_valor(tipo)
+        puntos = list(self._puntos)
+        for i in indices:
+            if 0 <= i < len(puntos):
+                if tipo is None:
+                    del puntos[i]
+                else:
+                    puntos[i] = replace(puntos[i], tipo=tipo)
+        self._puntos = puntos
+
     def captura(self):
         return tuple(self._puntos)
 

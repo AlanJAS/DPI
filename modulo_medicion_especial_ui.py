@@ -18,7 +18,7 @@ from modulo_intensidad import extraer_intensidad_por_anillo, escribir_rwl_intens
 from modulo_pith import estimar_anillos_faltantes, DialogoMetodoPith, DialogoEstimacionPith
 logger = logging.getLogger(__name__)
 from modulo_marcas_medicion import ModoMedicion, _es_salto_real, _es_normal, _es_espacio, _es_ewlw, _es_amarillo
-from modulo_ewlw import _calcular_ewlw_posiciones
+from modulo_ewlw import detectar_ewlw_imagen
 from modulo_worker_medicion import _Worker, _DialogoProgreso
 def _ultima_carpeta(nueva_ruta: str | None = None) -> str:
     return ultima_carpeta("ultima_carpeta", nueva_ruta)
@@ -408,20 +408,7 @@ def _detectar_ewlw_automatico(self):
     cancel_flag = {"stop": False}
     dlg.show()
 
-    def _tarea_ewlw(sig_prog, img_bgr, c, s, b, ruta_disco):
-        """Ejecuta en thread secundario. NO toca widgets Qt directamente."""
-        import cv2 as _cv2
-        if img_bgr is None:
-            # Fallback: leer del disco (solo si no está cacheada)
-            img_bgr = _cv2.imread(ruta_disco, _cv2.IMREAD_COLOR)
-            if img_bgr is None:
-                raise RuntimeError(
-                    "No se pudo leer la imagen desde el disco para detectar EW/LW.")
-        gray = _cv2.cvtColor(img_bgr, _cv2.COLOR_BGR2GRAY).astype(np.float32)
-        return _calcular_ewlw_posiciones(
-            sig_prog, gray, c, s, b, cancel_flag)
-
-    worker = _Worker(_tarea_ewlw, img_cached, coords, saltos, banda, ruta)
+    worker = _Worker(detectar_ewlw_imagen, img_cached, coords, saltos, banda, ruta, cancel_flag)
     self._ewlw_worker = worker
 
     worker.signals.progreso.connect(dlg.actualizar)

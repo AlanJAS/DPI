@@ -1,5 +1,6 @@
 """Operaciones de interfaz; reciben explícitamente su widget propietario."""
 from modulo_widgets import crear_boton
+from modulo_grafico_medicion_ui import GraficoMedicion
 import modulo_transformacion as _tr
 import pyqtgraph as pg
 from PyQt6.QtWidgets import QGraphicsScene, QPushButton, QVBoxLayout, QHBoxLayout, QWidget, QLabel, QSpinBox, QComboBox, QButtonGroup, QLineEdit, QListWidget, QSplitter
@@ -527,10 +528,6 @@ def _construir_panel_codatacion(self) -> QWidget:
     self.grafico_unif.showGrid(x=True, y=True, alpha=0.3)
     self.grafico_unif.setLabel("bottom", "Año")
     self.grafico_unif.setLabel("left",   "Ancho (mm)")
-    self._legend = self.grafico_unif.addLegend(offset=(10, 10))
-    self._plot_items: dict[str, object] = {}
-    self._series_ocultas: set[str] = set()
-    self._legend.scene().sigMouseClicked.connect(self._clic_leyenda)
     layout.addWidget(self.grafico_unif)
 
     # Controles de zoom, los mismos de Co-Datación: zoom por área,
@@ -541,36 +538,6 @@ def _construir_panel_codatacion(self) -> QWidget:
         layout.addWidget(_crear_barra_zoom(self.grafico_unif))
     except Exception as _e:
         print("No se pudo agregar la barra de zoom:", _e)
-
-    # ── Crosshair interactivo: línea vertical + etiqueta de año ────────
-    from pyqtgraph import InfiniteLine, TextItem, SignalProxy
-    self._graf_vline = InfiniteLine(angle=90, movable=False,
-                                     pen=pg.mkPen("#888", width=1,
-                                                  style=Qt.PenStyle.DotLine))
-    self._graf_vline.setZValue(60)
-    self._graf_vline.setVisible(False)
-    self.grafico_unif.addItem(self._graf_vline, ignoreBounds=True)
-
-    self._graf_label = TextItem(anchor=(0.0, 1.0),
-                                 fill=pg.mkBrush(0, 0, 0, 180),
-                                 border=pg.mkPen("#888", width=1))
-    self._graf_label.setZValue(61)
-    self._graf_label.setVisible(False)
-    self.grafico_unif.addItem(self._graf_label, ignoreBounds=True)
-
-    # Marcador del punto más cercano
-    self._graf_dot = self.grafico_unif.plot(
-        [], [], pen=None, symbol='o', symbolSize=10,
-        symbolBrush='#FFD700', symbolPen=pg.mkPen('#FFF', width=1.5))
-    self._graf_dot.setZValue(62)
-
-    # Proxy para throttle del mouse-move (cada 30ms)
-    self._graf_proxy = SignalProxy(
-        self.grafico_unif.scene().sigMouseMoved,
-        rateLimit=33, slot=self._graf_mouse_moved)
-
-    # Click en el gráfico → navegar a ese año en la imagen
-    self.grafico_unif.scene().sigMouseClicked.connect(self._graf_mouse_clicked)
 
     # Item de resaltado en la imagen al hacer clic en el gráfico
     self._item_highlight_anio = None
@@ -585,11 +552,10 @@ def _construir_panel_codatacion(self) -> QWidget:
     self.lbl_ventanas_r.setAlignment(Qt.AlignmentFlag.AlignLeft)
     layout.addWidget(self.lbl_ventanas_r)
 
-    # ── Atributos de estado ───────────────────────────────────────────
-    self._colores_radios = [
-        "#5cb85c", "#5bc0de", "#f0ad4e", "#d9534f",
-        "#9b59b6", "#1abc9c", "#e67e22", "#3498db",
-    ]
+    self.grafico_medicion = GraficoMedicion(
+        self.grafico_unif, self.combo_maestra, self.spin_ventana_r,
+        self.lbl_r_total, self.lbl_ventanas_r,
+        self.metodo_correlacion, self._navegar_anio_grafico)
 
     return panel
 

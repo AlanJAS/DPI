@@ -247,3 +247,16 @@ def _calcular_anchos_ewlw_por_anillo(coords, saltos, ppm):
 
     return anchos_anillo
 
+
+def detectar_ewlw_imagen(sig_prog, img_bgr, c, s, b, ruta_disco, cancel_flag=None):
+    """Ejecuta en thread secundario. NO toca widgets Qt directamente."""
+    import cv2 as _cv2
+    if img_bgr is None:
+        # Fallback: leer del disco (solo si no está cacheada)
+        img_bgr = _cv2.imread(ruta_disco, _cv2.IMREAD_COLOR)
+        if img_bgr is None:
+            raise RuntimeError(
+                "No se pudo leer la imagen desde el disco para detectar EW/LW.")
+    gray = _cv2.cvtColor(img_bgr, _cv2.COLOR_BGR2GRAY).astype(np.float32)
+    return _calcular_ewlw_posiciones(
+        sig_prog, gray, c, s, b, cancel_flag)

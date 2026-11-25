@@ -1,0 +1,27 @@
+import unittest
+import pandas as pd
+from modulo_comparacion_nucleo import comparar_serie
+class Comparacion(unittest.TestCase):
+    def test_sin_solape_posible(self):
+        a = pd.Series([1.,2.], index=[2000,2001])
+        r = comparar_serie('A', a,a,a,a,a,a)
+        self.assertEqual(r['nombre_serie'],'A')
+        self.assertEqual(r['shifts'],[])
+
+    def test_comparacion_con_solape(self):
+        import numpy as np
+        a = pd.Series(np.exp(np.sin(np.arange(60))), index=range(1900,1960))
+        r = comparar_serie('A', a,a,a,a,a,a)
+        self.assertEqual(r['mejor_shift'], 0)
+        self.assertAlmostEqual(r['mejor_r'], 1.)
+        self.assertIs(r['serie_a'], a)
+
+    def test_desfase_positivo(self):
+        import numpy as np
+        from modulo_comparacion_nucleo import analizar_desfases
+        rng = np.random.default_rng(47)
+        a = pd.Series(rng.uniform(1, 5, 70), index=range(100,170))
+        b = pd.Series(a.values.copy(), index=range(2000,2070))
+        shifts, rs, glks, tbps, ns = analizar_desfases(a, b, a, b)
+        self.assertEqual(shifts[int(np.argmax(rs))], 1900)
+        self.assertAlmostEqual(max(rs), 1.)

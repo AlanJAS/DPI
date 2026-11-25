@@ -1050,3 +1050,6 @@ class DialogoComparacionMultiple(QDialog):
         except Exception as e:
             QMessageBox.critical(self, "Error",
                                   f"No se pudo guardar:\n{e}")
+
+
+from modulo_comparacion_nucleo import resultado_sin_overlap

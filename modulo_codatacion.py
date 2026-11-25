@@ -1732,49 +1732,10 @@ class PanelCodatacion(QWidget):
         # en 'Series múltiples vs Crono'. Antes se desplazaba la segunda
         # serie, lo que daba desfases negativos para series flotantes y
         # resultaba confuso e inconsistente entre los dos análisis.
-        s_min = int(t_diff.index.min() - m_diff.index.max() + OVERLAP_MINIMO_ANALISIS - 1)
-        s_max = int(t_diff.index.max() - m_diff.index.min() - OVERLAP_MINIMO_ANALISIS + 1)
-
-        self._shifts_actuales = []
-        self._r_actuales = []
-        self._glk_actuales = []
-        self._tbp_actuales = []
-        self._n_actuales = []
-
-        for shift in range(s_min, s_max + 1):
-            # m_diff desplazada (+shift) se alinea con t_diff
-            overlap = (m_diff.index + shift).intersection(t_diff.index)
-            # Solape mínimo alto: ver OVERLAP_MINIMO_FLOTANTE. Sin esto las
-            # posiciones de los extremos, con diez o veinte años de solape,
-            # ganan por azar y tapan el desfase verdadero.
-            if len(overlap) < min(OVERLAP_MINIMO_FLOTANTE,
-                                  max(len(m_diff), len(t_diff))):
-                continue
-            r = _r_pearson(m_diff.loc[overlap - shift].values,
-                           t_diff.loc[overlap].values)
-            if np.isnan(r):
-                continue
-
-            # GLK y t-BP sobre la serie para GLK (transformada COFECHA si
-            # está activo, cruda si no): se desplaza la PRIMERA serie (a)
-            a_glk_shift = serie_a_glk.copy()
-            a_glk_shift.index = a_glk_shift.index + shift
-            overlap_glk = a_glk_shift.index.intersection(serie_b_glk.index)
-            n_ov = len(overlap_glk)
-            if n_ov >= OVERLAP_MINIMO_ANALISIS:
-                a_o = a_glk_shift.loc[overlap_glk]
-                b_o = serie_b_glk.loc[overlap_glk]
-                glk, _ = gleichlaufigkeit(a_o, b_o, min_overlap=OVERLAP_MINIMO_ANALISIS)
-                t_bp, _, _ = t_baillie_pilcher(a_o, b_o, min_overlap=OVERLAP_MINIMO_ANALISIS)
-            else:
-                glk = float("nan")
-                t_bp = float("nan")
-
-            self._shifts_actuales.append(shift)
-            self._r_actuales.append(r)
-            self._glk_actuales.append(glk)
-            self._tbp_actuales.append(t_bp)
-            self._n_actuales.append(n_ov)
+        from modulo_comparacion_nucleo import analizar_desfases
+        (self._shifts_actuales, self._r_actuales, self._glk_actuales,
+         self._tbp_actuales, self._n_actuales) = analizar_desfases(
+            m_diff, t_diff, serie_a_glk, serie_b_glk)
 
         if not self._shifts_actuales:
             return self.grafico_offset.setTitle("Sin coincidencias suficientes.")
@@ -2063,8 +2024,6 @@ class PanelCodatacion(QWidget):
         # activo; cruda si no).
         s_b_glk = self._serie_para_glk(
             self.cronologia_activa[col_val], es_crono=True)
-        c_min_year = int(s_b_raw.index.min())
-        c_max_year = int(s_b_raw.index.max())
 
         # Cursor de espera durante el cálculo
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
@@ -2092,76 +2051,13 @@ class PanelCodatacion(QWidget):
                 s_a_glk = self._serie_para_glk(
                     df_serie["Ancho_mm"], es_crono_serie)
 
-                s_min_year = int(s_a_raw.index.min())
-                s_max_year = int(s_a_raw.index.max())
-
-                # Rango de desfase que garantiza al menos MIN_OVERLAP años
-                # de solape con la cronología.
-                shift_min = c_min_year - s_max_year + MIN_OVERLAP - 1
-                shift_max = c_max_year - s_min_year - MIN_OVERLAP + 1
-
-                if shift_min > shift_max:
-                    resultados.append(self._resultado_sin_overlap(nombre))
-                    continue
-                max_shift_dinamico = max(abs(shift_min), abs(shift_max))
-
-                # ACELERACIÓN: si la serie YA se solapa con la cronología en su
-                # posición actual (serie fechada en años calendario), basta con
-                # explorar desfases PEQUEÑOS para detectar errores de datación.
-                # El barrido completo (±cientos de años) solo hace falta para
-                # series FLOTANTES sin fecha. Con muchas series fechadas, esto
-                # reduce el tiempo de más de un minuto a unos pocos segundos.
-                overlap_en_0 = len(s_a_raw.index.intersection(s_b_raw.index))
-                if overlap_en_0 >= MIN_OVERLAP:
-                    max_shift_dinamico = min(max_shift_dinamico, VENTANA_DESFASE_FECHADA)
-                else:
-                    max_shift_dinamico = min(max_shift_dinamico, 5000)
-
-                # r sobre alta frecuencia (s_*_corr); GLK/t-BP sobre
-                # s_*_glk (transformada COFECHA si activo, cruda si no).
-                shifts, rs, glks, tbps, ns = _estadisticos_por_desfase(
-                    s_a_corr, s_b_corr, max_shift_dinamico, MIN_OVERLAP,
-                    serie_a_raw=s_a_glk, serie_b_raw=s_b_glk,
-                )
-
-                if not shifts:
-                    resultados.append(self._resultado_sin_overlap(nombre))
-                    continue
-
-                # Puntaje compuesto por desfase y elección del mejor
-                scores = [score_compuesto(r, g, t)
-                          for r, g, t in zip(rs, glks, tbps)]
-                scores_validos = [
-                    (i, s) for i, s in enumerate(scores) if np.isfinite(s)]
-                if scores_validos:
-                    idx_mejor = max(scores_validos, key=lambda x: x[1])[0]
-                else:
-                    idx_mejor = int(np.argmax(rs))
-
-                # Puntaje en desfase=0 para calcular Δ
-                if 0 in shifts:
-                    score_shift0 = scores[shifts.index(0)]
-                else:
-                    score_shift0 = float("nan")
-
-                resultados.append({
-                    "nombre_serie": nombre,
-                    "shifts": shifts, "rs": rs, "glks": glks,
-                    "tbps": tbps, "ns": ns,
-                    "mejor_shift": shifts[idx_mejor],
-                    "mejor_score": scores[idx_mejor],
-                    "mejor_r": rs[idx_mejor],
-                    "mejor_glk": glks[idx_mejor],
-                    "mejor_tbp": tbps[idx_mejor],
-                    "mejor_n": ns[idx_mejor],
-                    "score_shift0": score_shift0,
-                    # Series CRUDAS para los gráficos de detalle y el
-                    # alineamiento (que diferencia internamente).
-                    "serie_a": s_a_raw,
-                    "serie_b": s_b_raw,
-                })
-
-                QApplication.processEvents()
+                from modulo_comparacion_nucleo import comparar_serie
+                resultado = comparar_serie(
+                    nombre, s_a_raw, s_b_raw, s_a_corr, s_b_corr,
+                    s_a_glk, s_b_glk, MIN_OVERLAP, VENTANA_DESFASE_FECHADA)
+                resultados.append(resultado)
+                if resultado["shifts"]:
+                    QApplication.processEvents()
         finally:
             QApplication.restoreOverrideCursor()
 
@@ -2222,22 +2118,8 @@ class PanelCodatacion(QWidget):
         return tuple(partes)
 
     def _resultado_sin_overlap(self, nombre: str) -> dict:
-        """Devuelve un dict de resultado en blanco para series que no
-        pueden compararse (sin solape suficiente con la cronología incluso
-        con el desfase máximo). Aparecen en la tabla con valores en 0/—
-        para que el usuario sepa cuáles quedaron fuera."""
-        return {
-            "nombre_serie": nombre,
-            "shifts": [], "rs": [], "glks": [],
-            "tbps": [], "ns": [],
-            "mejor_shift": 0,
-            "mejor_score": float("nan"),
-            "mejor_r": float("nan"),
-            "mejor_glk": float("nan"),
-            "mejor_tbp": float("nan"),
-            "mejor_n": 0,
-            "score_shift0": float("nan"),
-        }
+        from modulo_comparacion_nucleo import resultado_sin_overlap
+        return resultado_sin_overlap(nombre)
 
     def mostrar_tabla_offset(self):
         """Abre el diálogo con la tabla completa de offsets."""

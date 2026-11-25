@@ -892,13 +892,7 @@ class VistaInteractiva(QGraphicsView):
         if not self._puntos_seleccionados:
             return
         self.guardar_en_historial()
-        indices = sorted(self._puntos_seleccionados, reverse=True)
-        for i in indices:
-            if 0 <= i < len(self.coordenadas_anillos):
-                if tipo is None:
-                    self.modelo_medicion.borrar(i)
-                else:
-                    self.modelo_medicion.marcar(i, tipo)
+        self.modelo_medicion.editar_puntos(self._puntos_seleccionados, tipo)
         self._puntos_seleccionados.clear()
         self._dibujar_marcadores_seleccion()
         self.recalcular_todas_las_distancias()

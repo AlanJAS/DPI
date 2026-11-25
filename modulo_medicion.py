@@ -9,7 +9,6 @@ Contiene:
 
 import modulo_medicion_especial_ui
 
-import modulo_grafico_medicion_ui
 
 import modulo_medicion_ui
 
@@ -961,20 +960,23 @@ class PestanaImagen(QWidget):
         self.lbl_nombre_maestra.setText("Ninguna")
         self.lbl_nombre_maestra.setStyleSheet(f"color:{SECUNDARIO_QSS};")
         self.btn_eliminar_maestra.setEnabled(False)
-        # Limpiar items del gráfico que referenciaban la externa
-        self._plot_items = {k: v for k, v in getattr(self, "_plot_items", {}).items()
-                            if not k.startswith("📂") and not k.startswith("★")}
         self._actualizar_grafico()
 
     # -------------------------------------------------------------------------
     # Interacción con el gráfico: crosshair + navegación por clic
     # -------------------------------------------------------------------------
 
-    def _graf_mouse_moved(self, evt):
-        return modulo_grafico_medicion_ui._graf_mouse_moved(self, evt)
 
-    def _graf_mouse_clicked(self, ev):
-        return modulo_grafico_medicion_ui._graf_mouse_clicked(self, ev)
+    def _navegar_anio_grafico(self, anio):
+        mapa = self.vista.mapa_anio_coordenada()
+        if anio not in mapa:
+            if not mapa:
+                return False
+            anio = min(mapa, key=lambda a: abs(a - anio))
+        coord = mapa[anio]
+        self.vista.centerOn(coord[0], coord[1])
+        self._resaltar_anio_en_imagen(coord, anio)
+        return True
 
     def _resaltar_anio_en_imagen(self, coord: tuple, anio: int):
         """Dibuja un círculo brillante temporal sobre el punto del año en la imagen."""
@@ -1007,12 +1009,7 @@ class PestanaImagen(QWidget):
                 pass
             self._item_highlight_anio = None
 
-    def _clic_leyenda(self, ev):
-        return modulo_grafico_medicion_ui._clic_leyenda(self, ev)
 
-    def _normalizar(self, valores: list) -> list:
-        from modulo_grafico_medicion import normalizar_grafico
-        return normalizar_grafico(valores)
 
     def metodo_correlacion(self) -> str:
         """Método de transformación elegido en el selector de la barra."""
@@ -1021,16 +1018,8 @@ class PestanaImagen(QWidget):
             return _tr.DIFFLOG
         return combo.currentData() or _tr.DIFFLOG
 
-    def _transformar_corr(self, anios, anchos):
-        return transformar_medicion(anios, anchos, self.metodo_correlacion())
 
-    def _r_global(self, anios_a, anchos_a, anios_b, anchos_b):
-        return correlacion_global(anios_a, anchos_a, anios_b, anchos_b,
-                                  self.metodo_correlacion())
 
-    def _r_deslizante(self, anios_a, anchos_a, anios_b, anchos_b, ventana: int):
-        return correlacion_deslizante(anios_a, anchos_a, anios_b, anchos_b,
-                                     ventana, self.metodo_correlacion())
 
     def _seleccionar_maestra_externa(self):
         """Apunta el combo de maestra a la referencia externa cargada."""
@@ -1042,38 +1031,32 @@ class PestanaImagen(QWidget):
             # así que basta con cambiar el índice.
             self.combo_maestra.setCurrentIndex(idx)
 
-    def _actualizar_combo_maestra(self, entradas, nombre_maestra_ext):
-        """Actualiza el combo selector de maestra con las series disponibles."""
-        previo = self.combo_maestra.currentText()
-        self.combo_maestra.blockSignals(True)
-        self.combo_maestra.clear()
-        if nombre_maestra_ext:
-            self.combo_maestra.addItem(f"↑ Ext: {nombre_maestra_ext}")
-        for nombre, *_ in entradas:
-            self.combo_maestra.addItem(nombre)
-        idx = self.combo_maestra.findText(previo)
-        if idx >= 0:
-            self.combo_maestra.setCurrentIndex(idx)
-        self.combo_maestra.blockSignals(False)
 
-    def _dibujar_segmentos_correlacion(self, pw, entradas, maestra):
-        return modulo_grafico_medicion_ui._dibujar_segmentos_correlacion(self, pw, entradas, maestra)
 
-    def _actualizar_correlaciones_texto(self, entradas, maestra):
-        return modulo_grafico_medicion_ui._actualizar_correlaciones_texto(self, entradas, maestra)
 
     def _actualizar_grafico(self):
-        return modulo_grafico_medicion_ui._actualizar_grafico(self)
+        grafico = getattr(self, "grafico_medicion", None)
+        if grafico is None:
+            return
+        colores = grafico.COLORES
+        entradas = []
+        for i, (nombre, radio) in enumerate(self.caminos_guardados.items()):
+            dm = mediciones_radio(radio, self.vista.pixeles_por_mm)
+            if dm:
+                entradas.append((nombre, [d["anio"] for d in dm],
+                    [d["ancho_mm"] for d in dm], colores[i % len(colores)], Qt.PenStyle.SolidLine))
+        dm = self.datos_medidos
+        if dm:
+            entradas.append((self.input_codigo.text().strip() or "En medición",
+                [d["anio"] for d in dm], [d["ancho_mm"] for d in dm],
+                colores[len(self.caminos_guardados) % len(colores)], Qt.PenStyle.SolidLine))
+        grafico.actualizar(entradas, self.serie_maestra, self.nombre_maestra)
 
     # Aliases para compatibilidad con todas las llamadas existentes
     def _encuadrar_grafico(self, pw=None, solo_mas_larga: bool = True):
-        return modulo_grafico_medicion_ui._encuadrar_grafico(self, pw, solo_mas_larga)
+        return self.grafico_medicion.encuadrar(pw, solo_mas_larga)
 
-    def _posicionar_textos_correlacion(self, pw):
-        return modulo_grafico_medicion_ui._posicionar_textos_correlacion(self, pw)
 
-    def _reposicionar_textos_corr(self, vb=None):
-        return modulo_grafico_medicion_ui._reposicionar_textos_corr(self, vb)
 
     # -------------------------------------------------------------------------
     # Gestión de radios guardados

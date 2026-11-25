@@ -14,3 +14,12 @@ class Sesion(unittest.TestCase):
         self.assertIs(m.eliminar_radio('R'), r)
         m.cargar_radios({'R': r})
         self.assertIs(m.radios['R'], r)
+
+    def test_edicion_multiple(self):
+        from modulo_modelo_medicion import TipoMarca
+        m = ModeloSesionMedicion().activo
+        m.cargar([(i,0) for i in range(5)], [False]*5)
+        m.editar_puntos([1,3], TipoMarca.SALTO)
+        self.assertEqual(list(m.marcas), [False, True, False, True, False])
+        m.editar_puntos([1,3])
+        self.assertEqual(list(m.coordenadas), [(0,0),(2,0),(4,0)])

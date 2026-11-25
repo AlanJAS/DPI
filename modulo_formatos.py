@@ -923,7 +923,7 @@ def escribir_excel_merge(series_dict: dict[str, pd.DataFrame], ruta: str) -> Non
     combinado.to_excel(ruta, sheet_name="Series", index=True)
 
 
-def leer_como_columnas_o_tabular( ruta: str, base_nombre: str) -> dict:
+def leer_como_columnas_o_tabular(ruta: str, base_nombre: str) -> dict:
     """Si el archivo tiene múltiples columnas de valor, cada una como serie separada."""
     try:
         df_multi = leer_columna_multi(ruta)
