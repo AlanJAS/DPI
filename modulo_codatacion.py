@@ -592,8 +592,8 @@ def alineamiento_optimo_anillos(serie_a, serie_b, shift_base,
     if len(a) < 10 or len(b) < 10:
         return None
 
-    da = a.diff().dropna()
-    db = b.diff().dropna()
+    da = _est.diferencias_anuales(a)
+    db = _est.diferencias_anuales(b)
     sa = np.sign(da.to_numpy())
     years_a = da.index.to_numpy().astype(int)
     sb_by_year = {int(y): np.sign(v)
@@ -604,6 +604,8 @@ def alineamiento_optimo_anillos(serie_a, serie_b, shift_base,
                   for y, v in zip(db.index.to_numpy(), db.to_numpy())}
 
     n = len(years_a)
+    if n == 0 or db.empty:
+        return None
     shifts = list(range(int(shift_base) - int(max_correcciones),
                         int(shift_base) + int(max_correcciones) + 1))
     S = len(shifts)
@@ -708,7 +710,7 @@ def alineamiento_optimo_anillos(serie_a, serie_b, shift_base,
 
 def _diff_log(serie: pd.Series) -> pd.Series:
     """Diferencias de logaritmos — transforma anchos en tasas de crecimiento."""
-    return np.log(serie.replace(0, np.nan).dropna()).diff().dropna()
+    return _est.diferencias_log_anuales(serie)
 
 
 _r_pearson = _est.pearson
@@ -1820,8 +1822,7 @@ def aplicar_modo_cofecha(serie_mm, rigidez_spline=32, aplicar_log=True,
             valores = residuales
 
     if aplicar_first_diff and len(valores) > 1:
-        valores = np.diff(valores)
-        return pd.Series(valores, index=s.index[1:])
+        return _est.diferencias_anuales(pd.Series(valores, index=s.index))
 
     return pd.Series(valores, index=s.index)
 
@@ -4750,9 +4751,9 @@ class VentanaSkeletonPlot(QWidget):
             r = float(np.corrcoef(la.loc[cidx], lb.loc[cidx])[0, 1])
         else:
             r = float("nan")
-        glk, _ = gleichlaufigkeit(a, b, min_overlap=5)
+        glk, n_glk = gleichlaufigkeit(a, b, min_overlap=5)
         t_bp, _, _ = t_baillie_pilcher(a, b, min_overlap=5)
-        return r, glk, t_bp, n
+        return r, glk, t_bp, n, n_glk
 
     def _actualizar_stats(self):
         if self._ref.empty or self._flo.empty:
@@ -4766,9 +4767,9 @@ class VentanaSkeletonPlot(QWidget):
                 "<span style='color:#d9534f;'>Solape insuficiente en este "
                 "desfase (mín. 5 años).</span>")
             return
-        r, glk, t_bp, n = res
+        r, glk, t_bp, n, n_glk = res
         sc = score_compuesto(r, glk, t_bp)
-        sig = glk_significance(glk, n)
+        sig = glk_significance(glk, n_glk)
 
         def f(v, dec=2):
             return "—" if not np.isfinite(v) else f"{v:.{dec}f}"
@@ -4928,7 +4929,7 @@ class VentanaSkeletonPlot(QWidget):
             res = self._stats_offset(off)
             if res is None:
                 continue
-            r, glk, t_bp, n = res
+            r, glk, t_bp, n, _ = res
             sc = score_compuesto(r, glk, t_bp)
             filas.append((off, n, r, glk, t_bp, sc))
         if not filas:
@@ -4971,7 +4972,7 @@ class VentanaSkeletonPlot(QWidget):
             res = self._stats_offset(off)
             if res is None:
                 continue
-            r, glk, t_bp, n = res
+            r, glk, t_bp, n, _ = res
             sc = score_compuesto(r, glk, t_bp)
             if np.isfinite(sc) and sc > mejor_sc:
                 mejor_sc, mejor_off = sc, off

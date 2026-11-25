@@ -34,7 +34,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-from modulo_estadistica import pearson
+from modulo_estadistica import pearson, diferencias_log_anuales
 from modulo_cronologia import estandarizar_serie
 
 DIFFLOG = "difflog"
@@ -78,8 +78,7 @@ def transformar(serie: pd.Series, metodo: str = DIFFLOG,
         return idx.dropna()
 
     # Diferencias-log
-    s = s.clip(lower=1e-6)
-    return np.log(s).diff().dropna()
+    return diferencias_log_anuales(s, piso=1e-6)
 
 
 def par(serie_a: pd.Series, serie_b: pd.Series, metodo: str = DIFFLOG,

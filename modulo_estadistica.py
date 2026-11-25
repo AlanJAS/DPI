@@ -19,13 +19,53 @@ def pearson(a, b, *, tolerancia=0.0):
     return r if np.isfinite(r) else float("nan")
 
 
-def glk_alineado(a, b, min_overlap=10):
-    """GLK sobre observaciones alineadas (convención de empates de DPI)."""
+def serie_anual(serie):
+    """Serie numérica ordenada, con años únicos y observaciones finitas."""
+    s = pd.to_numeric(serie, errors="coerce").astype(float).sort_index()
+    if not s.index.is_unique:
+        raise ValueError("La serie contiene años duplicados.")
+    return s[np.isfinite(s)]
+
+
+def diferencias_anuales(serie):
+    """Diferencias únicamente entre años consecutivos, indexadas por año final."""
+    s = serie_anual(serie)
+    return s.diff().iloc[1:][np.diff(s.index.to_numpy()) == 1].dropna()
+
+
+def diferencias_log_anuales(serie, *, piso=None):
+    s = serie_anual(serie)
+    s = s[s > 0] if piso is None else s.clip(lower=piso)
+    return diferencias_anuales(np.log(s))
+
+
+def _pares_anuales(a, b, anios=None):
     a, b = np.asarray(a, dtype=float), np.asarray(b, dtype=float)
-    if a.shape != b.shape or a.size < max(2, min_overlap):
-        return float("nan")
-    da, db = np.sign(np.diff(a)), np.sign(np.diff(b))
-    return float(1.0 - np.mean(np.abs(da - db)) / 2.0)
+    if a.ndim != 1 or a.shape != b.shape:
+        raise ValueError("Las observaciones deben estar alineadas.")
+    valido = np.isfinite(a) & np.isfinite(b)
+    pares = valido[:-1] & valido[1:]
+    if anios is not None:
+        anios = np.asarray(anios)
+        if anios.shape != a.shape:
+            raise ValueError("Los años deben estar alineados.")
+        pares &= np.diff(anios) == 1
+    return a, b, pares
+
+
+def _glk_con_n(a, b, min_overlap=10, *, anios=None):
+    a, b, pares = _pares_anuales(a, b, anios)
+    n = int(pares.sum())
+    # Mantener el umbral histórico para series continuas: N años, N-1 cambios.
+    if n < max(1, min_overlap - 1):
+        return float("nan"), n
+    da, db = np.sign(np.diff(a)[pares]), np.sign(np.diff(b)[pares])
+    return float(1.0 - np.mean(np.abs(da - db)) / 2.0), n
+
+
+def glk_alineado(a, b, min_overlap=10, *, anios=None):
+    """GLK; sin años explícitos se presupone una grilla anual continua."""
+    return _glk_con_n(a, b, min_overlap, anios=anios)[0]
 
 
 def t_desde_r(r, n):
@@ -44,12 +84,12 @@ def tbp_filtrado(a, b, min_overlap=20):
     return t_desde_r(r, n), r, n
 
 
-def tbp_alineado(a, b, min_overlap=20):
-    """Ruta rápida histórica: filtrar pares positivos antes de diferenciar."""
-    a, b = np.asarray(a, dtype=float), np.asarray(b, dtype=float)
-    m = (a > 0) & (b > 0)
-    ha = 100.0 * np.diff(np.log(a[m]))
-    hb = 100.0 * np.diff(np.log(b[m]))
+def tbp_alineado(a, b, min_overlap=20, *, anios=None):
+    a, b, pares = _pares_anuales(a, b, anios)
+    positivos = (a > 0) & (b > 0)
+    pares &= positivos[:-1] & positivos[1:]
+    ha = 100.0 * (np.log(a[1:][pares]) - np.log(a[:-1][pares]))
+    hb = 100.0 * (np.log(b[1:][pares]) - np.log(b[:-1][pares]))
     return tbp_filtrado(ha, hb, min_overlap)[0]
 
 
@@ -102,16 +142,10 @@ def _autocorrelacion_ar1(x) -> float:
 
 def gleichlaufigkeit(serie_a, serie_b, min_overlap: int = 10):
     """GLK (Eckstein & Bauch 1969): proporción de años con cambio en la misma dirección."""
-    a = pd.to_numeric(serie_a, errors="coerce").dropna()
-    b = pd.to_numeric(serie_b, errors="coerce").dropna()
-    overlap = a.index.intersection(b.index)
-    if len(overlap) < min_overlap:
-        return float("nan"), 0
-
-    a = a.loc[overlap].sort_index().to_numpy(dtype=float)
-    b = b.loc[overlap].sort_index().to_numpy(dtype=float)
-
-    return glk_alineado(a, b, min_overlap), int(len(overlap))
+    a, b = serie_anual(serie_a), serie_anual(serie_b)
+    overlap = a.index.intersection(b.index).sort_values()
+    return _glk_con_n(a.loc[overlap], b.loc[overlap], min_overlap,
+                      anios=overlap.to_numpy())
 
 
 def glk_significance(glk: float, n: int) -> str:
@@ -127,11 +161,7 @@ def glk_significance(glk: float, n: int) -> str:
 
 def _filtro_hollstein(serie):
     """Filtro de Hollstein: 100 × primera diferencia logarítmica."""
-    s = pd.to_numeric(serie, errors="coerce").dropna()
-    s = s[s > 0]
-    if len(s) < 2:
-        return pd.Series(dtype=float)
-    return np.log(s).diff().dropna() * 100.0
+    return diferencias_log_anuales(serie) * 100.0
 
 
 def t_baillie_pilcher(serie_a, serie_b, min_overlap: int = 20):
@@ -168,9 +198,9 @@ def estadisticos_cofechado(serie_a, serie_b, min_overlap: int = 20) -> dict:
     b_ov = b.loc[overlap].to_numpy(dtype=float)
     resultado["r"] = pearson(a_ov, b_ov)
 
-    glk, _ = gleichlaufigkeit(serie_a, serie_b, min_overlap)
+    glk, n_glk = gleichlaufigkeit(serie_a, serie_b, min_overlap)
     resultado["glk"] = glk
-    resultado["glk_sig"] = glk_significance(glk, n)
+    resultado["glk_sig"] = glk_significance(glk, n_glk)
 
     t_bp, r_filt, _ = t_baillie_pilcher(serie_a, serie_b, min_overlap)
     resultado["t_bp"] = t_bp
@@ -357,15 +387,15 @@ def _estadisticos_por_desfase(
     # copiaban Series de pandas y se recalculaba el filtro de Hollstein por
     # cada desfase (decenas de miles de construcciones de Series) — eso hacía
     # que comparar muchas series tardara más de un minuto.
-    a_s = pd.to_numeric(serie_a, errors="coerce").dropna().sort_index()
-    b_s = pd.to_numeric(serie_b, errors="coerce").dropna().sort_index()
+    a_s = serie_anual(serie_a)
+    b_s = serie_anual(serie_b)
     ya = a_s.index.to_numpy(np.int64)
     va = a_s.to_numpy(dtype=float)
     yb = b_s.index.to_numpy(np.int64)
     vb = b_s.to_numpy(dtype=float)
     if usar_raw:
-        ar_s = pd.to_numeric(serie_a_raw, errors="coerce").dropna().sort_index()
-        br_s = pd.to_numeric(serie_b_raw, errors="coerce").dropna().sort_index()
+        ar_s = serie_anual(serie_a_raw)
+        br_s = serie_anual(serie_b_raw)
         yar = ar_s.index.to_numpy(np.int64)
         var_ = ar_s.to_numpy(dtype=float)
         ybr = br_s.index.to_numpy(np.int64)
@@ -388,6 +418,7 @@ def _estadisticos_por_desfase(
 
         # GLK y t-BP sobre las series CRUDAS (alineadas) si se proporcionaron;
         # si el solape crudo es corto, sobre las mismas series de r.
+        anios_glk = common
         if usar_raw:
             cr, iga, igb = np.intersect1d(
                 yar + shift, ybr, assume_unique=True, return_indices=True)
@@ -395,6 +426,7 @@ def _estadisticos_por_desfase(
                 ag = var_[iga]
                 bg = vbr[igb]
                 n = len(cr)
+                anios_glk = cr
             else:
                 ag = a_arr
                 bg = b_arr
@@ -402,8 +434,8 @@ def _estadisticos_por_desfase(
             ag = a_arr
             bg = b_arr
 
-        glk = glk_alineado(ag, bg, min_glk)
-        t_bp = tbp_alineado(ag, bg, min_tbp)
+        glk = glk_alineado(ag, bg, min_glk, anios=anios_glk)
+        t_bp = tbp_alineado(ag, bg, min_tbp, anios=anios_glk)
 
         shifts.append(shift)
         rs.append(r)
