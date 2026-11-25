@@ -24,7 +24,7 @@ from modulo_widgets import crear_boton
 import modulo_transformacion as _tr
 from modulo_grafico_medicion import (correlacion_deslizante, correlacion_global,
                                      transformar_medicion)
-from modulo_modelo_medicion import ModeloMedicion, PuntoMedicion, RadioMedicion, TipoMarca
+from modulo_modelo_medicion import ModeloSesionMedicion, ModeloMedicion, PuntoMedicion, RadioMedicion, TipoMarca
 import pandas as pd
 import pyqtgraph as pg
 from PIL import Image
@@ -244,7 +244,7 @@ class PestanaImagen(QWidget):
         # No escribir antes de comprobar si existe una sesión previa.
         self._sesion_protegida = ruta_imagen
         self._guardado_pendiente = False
-        self.caminos_guardados: dict = {}
+        self.modelo_sesion = ModeloSesionMedicion()
         self.serie_maestra: pd.DataFrame | None = None
         self.nombre_maestra: str = "Ninguna"
         self._exportador = ExportadorDendro(self)
@@ -1630,6 +1630,10 @@ class PestanaImagen(QWidget):
     # Gestión de radios guardados
     # -------------------------------------------------------------------------
 
+    @property
+    def caminos_guardados(self):
+        return self.modelo_sesion.radios
+
     def _finalizar_camino(self):
         if not self.datos_medidos:
             return
@@ -1642,7 +1646,7 @@ class PestanaImagen(QWidget):
         if not nombre or nombre in self.caminos_guardados:
             return QMessageBox.warning(self, "Identificador", "Nombre vacío o ya existente.")
 
-        self.caminos_guardados[nombre] = self._capturar_radio(nombre)
+        self.modelo_sesion.guardar_radio(nombre, self._capturar_radio(nombre))
         item = QListWidgetItem(nombre)
         item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
         item.setCheckState(Qt.CheckState.Checked)
@@ -1685,7 +1689,7 @@ class PestanaImagen(QWidget):
         datos = self.caminos_guardados[nombre]
         if not datos.puntos or datos.datos_historicos:
             return QMessageBox.warning(self, "Aviso", "El radio no tiene coordenadas editables.")
-        self.caminos_guardados.pop(nombre)
+        self.modelo_sesion.eliminar_radio(nombre)
 
         self.vista.limpiar_historial()
         self.vista.modelo_medicion.limpiar()
@@ -1751,7 +1755,7 @@ class PestanaImagen(QWidget):
 
         for item in items:
             nombre = item.text()
-            self.caminos_guardados.pop(nombre, None)
+            self.modelo_sesion.eliminar_radio(nombre)
             self.lista_caminos.takeItem(self.lista_caminos.row(item))
 
         # Redibujar TODOS los caminos inactivos restantes desde cero.
@@ -2156,7 +2160,7 @@ class PestanaImagen(QWidget):
             anio_medula=self.spin_medula.value(),
             anio_corteza=self.spin_corteza.value(),
             dir_idx=self.combo_dir.currentIndex(),
-            anomalias=dict(self.vista.anomalias),
+            anomalias=self.vista.anomalias,
             medula=self.check_tiene_medula.isChecked(),
             corteza=self.check_tiene_corteza.isChecked(),
         )
@@ -2217,7 +2221,7 @@ class PestanaImagen(QWidget):
             self.vista.pixeles_por_mm = datos["pixeles_por_mm"]
             self._dpi_modo = "guardado"
 
-        self.caminos_guardados = datos["caminos_guardados"]
+        self.modelo_sesion.cargar_radios(datos["caminos_guardados"])
         with QSignalBlocker(self.lista_caminos):
             self.lista_caminos.clear()
             for nombre in self.caminos_guardados:

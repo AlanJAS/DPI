@@ -250,7 +250,7 @@ class VistaInteractiva(QGraphicsView):
         )
 
         # Estado de medición
-        self.modelo_medicion = ModeloMedicion()
+        self.modelo_medicion = pestana_padre.modelo_sesion.activo if hasattr(pestana_padre, "modelo_sesion") else ModeloMedicion()
         self.puntos_calibracion: list[tuple[float, float]] = []
         # Items visuales de calibración (puntos, línea, texto) — se limpian
         # al cancelar/aceptar/reiniciar la calibración.

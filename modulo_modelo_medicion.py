@@ -135,6 +135,10 @@ class RadioMedicion:
     datos_historicos: tuple[tuple[int, float], ...] = ()
 
     def __post_init__(self):
+        if type(self.dir_idx) is not int or self.dir_idx not in (0, 1):
+            raise ValueError("Dirección de medición inválida")
+        if any(type(a) is not int for a in (self.anio_medula, self.anio_corteza)):
+            raise ValueError("Los años del radio deben ser enteros")
         puntos = tuple(self.puntos)
         if not all(isinstance(p, PuntoMedicion) for p in puntos):
             raise ValueError("Puntos de radio inválidos")
@@ -198,3 +202,26 @@ class HistorialMedicion:
 
     def rehacer(self):
         return self._cambiar(self._redo, self._undo)
+
+
+class ModeloSesionMedicion:
+    """Propietario de la geometría activa y los radios guardados tipados."""
+    def __init__(self):
+        self.activo = ModeloMedicion()
+        self._radios = {}
+        self.radios = MappingProxyType(self._radios)
+
+    def cargar_radios(self, radios):
+        nuevos = dict(radios)
+        if not all(isinstance(r, RadioMedicion) for r in nuevos.values()):
+            raise ValueError("Radio guardado inválido")
+        self._radios.clear()
+        self._radios.update(nuevos)
+
+    def guardar_radio(self, nombre, radio):
+        if not nombre or nombre in self._radios or not isinstance(radio, RadioMedicion):
+            raise ValueError("Radio inválido o duplicado")
+        self._radios[nombre] = radio
+
+    def eliminar_radio(self, nombre):
+        return self._radios.pop(nombre, None)
