@@ -10,7 +10,11 @@ def _salto_rapido(self, x, y):
                             ModoMedicion.BORRAR, ModoMedicion.ANOMALIA):
         modo_previo = self.modo_actual
         self.modo_actual = ModoMedicion.SALTO
-        self._paso_medir(x, y)
+        try:
+            self._paso_medir(x, y)
+        except BaseException:
+            self.modo_actual = modo_previo
+            raise
         # _paso_medir ya restaura ModoMedicion.MEDIR tras un salto;
         # si el modo previo era especial (anomalía, etc.) lo respetamos
         if modo_previo not in (ModoMedicion.MEDIR, ModoMedicion.SALTO):
