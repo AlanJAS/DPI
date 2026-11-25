@@ -3,7 +3,7 @@ import numpy as np
 from dpi.ciencia.estadistica import pearson, pearson_desde_sumas
 from dpi.ciencia.cofecha_nucleo import AcumuladosPar, r_de_sumas, r_quitando_cada_punto
 from dpi.ciencia.quiebres import _acumulados_por_desfase
-from modulo_grafico_medicion import correlacion_deslizante
+from dpi.medicion.grafico import correlacion_deslizante
 from dpi.ciencia.transformacion import DIFFLOG
 
 

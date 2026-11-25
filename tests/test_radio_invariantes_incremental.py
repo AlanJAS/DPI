@@ -1,5 +1,5 @@
 import unittest
-from modulo_modelo_medicion import RadioMedicion
+from dpi.medicion.modelo import RadioMedicion
 
 
 class RadioInvariantes(unittest.TestCase):

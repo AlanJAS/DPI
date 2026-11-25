@@ -1,8 +1,8 @@
 import unittest
 import pandas as pd
-from modulo_modelo_medicion import ModeloMedicion, PuntoMedicion, TipoMarca
-from modulo_marcas_medicion import _es_amarillo, _es_salto_real, _es_ewlw
-from modulo_modelo_series import ModeloSeries
+from dpi.medicion.modelo import ModeloMedicion, PuntoMedicion, TipoMarca
+from dpi.medicion.marcas import _es_amarillo, _es_salto_real, _es_ewlw
+from dpi.series.modelo import ModeloSeries
 
 
 class TestModelosDatos(unittest.TestCase):

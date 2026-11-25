@@ -1,8 +1,8 @@
 import unittest
 from io import StringIO
 import pandas as pd
-from modulo_modelo_series import ModeloSeries
-from json_seguro import cargar_json, a_json
+from dpi.series.modelo import ModeloSeries
+from dpi.infraestructura.json_seguro import cargar_json, a_json
 class Integridad(unittest.TestCase):
     def test_duplicado(self):
         m=ModeloSeries();df=pd.DataFrame({'Ancho_mm':[1]},index=[2000]);m.registrar('A',df)

@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 import numpy as np
-from json_seguro import a_json, guardar_json
+from dpi.infraestructura.json_seguro import a_json, guardar_json
 
 class TestJsonRobusto(unittest.TestCase):
     def test_escalar_numpy(self):

@@ -1,5 +1,5 @@
 import unittest
-from modulo_modelo_medicion import ModeloMedicion, RadioMedicion
+from dpi.medicion.modelo import ModeloMedicion, RadioMedicion
 
 class TestRadioCaptura(unittest.TestCase):
     def test_captura_independiente(self):

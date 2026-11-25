@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from modulo_intensidad_nucleo import extraer_intensidad_por_anillo as extraer
+from dpi.medicion.intensidad import extraer_intensidad_por_anillo as extraer
 class Recorte(unittest.TestCase):
     def test_gradiente(self):
         img=np.zeros((25,25,3),dtype=np.uint8);img[:,:,0]=np.arange(25)

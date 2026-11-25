@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from modulo_sesion_medicion import (
+from dpi.medicion.sesion import (
     VERSION_FORMATO, guardar_sesion, leer_sesion, normalizar_sesion, ruta_sesion,
 )
 

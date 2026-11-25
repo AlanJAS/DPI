@@ -1,7 +1,7 @@
 import json
 import random
 import unittest
-from modulo_modelo_medicion import ModeloMedicion, TipoMarca
+from dpi.medicion.modelo import ModeloMedicion, TipoMarca
 
 
 class TestModeloMedicion(unittest.TestCase):
@@ -52,7 +52,7 @@ class TestModeloMedicion(unittest.TestCase):
         self.assertEqual(m.captura(), despues)
 
     def test_historial_incluye_anomalias(self):
-        from modulo_modelo_medicion import HistorialMedicion
+        from dpi.medicion.modelo import HistorialMedicion
         m = ModeloMedicion()
         h = HistorialMedicion(m, 3)
         m.agregar((0, 0))

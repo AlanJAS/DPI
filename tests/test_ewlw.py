@@ -1,9 +1,9 @@
 import unittest
-from modulo_ewlw import _calcular_anchos_ewlw_por_anillo as calcular, calcular_anchos_ewlw
+from dpi.medicion.ewlw import _calcular_anchos_ewlw_por_anillo as calcular, calcular_anchos_ewlw
 class EWLW(unittest.TestCase):
     def test_entrada_tipada(self):
-        from modulo_ewlw import anchos_ewlw_puntos, _calcular_anchos_ewlw_por_anillo
-        from modulo_calculo_medicion import puntos_desde_geometria
+        from dpi.medicion.ewlw import anchos_ewlw_puntos, _calcular_anchos_ewlw_por_anillo
+        from dpi.medicion.calculo import puntos_desde_geometria
         c, m = [(0, 0), (2, 0), (4, 0)], [False, 'ew_lw', False]
         for direccion in (True, False):
             self.assertEqual(anchos_ewlw_puntos(puntos_desde_geometria(c, m), 2, direccion),

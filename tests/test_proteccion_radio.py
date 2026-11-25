@@ -1,5 +1,5 @@
 import unittest
-from modulo_sesion_medicion import normalizar_sesion
+from dpi.medicion.sesion import normalizar_sesion
 
 class TestMetadatosRadio(unittest.TestCase):
     def test_anomalias_y_extremos(self):

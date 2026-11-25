@@ -1,6 +1,6 @@
 import unittest
 from dpi.ciencia.indice_anual import validar_anios
-from modulo_modelo_medicion import RadioMedicion
+from dpi.medicion.modelo import RadioMedicion
 class Validacion(unittest.TestCase):
     def test_bool(self):
         with self.assertRaises(ValueError): validar_anios([True,2000])

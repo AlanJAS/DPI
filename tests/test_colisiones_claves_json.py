@@ -1,5 +1,5 @@
 import unittest
-from json_seguro import a_json, restaurar_claves_int
+from dpi.infraestructura.json_seguro import a_json, restaurar_claves_int
 
 class Claves(unittest.TestCase):
     def test_colisiones(self):

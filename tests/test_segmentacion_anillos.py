@@ -1,5 +1,5 @@
 import unittest
-from modulo_calculo_medicion import calcular_anillos, puntos_desde_geometria
+from dpi.medicion.calculo import calcular_anillos, puntos_desde_geometria
 class Segmentacion(unittest.TestCase):
     def test_segmentos(self):
         p = puntos_desde_geometria([(i,0) for i in range(8)], [False,'ew_lw',True,'quiebre_ini','espacio',False,'ew_lw',False])

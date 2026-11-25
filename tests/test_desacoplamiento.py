@@ -1,7 +1,7 @@
 import unittest
-from modulo_pith_nucleo import ajuste_degenerado, distancia_faltante_dap
-from modulo_ewlw import calcular_anchos_ewlw
-from modulo_intensidad_nucleo import valores_intensidad, segmentos_banda_intensidad
+from dpi.medicion.pith import ajuste_degenerado, distancia_faltante_dap
+from dpi.medicion.ewlw import calcular_anchos_ewlw
+from dpi.medicion.intensidad import valores_intensidad, segmentos_banda_intensidad
 
 
 class NucleosIndependientes(unittest.TestCase):

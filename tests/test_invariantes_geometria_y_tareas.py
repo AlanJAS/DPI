@@ -4,10 +4,10 @@ import math
 import os
 import unittest
 import numpy as np
-from modulo_calculo_medicion import calcular_anillos, puntos_desde_geometria
-from modulo_ewlw import _calcular_anchos_ewlw_por_anillo
-from modulo_intensidad_nucleo import segmentos_banda_intensidad, extraer_intensidad_por_anillo
-from modulo_pith_nucleo import distancia_faltante_dap
+from dpi.medicion.calculo import calcular_anillos, puntos_desde_geometria
+from dpi.medicion.ewlw import _calcular_anchos_ewlw_por_anillo
+from dpi.medicion.intensidad import segmentos_banda_intensidad, extraer_intensidad_por_anillo
+from dpi.medicion.pith import distancia_faltante_dap
 
 
 class GeometriaComun(unittest.TestCase):
@@ -33,7 +33,7 @@ class CicloTareasQt(unittest.TestCase):
         os.environ.setdefault('QT_QPA_PLATFORM','offscreen')
         from PyQt6.QtWidgets import QApplication, QWidget
         from PyQt6.QtCore import QEventLoop, QTimer
-        from modulo_worker_medicion import GestorTareasMedicion
+        from dpi.ui.medicion.tareas import GestorTareasMedicion
         app = QApplication.instance() or QApplication([])
         padre = QWidget()
         gestor = GestorTareasMedicion(padre)
@@ -62,7 +62,7 @@ class CicloTareasQt(unittest.TestCase):
         os.environ.setdefault('QT_QPA_PLATFORM','offscreen')
         from PyQt6.QtWidgets import QApplication, QWidget
         from PyQt6.QtCore import QEventLoop, QTimer
-        from modulo_worker_medicion import GestorTareasMedicion
+        from dpi.ui.medicion.tareas import GestorTareasMedicion
         app = QApplication.instance() or QApplication([])
         padre = QWidget()
         gestor = GestorTareasMedicion(padre)

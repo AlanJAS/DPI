@@ -1,6 +1,6 @@
 import unittest
 import pandas as pd
-from modulo_modelo_series import ModeloSeries
+from dpi.series.modelo import ModeloSeries
 
 class LecturaSeries(unittest.TestCase):
     def test_no_se_modifica_por_vista(self):

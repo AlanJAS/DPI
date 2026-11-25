@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from modulo_imagen import preparar_banda_rgb
+from dpi.infraestructura.imagen import preparar_banda_rgb
 class Imagen(unittest.TestCase):
     def test_rgb_y_canales(self):
         img = np.array([[[10, 20, 30]]], dtype=np.uint8)

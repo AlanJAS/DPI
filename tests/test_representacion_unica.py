@@ -2,9 +2,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from modulo_modelo_medicion import ModeloMedicion, PuntoMedicion, RadioMedicion
-from modulo_datos_medicion import mediciones_radio
-from modulo_sesion_medicion import guardar_sesion, leer_sesion
+from dpi.medicion.modelo import ModeloMedicion, PuntoMedicion, RadioMedicion
+from dpi.medicion.datos import mediciones_radio
+from dpi.medicion.sesion import guardar_sesion, leer_sesion
 
 
 class TestRepresentacionUnica(unittest.TestCase):

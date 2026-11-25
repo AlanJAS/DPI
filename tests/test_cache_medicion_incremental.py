@@ -1,6 +1,6 @@
 import unittest
-from modulo_calculo_medicion import calcular_anillos, anchos_puntos, anios_por_punto, _calcular_anillos
-from modulo_modelo_medicion import ModeloMedicion
+from dpi.medicion.calculo import calcular_anillos, anchos_puntos, anios_por_punto, _calcular_anillos
+from dpi.medicion.modelo import ModeloMedicion
 
 
 class CacheMedicion(unittest.TestCase):

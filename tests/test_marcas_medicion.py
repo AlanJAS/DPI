@@ -1,8 +1,8 @@
 import json
 import unittest
 
-from modulo_modelo_medicion import ModeloMedicion, TipoMarca
-from modulo_marcas_medicion import (
+from dpi.medicion.modelo import ModeloMedicion, TipoMarca
+from dpi.medicion.marcas import (
     ModoMedicion,
     _es_normal,
     _es_salto_real,

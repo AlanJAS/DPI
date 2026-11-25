@@ -64,7 +64,7 @@ class ArquitecturaUI(unittest.TestCase):
     def test_vista_sin_pestana(self):
         from PyQt6.QtWidgets import QGraphicsScene
         from modulo_vista_medicion import VistaInteractiva
-        from modulo_modelo_medicion import ModeloMedicion
+        from dpi.medicion.modelo import ModeloMedicion
         modelo = ModeloMedicion()
         escena = QGraphicsScene()
         vista = VistaInteractiva(escena, modelo=modelo, datacion=lambda: (2000, 2001, True))

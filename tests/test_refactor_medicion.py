@@ -1,6 +1,6 @@
 import unittest
-from modulo_modelo_medicion import ModeloMedicion
-from modulo_calculo_medicion import anchos_anillos, anchos_puntos
+from dpi.medicion.modelo import ModeloMedicion
+from dpi.medicion.calculo import anchos_anillos, anchos_puntos
 
 
 class TestAnchosTipados(unittest.TestCase):

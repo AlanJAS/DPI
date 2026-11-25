@@ -1,6 +1,6 @@
 import unittest
-from modulo_calculo_medicion import calcular_anillos, anios_por_punto
-from modulo_modelo_medicion import ModeloMedicion
+from dpi.medicion.calculo import calcular_anillos, anios_por_punto
+from dpi.medicion.modelo import ModeloMedicion
 
 class Anillos(unittest.TestCase):
     def test_quiebre_y_ewlw(self):

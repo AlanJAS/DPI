@@ -1,5 +1,5 @@
 import unittest
-from modulo_modelo_medicion import ModeloSesionMedicion, RadioMedicion, PuntoMedicion
+from dpi.medicion.modelo import ModeloSesionMedicion, RadioMedicion, PuntoMedicion
 class Sesion(unittest.TestCase):
     def test_propietario(self):
         m = ModeloSesionMedicion()
@@ -16,7 +16,7 @@ class Sesion(unittest.TestCase):
         self.assertIs(m.radios['R'], r)
 
     def test_edicion_multiple(self):
-        from modulo_modelo_medicion import TipoMarca
+        from dpi.medicion.modelo import TipoMarca
         m = ModeloSesionMedicion().activo
         m.cargar([(i,0) for i in range(5)], [False]*5)
         m.editar_puntos([1,3], TipoMarca.SALTO)

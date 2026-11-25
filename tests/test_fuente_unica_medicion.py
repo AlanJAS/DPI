@@ -1,5 +1,5 @@
 import unittest
-from modulo_datos_medicion import (mediciones_desde_anchos, mediciones_radio,
+from dpi.medicion.datos import (mediciones_desde_anchos, mediciones_radio,
                                    normalizar_radio)
 
 

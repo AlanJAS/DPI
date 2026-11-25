@@ -1,7 +1,7 @@
 import unittest
 import pandas as pd
 from dpi.ciencia.indice_anual import validar_anios
-from modulo_modelo_series import ModeloSeries
+from dpi.series.modelo import ModeloSeries
 
 class Anios(unittest.TestCase):
     def test_invalidos(self):

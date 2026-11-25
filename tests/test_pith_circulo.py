@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from modulo_pith_nucleo import ajustar_circulo_minimos_cuadrados as ajustar
+from dpi.medicion.pith import ajustar_circulo_minimos_cuadrados as ajustar
 class Circulo(unittest.TestCase):
     def test_centros(self):
         for x,y in [(0,0),(10,-3),(1e9,1e9)]:

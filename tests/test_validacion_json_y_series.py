@@ -3,8 +3,8 @@ import unittest
 
 import pandas as pd
 
-from json_seguro import cargar_json
-from modulo_modelo_series import ModeloSeries
+from dpi.infraestructura.json_seguro import cargar_json
+from dpi.series.modelo import ModeloSeries
 
 
 class ValidacionJsonYSeries(unittest.TestCase):

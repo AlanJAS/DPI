@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from modulo_intensidad_nucleo import extraer_intensidad_por_anillo as extraer
+from dpi.medicion.intensidad import extraer_intensidad_por_anillo as extraer
 class Intensidad(unittest.TestCase):
     def test_indice_sin_muestras(self):
         img=np.full((20,20,3),70,dtype=np.uint8)

@@ -1,8 +1,8 @@
 """Verifica que los algoritmos separados de Qt se pueden usar por sí solos."""
 import unittest
 import numpy as np
-from modulo_pith_nucleo import ajuste_degenerado, estimar_anillos_faltantes
-from modulo_intensidad_nucleo import extraer_intensidad_por_anillo
+from dpi.medicion.pith import ajuste_degenerado, estimar_anillos_faltantes
+from dpi.medicion.intensidad import extraer_intensidad_por_anillo
 
 
 class NucleosSinQt(unittest.TestCase):
