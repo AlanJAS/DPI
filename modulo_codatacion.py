@@ -439,16 +439,13 @@ class PanelCodatacion(QWidget):
         n_duplicadas = 0
         errores: list[str] = []
 
-        from dpi.formatos.deteccion import leer_series_auto
+        from dpi.series.importacion import importar_archivo
         for ruta in rutas:
             try:
-                series_extraidas = leer_series_auto(ruta)
-
-                for id_serie, df_serie in series_extraidas.items():
-                    if id_serie in self.series_datos:
+                for id_serie, agregada in importar_archivo(self.modelo_series, ruta):
+                    if not agregada:
                         n_duplicadas += 1
                         continue
-                    self.modelo_series.registrar(id_serie, df_serie)
                     self._series_modificadas(regraficar=False)
                     item = QListWidgetItem(id_serie)
                     item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
