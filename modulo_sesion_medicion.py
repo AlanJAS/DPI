@@ -5,8 +5,8 @@ import os
 from numbers import Real
 
 from json_seguro import guardar_json
-from modulo_datos_medicion import normalizar_radio
-from modulo_modelo_medicion import ModeloMedicion, PuntoMedicion, RadioMedicion
+from modulo_datos_medicion import normalizar_radio, radio_desde_dict
+from modulo_modelo_medicion import ModeloMedicion, RadioMedicion
 
 VERSION_FORMATO = 1
 
@@ -108,15 +108,7 @@ def normalizar_sesion(datos):
 
 def _radio_tipado(datos, *, activo=False):
     """Convierte un radio ya validado al modelo interno."""
-    clave = "coordenadas" if activo else "coords"
-    puntos = tuple(PuntoMedicion(c, m) for c, m in
-                   zip(datos[clave], datos["es_salto"], strict=True))
-    return RadioMedicion(
-        datos.get("codigo"), puntos, datos["anio_medula"],
-        datos["anio_corteza"], datos["dir_idx"],
-        datos.get("anomalias", {}), datos.get("medula", False),
-        datos.get("corteza", False),
-        tuple((d["anio"], d["ancho_mm"]) for d in datos.get("datos_medidos", [])))
+    return radio_desde_dict(datos)
 
 
 def leer_sesion(ruta_imagen, *, tipada=False):

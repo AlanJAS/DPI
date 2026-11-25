@@ -1,6 +1,6 @@
 """Proyecciones de medición y migración de radios, independientes de Qt."""
 from modulo_calculo_medicion import anchos_anillos, anchos_puntos, anios_medicion
-from modulo_modelo_medicion import RadioMedicion
+from modulo_modelo_medicion import PuntoMedicion, RadioMedicion
 
 
 def mediciones_desde_anchos(anchos, medula, corteza, med_a_cor):
@@ -27,18 +27,23 @@ def normalizar_radio(radio):
     return datos
 
 
-def mediciones_radio(radio, ppm):
-    if isinstance(radio, RadioMedicion):
-        if len(radio.puntos) < 2:
-            return [{"anio": a, "ancho_mm": w} for a, w in radio.datos_historicos]
-        return mediciones_desde_anchos(
-            anchos_puntos(radio.puntos, ppm), radio.anio_medula,
-            radio.anio_corteza, radio.dir_idx == 0)
+def radio_desde_dict(radio):
+    """Adaptador histórico: el cálculo posterior solo recibe radios tipados."""
     datos = normalizar_radio(radio)
     coords = datos.get("coords", datos.get("coordenadas", []))
     marcas = datos.get("es_salto", [])
-    if len(coords) < 2 or len(coords) != len(marcas):
-        return [dict(d) for d in datos.get("datos_medidos", [])]
-    anchos = anchos_anillos(coords, marcas, ppm)
-    return mediciones_desde_anchos(anchos, datos["anio_medula"],
-                                  datos["anio_corteza"], datos["dir_idx"] == 0)
+    puntos = tuple(PuntoMedicion(c, m) for c, m in zip(coords, marcas, strict=True))
+    return RadioMedicion(datos.get("codigo"), puntos, datos["anio_medula"],
+        datos["anio_corteza"], datos["dir_idx"], datos.get("anomalias", {}),
+        datos.get("medula", False), datos.get("corteza", False),
+        tuple((d["anio"], d["ancho_mm"]) for d in datos.get("datos_medidos", [])))
+
+
+def mediciones_radio(radio, ppm):
+    if not isinstance(radio, RadioMedicion):
+        radio = radio_desde_dict(radio)
+    if len(radio.puntos) < 2:
+        return [{"anio": a, "ancho_mm": w} for a, w in radio.datos_historicos]
+    return mediciones_desde_anchos(
+        anchos_puntos(radio.puntos, ppm), radio.anio_medula,
+        radio.anio_corteza, radio.dir_idx == 0)
