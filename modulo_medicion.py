@@ -19,7 +19,7 @@ import modulo_medicion_ui
 import os
 from dpi.medicion.calculo import anchos_puntos
 import logging
-from modulo_datos_medicion import mediciones_desde_anchos, mediciones_radio
+from dpi.medicion.datos import mediciones_desde_anchos, mediciones_radio
 from modulo_sesion_medicion import guardar_sesion, leer_sesion
 
 import cv2

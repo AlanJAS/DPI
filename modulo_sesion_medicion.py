@@ -4,7 +4,7 @@ import os
 from numbers import Real
 
 from json_seguro import guardar_json, cargar_json
-from modulo_datos_medicion import normalizar_radio, radio_desde_dict
+from dpi.medicion.datos import normalizar_radio, radio_desde_dict
 from dpi.medicion.modelo import RadioMedicion
 
 VERSION_FORMATO = 1
