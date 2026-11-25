@@ -16,8 +16,8 @@ Funcionalidades:
     índice (formato preferido del usuario para análisis posterior)
 
 Reutiliza:
-  - leer_tucson_multi() de modulo_formatos.py
-  - Helpers de escritura de modulo_formatos.py
+  - leer_tucson_multi() de dpi/formatos/tucson.py
+  - Helpers de escritura de dpi/formatos/tucson.py
 """
 
 from __future__ import annotations

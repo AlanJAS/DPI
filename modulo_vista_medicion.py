@@ -51,16 +51,9 @@ import dpi.ui.medicion.herramientas.autodetectar as autodetectar
 from dpi.ui.medicion.herramientas.despacho import acciones_click
 
 
-from dpi.ui.medicion.herramientas.estado import EstadoCalibracion
-
-
-from dpi.ui.medicion.herramientas.estado import EstadoSeleccion
-
-
-from dpi.ui.medicion.herramientas.estado import EstadoEspacio
-
-
-from dpi.ui.medicion.herramientas.estado import EstadoAutodeteccion
+from dpi.ui.medicion.herramientas.estado import (
+    EstadoCalibracion, EstadoSeleccion, EstadoEspacio, EstadoAutodeteccion,
+)
 
 
 class VistaInteractiva(QGraphicsView):
@@ -125,7 +118,18 @@ class VistaInteractiva(QGraphicsView):
 
         # Estado de interacción
         self.modo_actual: ModoMedicion = ModoMedicion.MEDIR
-        self._acciones_click = acciones_click(self)
+        self._acciones_click = acciones_click(
+            insertar_en_segmento=self._insertar_en_segmento,
+            borrar_punto_cercano=self._borrar_punto_cercano,
+            iniciar_seleccion_mouse=self._iniciar_seleccion_mouse,
+            paso_calibracion=self._paso_calibracion,
+            paso_medir=self._paso_medir,
+            paso_autodetect=self._paso_autodetect,
+            paso_anomalia=self._paso_anomalia,
+            paso_pith=self._paso_pith,
+            paso_espacio=self._paso_espacio,
+            paso_ewlw=self._paso_ewlw,
+        )
         # Anomalías: {anio: tipo_str}
         self._punto_arrastrado_idx: int | None = None
         self._is_panning: bool = False

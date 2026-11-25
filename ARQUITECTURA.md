@@ -9,7 +9,7 @@
 - `dpi/infraestructura`: JSON e imágenes.
 - `dpi/ui`: componentes Qt trasladados; aún conviven con interfaces históricas en la raíz.
 
-Las importaciones históricas se conservan como adaptadores de compatibilidad.
+Los adaptadores históricos de medición, series, infraestructura, formatos y constantes fueron retirados. Las interfaces principales aún conservan sus nombres históricos.
 Para código nuevo se prefieren los nombres de paquete. Los algoritmos y modelos
 no deben importar interfaces Qt; la UI coordina los modelos, no al revés.
 
@@ -25,5 +25,4 @@ Las pruebas de arranque necesitan las dependencias declaradas en requirements.tx
 La migración de archivos no equivale por sí sola a desacoplamiento completo.
 PanelCodatacion, PestanaImagen y VistaInteractiva todavía coordinan numerosas
 operaciones; su descomposición funcional requiere pruebas de interacción Qt.
-Los adaptadores históricos deben retirarse solo cuando se hayan migrado sus
-consumidores y se haya verificado la distribución en Windows y Linux.
+El estado temporal de las herramientas está agrupado en objetos independientes; las operaciones Qt todavía reciben la vista. Falta verificar la distribución en Windows y Linux.
