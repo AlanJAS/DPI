@@ -94,10 +94,7 @@ INTERVALO_MARCADOR_CENTENA = 100
 import os as _os
 import sys as _sys
 
-APP_NOMBRE = "Dendro Pixel Interface"
-APP_SIGLA = "DPI"
-APP_SUITE = "MoiCedrus Dendrochronological Suite"
-VERSION = "2.4.1"
+from dpi.version import APP_NOMBRE, APP_SIGLA, APP_SUITE, VERSION
 
 # Nombres y ubicaciones posibles del ícono. Se prueban en orden porque el
 # archivo vive en la raíz al correr desde el código fuente, y dentro de
