@@ -1,7 +1,7 @@
 """Componentes de medición de DPI."""
 
 import math
-from modulo_calculo_medicion import anchos_puntos
+from modulo_calculo_medicion import anchos_puntos, anios_por_punto
 import numpy as np
 from modulo_modelo_medicion import ModeloMedicion, PuntoMedicion, HistorialMedicion, TipoMarca
 from PyQt6.QtWidgets import QWidget, QDialog, QGraphicsView, QGraphicsScene, QPushButton, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QDoubleSpinBox, QComboBox, QToolTip, QGraphicsEllipseItem, QDialogButtonBox
@@ -684,26 +684,13 @@ class VistaInteractiva(QGraphicsView):
             # estén completamente inicializados; usamos valores neutros como fallback.
             anio_medula, anio_corteza, medula_a_corteza = 0, 0, True
 
-        anillos_validos = 0
+        anios, cierres = anios_por_punto(self.modelo_medicion.captura(),
+            self.pixeles_por_mm, anio_medula, anio_corteza, medula_a_corteza)
         for i, coord in enumerate(self.coordenadas_anillos):
             val = self.es_salto[i] if i > 0 else False
-            es_amar  = _es_amarillo(val)    # salto o espacio → amarillo
-            es_corte = _es_salto_real(val)  # solo salto → rompe cuenta
-
-            # Solo los límites normales (False) incrementan la cuenta de anillos.
-            # Excepción: si el segmento que SALE es "espacio", es inicio de quiebre
-            # dentro del mismo anillo → no incrementa.
-            val_sale_cnt = self.es_salto[i + 1] if i + 1 < len(self.es_salto) else False
-            if (i > 0
-                    and not es_amar
-                    and not _es_ewlw(val)
-                    and not _es_espacio(val_sale_cnt)):
-                anillos_validos += 1
-
-            if medula_a_corteza:
-                anio = (anio_medula + anillos_validos - 1) if i > 0 else (anio_medula - 1)
-            else:
-                anio = (anio_corteza - anillos_validos + 1) if i > 0 else anio_corteza
+            es_amar = _es_amarillo(val)
+            es_corte = _es_salto_real(val)
+            anio = anios[i]
 
             # Línea de conexión: ew_lw usa azul (cuenta como distancia)
             if i > 0:
@@ -757,7 +744,7 @@ class VistaInteractiva(QGraphicsView):
             # Medio    (0.3–1.5)      → cada 5 años
             # Alejado  (> 1.5)        → solo décadas
             # En todos los casos el font-size se ajusta para ser siempre legible.
-            if i > 0 and not es_amar and not _es_ewlw(val) and not _es_quiebre_ini(val):
+            if i in cierres:
                 escala = self._escala_vista()
                 mostrar = self._filtro_densidad_anio(anio, escala)
 
@@ -797,17 +784,9 @@ class VistaInteractiva(QGraphicsView):
             medula_a_corteza = self._pestana.combo_dir.currentIndex() == 0
         except Exception:
             return None
-        anillos_validos = 0
-        for i in range(1, idx + 1):
-            val_sale_b = self.es_salto[i + 1] if i + 1 < len(self.es_salto) else False
-            if (not _es_amarillo(self.es_salto[i])
-                    and not _es_ewlw(self.es_salto[i])
-                    and not _es_espacio(val_sale_b)):
-                anillos_validos += 1
-        if medula_a_corteza:
-            return (anio_medula + anillos_validos - 1) if idx > 0 else (anio_medula - 1)
-        else:
-            return (anio_corteza - anillos_validos + 1) if idx > 0 else anio_corteza
+        anios, _ = anios_por_punto(self.modelo_medicion.captura(),
+            self.pixeles_por_mm, anio_medula, anio_corteza, medula_a_corteza)
+        return anios[idx] if 0 <= idx < len(anios) else None
 
     def _dibujar_anomalias(self):
         """Dibuja marcas de color sobre los ticks de anillos con anomalía registrada."""
@@ -2076,25 +2055,9 @@ class VistaInteractiva(QGraphicsView):
         except Exception:
             return mapa
 
-        anillos_validos = 0
-        for i, coord in enumerate(coords):
-            val = self.es_salto[i] if i > 0 else False
-            es_amar = _es_amarillo(val)
-            val_sale = self.es_salto[i + 1] if i + 1 < len(self.es_salto) else False
-            if (i > 0
-                    and not es_amar
-                    and not _es_ewlw(val)
-                    and not _es_quiebre_ini(val)
-                    and not _es_espacio(val_sale)):
-                anillos_validos += 1
-
-            if i > 0 and not es_amar and not _es_ewlw(val) and not _es_quiebre_ini(val):
-                if med_a_cor:
-                    anio = anio_medula + anillos_validos - 1
-                else:
-                    anio = anio_corteza - anillos_validos + 1
-                mapa[anio] = coord
-        return mapa
+        anios, cierres = anios_por_punto(self.modelo_medicion.captura(),
+            self.pixeles_por_mm, anio_medula, anio_corteza, med_a_cor)
+        return {anios[i]: coords[i] for i in sorted(cierres)}
 
     def _segmento_mas_cercano(self, x: float, y: float) -> tuple[int, float, float] | None:
         """
@@ -3232,22 +3195,8 @@ class VistaInteractiva(QGraphicsView):
             pen_tick_in = QPen(QColor(COLOR_PUNTO_INACTIVO))
             pen_tick_in.setCosmetic(True); pen_tick_in.setWidthF(grosor)
 
-            # Pre-calcular el año de cada coord (necesario para las etiquetas)
-            anios_por_idx: list[int | None] = [None] * len(coords)
-            anillos_validos_acum = 0
-            for i in range(len(coords)):
-                if i > 0:
-                    val = saltos[i] if i < len(saltos) else False
-                    val_sig = saltos[i + 1] if i + 1 < len(saltos) else False
-                    if (not _es_amarillo(val) and not _es_ewlw(val)
-                            and not _es_espacio(val_sig)):
-                        anillos_validos_acum += 1
-                if medula_a_corteza:
-                    anios_por_idx[i] = (anio_medula + anillos_validos_acum - 1
-                                         if i > 0 else (anio_medula - 1))
-                else:
-                    anios_por_idx[i] = (anio_corteza - anillos_validos_acum + 1
-                                         if i > 0 else anio_corteza)
+            anios_por_idx, cierres = anios_por_punto(datos.puntos,
+                self.pixeles_por_mm, anio_medula, anio_corteza, medula_a_corteza)
 
             # Primera pasada: dibujar TODOS los ticks y líneas (sin filtro).
             # El grosor ya está adaptado al zoom para evitar saturación.
@@ -3276,18 +3225,9 @@ class VistaInteractiva(QGraphicsView):
             # comportamiento que el camino activo).
             ultimo_bbox_inactivo = None
             for i in range(1, len(coords)):
-                val = saltos[i] if i < len(saltos) else False
-                val_sig = saltos[i + 1] if i + 1 < len(saltos) else False
-                es_amar = _es_amarillo(val)
-                es_ewlw_aqui = _es_ewlw(val)
-                es_espacio_sig = _es_espacio(val_sig)
-                es_quiebre_ini_aqui = _es_quiebre_ini(val)
-
-                # Saltar segmentos que no llevan etiqueta
-                if es_amar or es_ewlw_aqui or es_quiebre_ini_aqui:
+                if i not in cierres:
                     continue
-
-                anio = anios_por_idx[i] if anios_por_idx[i] is not None else 0
+                anio = anios_por_idx[i]
                 mostrar = self._filtro_densidad_anio(anio, escala)
 
                 if mostrar:
