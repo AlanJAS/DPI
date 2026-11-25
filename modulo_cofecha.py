@@ -28,6 +28,7 @@ import numpy as np
 import pandas as pd
 
 import modulo_cofecha_nucleo as _nuc
+from modulo_estadistica import sensibilidad_media, autocorrelacion_lag1, pearson
 
 from modulo_cronologia import (
     _spline_cook,
@@ -41,36 +42,6 @@ from modulo_cronologia import (
 # ---------------------------------------------------------------------------
 # Estadísticos descriptivos de una serie
 # ---------------------------------------------------------------------------
-
-def sensibilidad_media(valores: np.ndarray) -> float:
-    """Sensibilidad media (mean sensitivity) de Douglass.
-
-    Media de las diferencias relativas entre anillos consecutivos:
-        MS = (1/(n-1)) · Σ | 2·(xₜ₊₁ − xₜ) / (xₜ₊₁ + xₜ) |
-    Mide cuánta variación año a año tiene la serie; valores altos indican
-    una serie sensible al clima, que es la que sirve para cofechar.
-    """
-    v = np.asarray(valores, dtype=float)
-    v = v[np.isfinite(v)]
-    if v.size < 2:
-        return float("nan")
-    suma = v[1:] + v[:-1]
-    with np.errstate(divide="ignore", invalid="ignore"):
-        d = np.abs(2.0 * (v[1:] - v[:-1]) / suma)
-    d = d[np.isfinite(d)]
-    return float(np.mean(d)) if d.size else float("nan")
-
-
-def autocorrelacion_lag1(valores: np.ndarray) -> float:
-    """Autocorrelación de primer orden."""
-    v = np.asarray(valores, dtype=float)
-    v = v[np.isfinite(v)]
-    if v.size < 3:
-        return float("nan")
-    c = v - v.mean()
-    if np.std(c) == 0:
-        return float("nan")
-    return float(np.corrcoef(c[1:], c[:-1])[0, 1])
 
 
 def nivel_critico(n: int, alfa: float = 0.01) -> float:
@@ -140,10 +111,9 @@ def construir_maestro(indices: dict[str, pd.Series],
 # ---------------------------------------------------------------------------
 
 def _r(a: np.ndarray, b: np.ndarray) -> float:
-    if a.size < 3 or np.std(a) == 0 or np.std(b) == 0:
+    if a.size < 3:
         return float("nan")
-    r = float(np.corrcoef(a, b)[0, 1])
-    return r if np.isfinite(r) else float("nan")
+    return pearson(a, b)
 
 
 def grilla_segmentos(primer_anio: int, ultimo_anio: int,

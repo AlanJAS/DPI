@@ -2,88 +2,9 @@
 
 import numpy as np
 import pandas as pd
-from modulo_codigos import clave_codigo_dendro
-
-
-def agrupar_por_arbol(nombres) -> dict:
-    """Agrupa códigos de serie por ÁRBOL, reutilizando el lector de códigos.
-
-    QLH107A y QLH107B son dos radios del mismo árbol; QLH108A es otro árbol.
-    Se usa la misma clave que ordena los archivos al unir: sitio + número,
-    ignorando el radio.
-
-    Devuelve {nombre_de_serie: identificador_de_arbol}.
-    """
-    out = {}
-    for n in nombres:
-        k = clave_codigo_dendro(n)
-        out[n] = f"{k[0]}{k[1]}"      # sitio + número de árbol, sin el radio
-    return out
-
-
-def rbar_entre_arboles(series_dict, nombres, min_overlap: int = 10) -> dict:
-    """Rbar separando radios del mismo árbol de árboles distintos.
-
-    POR QUÉ IMPORTA
-    ---------------
-    Dos radios del mismo árbol comparten mucho más que la señal del sitio:
-    comparten el individuo, con su microambiente, sus competidores y sus
-    daños. Meterlos en la misma bolsa que los pares entre árboles infla el
-    Rbar y, con él, la EPS y la SSS. Una colección de 30 radios de 10 árboles
-    NO tiene la réplica de 30 árboles.
-
-    Se calculan tres cantidades, como en `rwi.stats` de dplR:
-
-      rbar_wt   correlación media ENTRE radios del mismo árbol
-      rbar_bt   correlación media ENTRE árboles distintos
-      rbar_eff  el que hay que usar:
-                    rbar_bt / (rbar_wt + (1 − rbar_wt)/c_eff)
-                donde c_eff es el número efectivo de radios por árbol.
-
-    Cuando cada árbol tiene un solo radio, rbar_eff es igual a rbar_bt y todo
-    se reduce al caso simple.
-    """
-    arbol = agrupar_por_arbol(nombres)
-    cols = {}
-    for n in nombres:
-        v = series_dict.get(n)
-        if v is None:
-            continue
-        col = v["Ancho_mm"] if isinstance(v, pd.DataFrame) else v
-        col = pd.to_numeric(col, errors="coerce").dropna()
-        if len(col) > 5:
-            cols[n] = col
-    claves = list(cols)
-    if len(claves) < 2:
-        return {"rbar_wt": float("nan"), "rbar_bt": float("nan"),
-                "rbar_eff": float("nan"), "n_arboles": 0, "c_eff": float("nan")}
-    M = pd.concat(cols, axis=1)
-    R = M.corr(min_periods=min_overlap)
-    wt, bt = [], []
-    for i in range(len(claves)):
-        for j in range(i + 1, len(claves)):
-            r = R.iloc[i, j]
-            if not np.isfinite(r):
-                continue
-            (wt if arbol[claves[i]] == arbol[claves[j]] else bt).append(float(r))
-    arboles = {}
-    for n in claves:
-        arboles.setdefault(arbol[n], []).append(n)
-    n_por_arbol = np.array([len(v) for v in arboles.values()], dtype=float)
-    rbar_wt = float(np.mean(wt)) if wt else float("nan")
-    rbar_bt = float(np.mean(bt)) if bt else float("nan")
-    if not wt:
-        c_eff = 1.0
-        rbar_eff = rbar_bt
-    else:
-        # Número efectivo de radios por árbol: media armónica, como dplR
-        c_eff_rec = float(np.mean(1.0 / n_por_arbol))
-        c_eff = 1.0 / c_eff_rec if c_eff_rec > 0 else 1.0
-        den = rbar_wt + (1.0 - rbar_wt) * c_eff_rec
-        rbar_eff = rbar_bt / den if den > 0 else float("nan")
-    return {"rbar_wt": rbar_wt, "rbar_bt": rbar_bt, "rbar_eff": rbar_eff,
-            "n_arboles": len(arboles), "c_eff": c_eff,
-            "n_pares_wt": len(wt), "n_pares_bt": len(bt)}
+from modulo_estadistica import (
+    agrupar_por_arbol, rbar_entre_arboles, correlaciones_pares, calcular_eps,
+)
 
 
 def _biweight_mean(values, c: float = 9.0, minimo: int = 6) -> float:
@@ -1189,36 +1110,12 @@ def _construir_cronologia_desde_series(
     # series son 14.196 pares y era el mayor costo al generar la cronología.
     # Ahora la matriz de correlaciones se calcula de una sola vez con
     # álgebra matricial, respetando NaN y el mínimo de 10 años en común.
-    M = df.to_numpy(dtype=float)
-    valido = ~np.isnan(M)
-    Z = np.where(valido, M, 0.0)
-    V = valido.astype(float)
-    n_ab = V.T @ V
-    s_a = Z.T @ V
-    s_b = V.T @ Z
-    s_ab = Z.T @ Z
-    s_aa = (Z * Z).T @ V
-    s_bb = V.T @ (Z * Z)
-    with np.errstate(divide="ignore", invalid="ignore"):
-        cov_m = s_ab - (s_a * s_b) / n_ab
-        var_a = s_aa - (s_a * s_a) / n_ab
-        var_b = s_bb - (s_b * s_b) / n_ab
-        R_m = cov_m / np.sqrt(var_a * var_b)
-    iu = np.triu_indices(M.shape[1], k=1)
-    r_pares = R_m[iu]
-    ok = (n_ab[iu] >= 10) & np.isfinite(r_pares)
-    rs_pairs = r_pares[ok]
+    rs_pairs = correlaciones_pares(df.to_numpy(dtype=float))
     rbar_completo = float(np.mean(rs_pairs)) if rs_pairs.size else float("nan")
     # Profundidad de muestreo promedio (mean number of series per year
     # with valid data) — igual que la columna "cores" de ARSTAN.
     sample_depth_mean = float(ns[ns > 0].mean()) if (ns > 0).any() else 0.0
-    if np.isfinite(rbar_completo) and sample_depth_mean > 1:
-        eps_completo = float(
-            (sample_depth_mean * rbar_completo) /
-            (1 + (sample_depth_mean - 1) * rbar_completo)
-        )
-    else:
-        eps_completo = float("nan")
+    eps_completo = float(calcular_eps(rbar_completo, sample_depth_mean))
 
     meta = {
         "nombre": "",
