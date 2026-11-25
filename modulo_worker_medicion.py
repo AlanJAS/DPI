@@ -42,7 +42,7 @@ class _Worker(QThread):
                 **self._kwargs,
             )
             self.signals.resultado.emit(resultado)
-        except Exception as exc:
+        except Exception:
             import traceback
             self.signals.error.emit(traceback.format_exc())
 

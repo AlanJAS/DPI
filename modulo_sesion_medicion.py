@@ -106,11 +106,6 @@ def normalizar_sesion(datos):
     return resultado
 
 
-def _radio_tipado(datos, *, activo=False):
-    """Convierte un radio ya validado al modelo interno."""
-    return radio_desde_dict(datos)
-
-
 def leer_sesion(ruta_imagen, *, tipada=False):
     """Devuelve None solo cuando no existe el archivo de sesión."""
     try:
@@ -121,10 +116,10 @@ def leer_sesion(ruta_imagen, *, tipada=False):
     datos = normalizar_sesion(datos)
     if tipada:
         datos["caminos_guardados"] = {
-            nombre: _radio_tipado(radio)
+            nombre: radio_desde_dict(radio)
             for nombre, radio in datos["caminos_guardados"].items()}
         activo = datos["camino_activo"]
-        datos["camino_activo"] = _radio_tipado(activo, activo=True) if activo else None
+        datos["camino_activo"] = radio_desde_dict(activo) if activo else None
     return datos
 
 

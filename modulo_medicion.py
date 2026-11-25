@@ -28,7 +28,7 @@ from modulo_modelo_medicion import ModeloMedicion, PuntoMedicion, RadioMedicion,
 import pandas as pd
 import pyqtgraph as pg
 from PIL import Image
-from modulo_imagen import detectar_dpi
+from modulo_imagen import detectar_dpi, preparar_banda_rgb
 from modulo_formatos import (leer_archivo_tucson, leer_wid, leer_dendro_auto,
                              leer_pos, escribir_pos,
                              _escribir_excel, _asegurar_extension,
@@ -593,33 +593,7 @@ class PestanaImagen(QWidget):
             brillo = self._slider_brillo.value()
             contraste = self._slider_contraste.value() / 100.0
 
-            # ── Construir LUT de 256 entradas (O(256), no O(pixeles)) ──
-            lut = np.arange(256, dtype=np.float32)
-            lut = contraste * lut + brillo
-            lut = np.clip(lut, 0, 255).astype(np.uint8)
-
-            sin_ajuste = (brillo == 0 and contraste == 1.0)
-
-            # ── Extraer canal y aplicar ──
-            if banda == "RGB":
-                if sin_ajuste:
-                    rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-                else:
-                    rgb = cv2.LUT(cv2.cvtColor(img, cv2.COLOR_BGR2RGB), lut)
-            else:
-                if banda == "R":
-                    gray = img[:, :, 2]
-                elif banda == "G":
-                    gray = img[:, :, 1]
-                elif banda == "B":
-                    gray = img[:, :, 0]
-                else:  # Gris
-                    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-                if not sin_ajuste:
-                    gray = cv2.LUT(gray, lut)
-                rgb = cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB)
-                del gray
+            rgb = preparar_banda_rgb(img, banda, brillo, contraste)
 
             QApplication.processEvents()
 

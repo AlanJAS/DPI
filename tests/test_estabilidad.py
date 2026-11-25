@@ -24,7 +24,7 @@ class Estabilidad(unittest.TestCase):
         np.testing.assert_allclose(correlaciones_pares(np.c_[x, y]), [1])
 
     def test_cache(self):
-        tree = ast.parse((Path(__file__).resolve().parents[1] / 'modulo_codatacion.py').read_text())
+        tree = ast.parse((Path(__file__).resolve().parents[1] / 'modulo_codatacion.py').read_text(encoding='utf-8'))
         node = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == '_clave_cache_comparacion')
         ns = dict(pd=pd, hashlib=hashlib)
         exec(compile(ast.Module(body=[node], type_ignores=[]), '<cache>', 'exec'), ns)

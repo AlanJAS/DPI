@@ -1,5 +1,5 @@
 """Proyecciones de medición y migración de radios, independientes de Qt."""
-from modulo_calculo_medicion import anchos_anillos, anchos_puntos, anios_medicion
+from modulo_calculo_medicion import anchos_puntos, anios_medicion
 from modulo_modelo_medicion import PuntoMedicion, RadioMedicion
 
 
