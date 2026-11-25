@@ -2,7 +2,7 @@
 import os
 import re
 import numpy as np
-from constantes import DPI_DEFECTO, MM_POR_PULGADA
+from dpi.medicion.constantes import DPI_DEFECTO, MM_POR_PULGADA
 
 def leer_pos(ruta: str) -> tuple[float, int | None, list, list]:
     """Parsea un archivo .pos de CooRecorder y devuelve (dpi, anio, coords_px, saltos)."""

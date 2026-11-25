@@ -4,10 +4,11 @@
 # mantenimiento y futuros ajustes sin buscar en múltiples archivos.
 # =============================================================================
 
-# --- Resolución y escala ---
-DPI_DEFECTO = 2400
-MM_POR_PULGADA = 25.4
-PIXELES_POR_MM_DEFECTO = DPI_DEFECTO / MM_POR_PULGADA  # ≈ 94.49
+from dpi.medicion.constantes import (
+    DPI_DEFECTO,
+    MM_POR_PULGADA,
+    PIXELES_POR_MM_DEFECTO,
+)
 
 # --- Formato Tucson (.rwl) ---
 TUCSON_VALOR_FIN = -9999       # Marca fin de serie

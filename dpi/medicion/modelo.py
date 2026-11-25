@@ -5,7 +5,7 @@ from types import MappingProxyType
 from enum import Enum
 from math import isfinite
 from numbers import Real
-from constantes import PIXELES_POR_MM_DEFECTO
+from dpi.medicion.constantes import PIXELES_POR_MM_DEFECTO
 
 
 class TipoMarca(Enum):
