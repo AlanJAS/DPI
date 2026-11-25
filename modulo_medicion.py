@@ -66,7 +66,7 @@ logger = logging.getLogger(__name__)
 
 from dpi.medicion.marcas import ModoMedicion, _es_ewlw
 
-from modulo_ewlw import anchos_ewlw_puntos
+from dpi.medicion.ewlw import anchos_ewlw_puntos
 
 
 
