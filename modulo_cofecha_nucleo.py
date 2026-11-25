@@ -31,6 +31,7 @@ Las tres ideas que hacen la diferencia:
 from __future__ import annotations
 
 import numpy as np
+from modulo_indice_anual import validar_anios
 from modulo_estadistica import (pearson, pearson_desde_sumas,
                                 centrar_escalar_correlacion)
 
@@ -65,11 +66,7 @@ class Matriz:
             raise ValueError("No hay series para alinear.")
         indices = {}
         for nombre, s in series.items():
-            idx = np.asarray(s.index, dtype=float)
-            if (not np.isfinite(idx).all() or not np.equal(idx, np.floor(idx)).all()
-                    or np.unique(idx).size != idx.size or (np.abs(idx) > 2**53 - 1).any()):
-                raise ValueError("Índice anual inválido")
-            indices[nombre] = idx.astype(np.int64)
+            indices[nombre] = validar_anios(s.index)
         primero = min(int(idx.min()) for idx in indices.values() if idx.size)
         ultimo = max(int(idx.max()) for idx in indices.values() if idx.size)
         if (ultimo - primero + 1) * len(nombres) > 25_000_000:

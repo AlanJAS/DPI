@@ -4,6 +4,7 @@ from collections.abc import Mapping
 
 import pandas as pd
 import numpy as np
+from modulo_indice_anual import validar_anios
 
 
 @dataclass(frozen=True)
@@ -79,10 +80,7 @@ class ModeloSeries:
         if not isinstance(df, pd.DataFrame) or 'Ancho_mm' not in df.columns:
             raise ValueError('La serie debe contener Ancho_mm')
         datos = df.copy()
-        anios = pd.to_numeric(datos.index, errors='raise').to_numpy(dtype=float)
-        if not np.isfinite(anios).all() or not np.equal(anios, np.floor(anios)).all():
-            raise ValueError('Los años deben ser enteros finitos')
-        datos.index = pd.Index(anios.astype('int64'), name=df.index.name)
+        datos.index = pd.Index(validar_anios(datos.index), name=df.index.name)
         if not datos.index.is_unique or datos.empty:
             raise ValueError('Serie vacía o años duplicados')
         valores = pd.to_numeric(datos['Ancho_mm'], errors='raise')
@@ -118,11 +116,11 @@ class ModeloSeries:
     def desplazar(self, nombre, shift):
         self._exigir_sin_prueba(nombre)
         df = self._datos.get(nombre)
-        if not shift or df is None or df.empty:
-            return False
         if not isinstance(shift, (int, np.integer)) or isinstance(shift, bool):
             raise ValueError('El desfase debe ser entero')
+        if shift == 0 or df is None or df.empty:
+            return False
         nuevo = df.copy()
-        nuevo.index = nuevo.index + int(shift)
+        nuevo.index = pd.Index([int(a) + int(shift) for a in nuevo.index], name=nuevo.index.name)
         self.actualizar(nombre, nuevo)
         return True
