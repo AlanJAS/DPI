@@ -2105,10 +2105,11 @@ class PanelCodatacion(QWidget):
                 s_a_glk = self._serie_para_glk(
                     df_serie["Ancho_mm"], es_crono_serie)
 
-                from modulo_comparacion_nucleo import comparar_serie
+                from modulo_comparacion_nucleo import comparar_serie, SeriePreparada
                 resultado = comparar_serie(
-                    nombre, s_a_raw, s_b_raw, s_a_corr, s_b_corr,
-                    s_a_glk, s_b_glk, MIN_OVERLAP, VENTANA_DESFASE_FECHADA)
+                    nombre, SeriePreparada(s_a_raw, s_a_corr, s_a_glk),
+                    SeriePreparada(s_b_raw, s_b_corr, s_b_glk),
+                    MIN_OVERLAP, VENTANA_DESFASE_FECHADA)
                 resultados.append(resultado)
                 if resultado["shifts"]:
                     QApplication.processEvents()

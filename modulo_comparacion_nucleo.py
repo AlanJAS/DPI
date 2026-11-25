@@ -1,13 +1,26 @@
 """Comparación de una serie preparada contra una cronología, sin Qt."""
 import hashlib
+from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 from modulo_estadistica import _estadisticos_por_desfase
 from modulo_datacion import score_compuesto
 
 
-def comparar_serie(nombre, s_a_raw, s_b_raw, s_a_corr, s_b_corr, s_a_glk, s_b_glk,
+@dataclass(frozen=True, slots=True)
+class SeriePreparada:
+    cruda: pd.Series
+    correlacion: pd.Series
+    glk: pd.Series
+
+
+def comparar_serie(nombre, serie: SeriePreparada, referencia: SeriePreparada,
                    MIN_OVERLAP=20, VENTANA_DESFASE_FECHADA=50):
+    s_a_raw, s_b_raw = serie.cruda, referencia.cruda
+    s_a_corr, s_b_corr = serie.correlacion, referencia.correlacion
+    s_a_glk, s_b_glk = serie.glk, referencia.glk
+    if any(s.empty for s in (s_a_raw, s_b_raw, s_a_corr, s_b_corr)):
+        return resultado_sin_overlap(nombre)
     c_min_year = int(s_b_raw.index.min())
     c_max_year = int(s_b_raw.index.max())
     s_min_year = int(s_a_raw.index.min())
