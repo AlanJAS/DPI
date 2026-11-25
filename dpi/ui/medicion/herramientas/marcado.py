@@ -28,15 +28,9 @@ def _salto_rapido(self, x, y):
 def _insertar_en_segmento(self, x, y):
     if len(self.coordenadas_anillos) < 2:
         return
-    tol = self._tolerancia_segmento()
-    mejor_d, mejor_idx = float("inf"), -1
-    for i in range(len(self.coordenadas_anillos) - 1):
-        x1, y1 = self.coordenadas_anillos[i]
-        x2, y2 = self.coordenadas_anillos[i + 1]
-        d = self._dist_punto_segmento(x, y, x1, y1, x2, y2)
-        if d < mejor_d:
-            mejor_d, mejor_idx = d, i
-    if mejor_d < tol and mejor_idx != -1:
+    hit = self._segmento_mas_cercano(x, y)
+    if hit is not None and hit[2] < self._tolerancia_segmento():
+        mejor_idx = hit[0]
         self.guardar_en_historial()
         self.modelo_medicion.insertar(mejor_idx + 1, (x, y), TipoMarca.NORMAL)
         self.recalcular_todas_las_distancias()
