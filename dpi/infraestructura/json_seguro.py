@@ -96,7 +96,7 @@ def a_json(obj):
         return obj if math.isfinite(obj) else None
     if isinstance(obj, (str, bool, int)) or obj is None:
         return obj
-    return str(obj)                        # último recurso: no perder el dato
+    raise TypeError(f"Tipo no serializable: {type(obj).__name__}")
 
 
 def cargar_json(archivo):
