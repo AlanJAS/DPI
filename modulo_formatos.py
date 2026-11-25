@@ -29,8 +29,10 @@ def leer_pos(ruta: str) -> tuple[float, int | None, list, list]:
             if ln.startswith("#DPI"):
                 try:
                     dpi = float(ln.split()[1].replace(",", "."))
-                except (IndexError, ValueError):
-                    pass
+                except (IndexError, ValueError) as exc:
+                    raise ValueError("DPI inválido en POS") from exc
+                if not np.isfinite(dpi) or dpi <= 0:
+                    raise ValueError("DPI inválido en POS")
             elif ln.startswith("#C DATED"):
                 try:
                     anio_datado = int(ln.split()[2])
@@ -67,8 +69,10 @@ def escribir_pos(ruta, coords_px, saltos, dpi, anio_corteza, codigo, ruta_imagen
     de esos tipos vive en el estado JSON del programa.
     """
     ppm = dpi / MM_POR_PULGADA  # píxeles por mm
-    if ppm <= 0:
-        ppm = 1.0
+    if not np.isfinite(ppm) or ppm <= 0:
+        raise ValueError("DPI inválido en POS")
+    if len(coords_px) != len(saltos) or not np.isfinite(coords_px).all():
+        raise ValueError("Geometría inválida en POS")
     lineas = [
         "#DENDRO (formato de coordenadas compatible CooRecorder/Cybis)",
         f"#Imagefile {os.path.basename(ruta_imagen)}",

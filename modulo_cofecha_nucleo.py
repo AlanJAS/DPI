@@ -61,17 +61,26 @@ class Matriz:
     @classmethod
     def desde_series(cls, series: dict) -> "Matriz":
         nombres = list(series.keys())
-        if not nombres:
+        if not nombres or not any(len(s) for s in series.values()):
             raise ValueError("No hay series para alinear.")
-        primero = min(int(np.min(s.index)) for s in series.values() if len(s))
-        ultimo = max(int(np.max(s.index)) for s in series.values() if len(s))
+        indices = {}
+        for nombre, s in series.items():
+            idx = np.asarray(s.index, dtype=float)
+            if (not np.isfinite(idx).all() or not np.equal(idx, np.floor(idx)).all()
+                    or np.unique(idx).size != idx.size or (np.abs(idx) > 2**53 - 1).any()):
+                raise ValueError("Índice anual inválido")
+            indices[nombre] = idx.astype(np.int64)
+        primero = min(int(idx.min()) for idx in indices.values() if idx.size)
+        ultimo = max(int(idx.max()) for idx in indices.values() if idx.size)
+        if (ultimo - primero + 1) * len(nombres) > 25_000_000:
+            raise ValueError("Matriz anual demasiado grande")
         anios = np.arange(primero, ultimo + 1, dtype=np.int64)
         valores = np.full((anios.size, len(nombres)), np.nan, dtype=float)
         for j, n in enumerate(nombres):
             s = series[n]
             if not len(s):
                 continue
-            pos = np.asarray(s.index, dtype=np.int64) - primero
+            pos = indices[n] - primero
             v = np.asarray(s.to_numpy(), dtype=float)
             bueno = (pos >= 0) & (pos < anios.size) & np.isfinite(v)
             valores[pos[bueno], j] = v[bueno]
@@ -346,7 +355,13 @@ def z_leave_one_out(mat: np.ndarray, minimo: int = 4):
     eso sale en forma cerrada y de una sola vez para toda la matriz.
     Devuelve una matriz de z con NaN donde no hay suficientes series.
     """
+    mat = np.asarray(mat, dtype=float)
+    if mat.ndim != 2 or mat.shape[1] == 0:
+        raise ValueError("Se esperaba una matriz con series")
     finito = np.isfinite(mat)
+    referencia = mat[np.arange(mat.shape[0]), np.argmax(finito, axis=1)][:, None]
+    referencia = np.where(np.isfinite(referencia), referencia, 0.0)
+    mat = mat - referencia
     x0 = np.where(finito, mat, 0.0)
     n = finito.sum(axis=1)[:, None]
     s = x0.sum(axis=1)[:, None]
