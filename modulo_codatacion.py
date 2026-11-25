@@ -20,7 +20,7 @@ from modulo_widgets import (
     _ensanchar_dialogo, _agregar_hover_anio, _crear_barra_zoom,
     SpinBoxFlechas, SeccionColapsable,
 )
-from modulo_modelo_series import ModeloSeries
+from dpi.series.modelo import ModeloSeries
 from dpi.ciencia.comparacion_nucleo import SeriePreparada, comparar_serie
 import dpi.ciencia.transformacion as _tr
 import dpi.ciencia.estadistica as _est

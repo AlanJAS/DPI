@@ -5,7 +5,7 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
 NUCLEOS = (
-    'dpi.medicion.calculo', 'dpi.medicion.modelo', 'modulo_modelo_series',
+    'dpi.medicion.calculo', 'dpi.medicion.modelo', 'dpi.series.modelo',
     'dpi.ciencia.estadistica', 'dpi.ciencia.cronologia', 'dpi.ciencia.datacion', 'dpi.ciencia.quiebres',
     'dpi.ciencia.cofecha', 'dpi.ciencia.cofecha_nucleo', 'dpi.ciencia.comparacion_nucleo',
     'dpi.medicion.pith', 'dpi.medicion.intensidad', 'dpi.ciencia.indice_anual',
