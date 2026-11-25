@@ -94,7 +94,7 @@ def normalizar_sesion(datos):
     return resultado
 
 
-def leer_sesion(ruta_imagen, *, tipada=False):
+def leer_sesion(ruta_imagen):
     """Devuelve None solo cuando no existe el archivo de sesión."""
     try:
         with open(ruta_sesion(ruta_imagen), encoding="utf-8-sig") as archivo:
@@ -102,12 +102,11 @@ def leer_sesion(ruta_imagen, *, tipada=False):
     except FileNotFoundError:
         return None
     datos = normalizar_sesion(datos)
-    if tipada:
-        datos["caminos_guardados"] = {
-            nombre: radio_desde_dict(radio)
-            for nombre, radio in datos["caminos_guardados"].items()}
-        activo = datos["camino_activo"]
-        datos["camino_activo"] = radio_desde_dict(activo) if activo else None
+    datos["caminos_guardados"] = {
+        nombre: radio_desde_dict(radio)
+        for nombre, radio in datos["caminos_guardados"].items()}
+    activo = datos["camino_activo"]
+    datos["camino_activo"] = radio_desde_dict(activo) if activo else None
     return datos
 
 

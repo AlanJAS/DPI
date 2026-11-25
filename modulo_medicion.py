@@ -1705,7 +1705,7 @@ class PestanaImagen(QWidget):
     def _cargar_estado(self) -> bool:
         self._sesion_protegida = None
         try:
-            datos = leer_sesion(self.ruta_imagen_actual, tipada=True)
+            datos = leer_sesion(self.ruta_imagen_actual)
             if datos is None:
                 return False
             activo = datos["camino_activo"]

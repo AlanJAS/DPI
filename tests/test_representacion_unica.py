@@ -25,22 +25,22 @@ class TestRepresentacionUnica(unittest.TestCase):
             r = RadioMedicion("R", (PuntoMedicion((0, 0)), PuntoMedicion((2, 0))),
                               2000, 2000, 0, {2000: "tipo"})
             guardar_sesion(imagen, 2, {"R": r}, r)
-            sesion = leer_sesion(imagen, tipada=True)
+            sesion = leer_sesion(imagen)
             self.assertEqual(sesion["caminos_guardados"]["R"], r)
             self.assertEqual(sesion["camino_activo"], r)
-            self.assertEqual(leer_sesion(imagen)["caminos_guardados"]["R"], r.a_dict())
+            self.assertEqual(leer_sesion(imagen)["caminos_guardados"]["R"], r)
 
     def test_legacy_sin_geometria(self):
         with tempfile.TemporaryDirectory() as tmp:
             imagen = Path(tmp) / "arbol.png"
             historico = {"datos_medidos": [{"anio": 2000, "ancho_mm": 3.}]}
             guardar_sesion(imagen, 2, {"R": historico}, {})
-            sesion = leer_sesion(imagen, tipada=True)
+            sesion = leer_sesion(imagen)
             r = sesion["caminos_guardados"]["R"]
             self.assertIsNone(sesion["camino_activo"])
             self.assertEqual(mediciones_radio(r, 100), historico["datos_medidos"])
             guardar_sesion(imagen, 2, {"R": r}, {})
-            self.assertEqual(leer_sesion(imagen, tipada=True)["caminos_guardados"]["R"], r)
+            self.assertEqual(leer_sesion(imagen)["caminos_guardados"]["R"], r)
 
     def test_rechaza_puntos_invalidos(self):
         with self.assertRaises(ValueError):

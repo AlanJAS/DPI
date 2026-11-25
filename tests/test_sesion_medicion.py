@@ -23,9 +23,9 @@ class TestSesionMedicion(unittest.TestCase):
         datos = leer_sesion(self.imagen)
         self.assertEqual(datos["version_formato"], VERSION_FORMATO)
         self.assertEqual(datos["pixeles_por_mm"], 10)
-        self.assertEqual(datos["camino_activo"]["coordenadas"], [(0., 0.), (10., 0.)])
-        self.assertEqual(datos["caminos_guardados"]["R1"]["es_salto"], [False, False])
-        self.assertNotIn("datos_medidos", datos["camino_activo"])
+        self.assertEqual(datos["camino_activo"].coordenadas, ((0., 0.), (10., 0.)))
+        self.assertEqual(datos["caminos_guardados"]["R1"].marcas, (False, False))
+        self.assertFalse(datos["camino_activo"].datos_historicos)
         self.assertEqual(Path(ruta_sesion(self.imagen)).name, ".árbol.png_dpi.json")
 
     def test_migracion_legacy(self):
