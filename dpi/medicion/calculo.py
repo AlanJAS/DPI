@@ -128,3 +128,14 @@ def indice_punto_mas_cercano(coordenadas, x, y, tol):
         if d < tol and d < mejor_d:
             mejor_d, mejor_idx = d, i
     return mejor_idx
+
+
+def posicion_insercion(coords, ancla, punto):
+    """Posición adyacente al ancla, según la distancia a sus vecinos."""
+    if not 0 <= ancla < len(coords):
+        raise IndexError('Ancla inválida')
+    if ancla == len(coords) - 1:
+        return len(coords)
+    if ancla == 0:
+        return 0
+    return ancla + 1 if math.dist(punto, coords[ancla+1]) < math.dist(punto, coords[ancla-1]) else ancla

@@ -1,5 +1,6 @@
 """Operaciones de interfaz extraídas; reciben explícitamente el contexto de la vista."""
 import math
+from dpi.medicion.calculo import posicion_insercion
 from dpi.medicion.modelo import TipoMarca
 from PyQt6.QtGui import QPen, QColor, QBrush
 from PyQt6.QtCore import Qt
@@ -120,28 +121,7 @@ def _paso_medir(self, x: float, y: float):
         idx_a = n - 1
         self._resaltar_anclado(idx_a)
 
-    # Determinar dirección: el nuevo punto va ANTES o DESPUÉS del ancla.
-    # Se compara la distancia euclidiana del cursor a los vecinos para
-    # inferir en qué lado del ancla está el usuario apuntando.
-    # Regla simple: si el ancla es el último punto → append.
-    #               si el ancla es el primero       → prepend.
-    #               si está en el medio             → detectar por posición.
-    if idx_a == n - 1:
-        # Ancla al final → añadir después (hacia corteza o médula según dirección global)
-        insert_pos = n
-    elif idx_a == 0:
-        # Ancla al principio → insertar antes
-        insert_pos = 0
-    else:
-        # Punto intermedio: insertar en el lado donde cae el nuevo clic.
-        # Comparar proyección sobre el vector ancla→siguiente vs ancla→anterior
-        ax, ay = coords[idx_a]
-        bx, by = coords[idx_a + 1]   # siguiente
-        px_prev, py_prev = coords[idx_a - 1]  # anterior
-        # Distancia del nuevo clic a ambos vecinos
-        d_sig  = math.hypot(x - bx,      y - by)
-        d_prev = math.hypot(x - px_prev, y - py_prev)
-        insert_pos = idx_a + 1 if d_sig < d_prev else idx_a
+    insert_pos = posicion_insercion(coords, idx_a, (x, y))
 
     self.guardar_en_historial()
     self.modelo_medicion.insertar(insert_pos, (x, y), TipoMarca.SALTO if es_salto_modo else TipoMarca.NORMAL)
