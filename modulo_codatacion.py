@@ -454,7 +454,6 @@ class PanelCodatacion(QWidget):
                     if not agregada:
                         n_duplicadas += 1
                         continue
-                    self._series_modificadas(regraficar=False)
                     item = QListWidgetItem(id_serie)
                     item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
                     item.setCheckState(Qt.CheckState.Unchecked)
@@ -466,6 +465,8 @@ class PanelCodatacion(QWidget):
                 errores.append(f"{os.path.basename(ruta)}: {exc}")
                 continue
 
+        if n_agregadas:
+            self._series_modificadas(regraficar=False)
         self.graficar_series()
 
         if n_agregadas == 0 and not errores:
