@@ -11,7 +11,6 @@ import os
 import sys
 import datetime
 import logging
-import hashlib
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
@@ -1976,7 +1975,8 @@ class PanelCodatacion(QWidget):
         # Si nada cambió desde el último cálculo, reusamos los resultados
         # guardados en vez de recalcular (que puede ser lento con series
         # flotantes y rangos de desfase amplios).
-        clave_actual = self._clave_cache_comparacion(nombres)
+        nombres_iniciales = tuple(nombres)
+        clave_actual = self._clave_cache_comparacion(nombres_iniciales)
         cache = getattr(self, "_cache_comparacion", None)
         if (cache is not None and cache.get("clave") == clave_actual
                 and cache.get("resultados")):
@@ -2070,6 +2070,11 @@ class PanelCodatacion(QWidget):
                 resultados.append(resultado)
                 if resultado["shifts"]:
                     QApplication.processEvents()
+                    if (tuple(sorted(self._series_marcadas())) != tuple(sorted(nombres_iniciales))
+                            or self._clave_cache_comparacion(nombres_iniciales) != clave_actual):
+                        QMessageBox.warning(self, "Comparación desactualizada",
+                            "Los datos o parámetros cambiaron durante el cálculo. Vuelve a comparar.")
+                        return
         finally:
             QApplication.restoreOverrideCursor()
 
@@ -2096,25 +2101,6 @@ class PanelCodatacion(QWidget):
 
     def _clave_cache_comparacion(self, nombres: list[str]) -> tuple:
         """Identifica datos, años, columnas y metadatos de la comparación."""
-        def _firma(df):
-            if df is None:
-                return None
-            h = hashlib.blake2b(digest_size=32)
-            h.update(repr((tuple(df.columns), tuple(map(str, df.dtypes)),
-                           str(df.index.dtype))).encode("utf-8"))
-            h.update(pd.util.hash_pandas_object(df, index=True).to_numpy().tobytes())
-            return h.digest()
-
-        modelo = getattr(self, "modelo_series", None)
-        if modelo is None:
-            # Compatibilidad con consumidores sin modelo.
-            partes = [(n, _firma(self.series_datos.get(n))) for n in sorted(nombres)]
-        else:
-            partes = [("__series__", modelo.revision, tuple(sorted(nombres)))]
-        partes.append((self._nombre_cronologia_activa,
-                       _firma(self.cronologia_activa),
-                       repr(self.meta_cronologia or {})))
-
         # Incluir el estado del modo COFECHA: afecta directamente las
         # correlaciones (transformación de las series). Sin esto, al
         # activar/desactivar COFECHA la clave no cambiaba y se devolvía el
@@ -2128,8 +2114,12 @@ class PanelCodatacion(QWidget):
             )
         except Exception:
             cof = ()
-        partes.append(("__cofecha__",) + cof)
-        return tuple(partes)
+        from modulo_comparacion_nucleo import clave_cache_comparacion
+        modelo = getattr(self, "modelo_series", None)
+        return clave_cache_comparacion(nombres,
+            revision=modelo.revision if modelo is not None else None,
+            series=self.series_datos, nombre_crono=self._nombre_cronologia_activa,
+            cronologia=self.cronologia_activa, meta=self.meta_cronologia, cofecha=cof)
 
     def _resultado_sin_overlap(self, nombre: str) -> dict:
         from modulo_comparacion_nucleo import resultado_sin_overlap

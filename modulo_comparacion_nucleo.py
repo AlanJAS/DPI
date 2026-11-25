@@ -1,5 +1,7 @@
 """Comparación de una serie preparada contra una cronología, sin Qt."""
+import hashlib
 import numpy as np
+import pandas as pd
 from modulo_estadistica import _estadisticos_por_desfase
 from modulo_datacion import score_compuesto
 
@@ -144,3 +146,26 @@ def analizar_desfases(m_diff, t_diff, serie_a_glk, serie_b_glk):
         ns.append(n_ov)
 
     return shifts, rs, glks, tbps, ns
+
+
+def firma_dataframe(df):
+    """Huella de contenido, índice, nombres y tipos de columnas."""
+    if df is None:
+        return None
+    h = hashlib.blake2b(digest_size=32)
+    h.update(repr((tuple(df.columns), tuple(map(str, df.dtypes)),
+                   str(df.index.dtype))).encode("utf-8"))
+    h.update(pd.util.hash_pandas_object(df, index=True).to_numpy().tobytes())
+    return h.digest()
+
+
+def clave_cache_comparacion(nombres, *, revision, series, nombre_crono,
+                             cronologia, meta, cofecha=()):
+    """Identidad del cálculo independiente de los controles de Qt."""
+    if revision is None:
+        partes = [(n, firma_dataframe(series.get(n))) for n in sorted(nombres)]
+    else:
+        partes = [("__series__", revision, tuple(sorted(nombres)))]
+    partes.append((nombre_crono, firma_dataframe(cronologia), repr(meta or {})))
+    partes.append(("__cofecha__",) + tuple(cofecha))
+    return tuple(partes)

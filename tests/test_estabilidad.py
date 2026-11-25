@@ -1,7 +1,3 @@
-import ast
-import hashlib
-from pathlib import Path
-from types import SimpleNamespace
 import unittest
 import numpy as np
 import pandas as pd
@@ -24,17 +20,18 @@ class Estabilidad(unittest.TestCase):
         np.testing.assert_allclose(correlaciones_pares(np.c_[x, y]), [1])
 
     def test_cache(self):
-        tree = ast.parse((Path(__file__).resolve().parents[1] / 'modulo_codatacion.py').read_text(encoding='utf-8'))
-        node = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == '_clave_cache_comparacion')
-        ns = dict(pd=pd, hashlib=hashlib)
-        exec(compile(ast.Module(body=[node], type_ignores=[]), '<cache>', 'exec'), ns)
-        firma = ns[node.name]
+        from modulo_comparacion_nucleo import clave_cache_comparacion
         df = pd.DataFrame({'Ancho_mm': [1., 2., 3.]}, index=[2000, 2001, 2002])
-        obj = SimpleNamespace(series_datos={'a': df}, cronologia_activa=df.copy(), _nombre_cronologia_activa='c', meta_cronologia={})
-        inicial = firma(obj, ['a'])
-        self.assertEqual(inicial, firma(obj, ['a']))
+        args = dict(revision=None, series={'a': df}, nombre_crono='c',
+                    cronologia=df.copy(), meta={})
+        def firma(**cambios):
+            return clave_cache_comparacion(['a'], **(args | cambios))
+        inicial = firma()
+        self.assertEqual(inicial, firma())
         df.iloc[:, 0] = [3., 2., 1.]
-        self.assertNotEqual(inicial, firma(obj, ['a']))
-        inicial = firma(obj, ['a'])
-        obj.meta_cronologia['columna_valor'] = 'Ancho_mm'
-        self.assertNotEqual(inicial, firma(obj, ['a']))
+        self.assertNotEqual(inicial, firma())
+        inicial = firma()
+        args['meta']['columna_valor'] = 'Ancho_mm'
+        self.assertNotEqual(inicial, firma())
+        self.assertNotEqual(firma(revision=1), firma(revision=2))
+        self.assertNotEqual(firma(cofecha=(True,)), firma(cofecha=(False,)))
