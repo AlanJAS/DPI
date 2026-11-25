@@ -7,8 +7,6 @@ sobrantes mediante búsqueda exhaustiva, y aplicar correcciones en memoria.
 
 import os
 import sys
-import csv
-import json
 import datetime
 import logging
 import hashlib
@@ -43,31 +41,22 @@ from modulo_estadistica import (
 import modulo_quiebres as _qb
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton, QListWidget, QListWidgetItem,
-    QSplitter, QFileDialog, QMessageBox, QInputDialog,
-    QSpinBox, QDoubleSpinBox, QTableWidget, QTableWidgetItem,
-    QHeaderView, QAbstractItemView, QDialog, QFormLayout,
-    QComboBox, QCheckBox, QLineEdit, QTextEdit, QGroupBox,
-    QDialogButtonBox, QApplication, QProgressDialog,
-    QScrollArea, QRadioButton, QButtonGroup, QFrame,
-    QSlider,
-    QTabWidget, QPlainTextEdit,
-    QTextBrowser,
+    QPushButton, QListWidget, QListWidgetItem, QSplitter,
+    QFileDialog, QMessageBox, QSpinBox, QTableWidget,
+    QTableWidgetItem, QHeaderView, QAbstractItemView, QDialog,
+    QFormLayout, QComboBox, QCheckBox, QGroupBox,
+    QDialogButtonBox, QApplication, QProgressDialog, QScrollArea,
+    QFrame, QTabWidget, QPlainTextEdit, QTextBrowser,
 )
-from PyQt6.QtGui import (
-    QColor, QFont, QKeySequence, QShortcut, QPainter, QPalette,
-)
+from PyQt6.QtGui import QColor, QFont, QKeySequence, QShortcut, QPalette
 from PyQt6.QtCore import Qt, QSettings, QEvent
 
 from estilos import SECUNDARIO_QSS, color_secundario
 import estilos_graficos as _gr
 import json_seguro as _js
 from constantes import (
-    TUCSON_VALOR_FIN, TUCSON_VALOR_FALTANTE, TUCSON_VALOR_999,
-    TUCSON_MAX_CHARS_ID, TUCSON_DIVISOR,
-    OVERLAP_MINIMO_ANALISIS, OVERLAP_MINIMO_GRAFICO,
-    OVERLAP_MINIMO_FLOTANTE,
-    UMBRAL_ANCLA_DEFECTO,
+    TUCSON_VALOR_FIN, TUCSON_VALOR_FALTANTE, TUCSON_MAX_CHARS_ID, TUCSON_DIVISOR,
+    OVERLAP_MINIMO_ANALISIS, OVERLAP_MINIMO_GRAFICO, OVERLAP_MINIMO_FLOTANTE, UMBRAL_ANCLA_DEFECTO,
     VENTANA_COFECHADO_DEFECTO, COLORES_SERIES,
 )
 
@@ -106,52 +95,10 @@ from modulo_formatos import (
 )
 
 
-
-
-
-
-
-
-
-
-# =============================================================================
-# ESTADÍSTICOS DE COFECHADO
-# =============================================================================
-
-
-# =============================================================================
-# COLORES Y SCORE COMPUESTO
-# =============================================================================
-
-
-
-
-
-
-
-
-
-
-
-# =============================================================================
-# EPS / RBAR
-# =============================================================================
-
-
 from modulo_cronologia import (
     agrupar_por_arbol,
     rbar_entre_arboles,
 )
-
-
-# =============================================================================
-# FORMATEADORES HTML PARA STATS
-# =============================================================================
-
-
-
-
-
 
 
 TOOLTIP_STATS = (
@@ -233,8 +180,6 @@ from modulo_cronologia import (
 )
 
 
-
-
 from modulo_cronologia import (
     _construir_cronologia_desde_series,
 )
@@ -252,44 +197,9 @@ from modulo_formatos import (
 )
 
 
-
-
-
-
-# =============================================================================
-# VENTANA TABLA DE OFFSET
-# =============================================================================
-
-
-
-
-
-
-
-# =============================================================================
-# DIÁLOGO DE COMPARACIÓN MÚLTIPLE VS CRONOLOGÍA
-# =============================================================================
-
-
-
-# =============================================================================
-# QSPINBOX CON FLECHAS UNICODE SIEMPRE VISIBLES
-# =============================================================================
-
-
-
-# =============================================================================
-# WIDGET DE SECCIÓN COLAPSABLE (ACCORDION)
-# =============================================================================
-
-
-
 # =============================================================================
 # PANEL DE CO-DATACIÓN
 # =============================================================================
-
-
-
 
 
 from modulo_codatacion_util import (
@@ -4044,12 +3954,3 @@ class PanelCodatacion(QWidget):
         if stats and np.isfinite(stats.get("r", float("nan"))) and self._stats_movil_years:
             self.lbl_stats.setText(formato_stats_global_html(stats))
             self.lbl_stats.setVisible(True)
-
-
-# =============================================================================
-# VENTANA DE CRONOLOGÍA
-# =============================================================================
-
-# =============================================================================
-# DIÁLOGO REUSABLE EPS / RBAR (compartido entre panel y VentanaCronologia)
-# =============================================================================

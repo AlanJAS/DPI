@@ -20,13 +20,12 @@ import numpy as np
 import pandas as pd
 
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QSpinBox, QDoubleSpinBox, QGroupBox, QFormLayout,
-    QDialogButtonBox, QComboBox, QCheckBox, QTabWidget,
-    QWidget, QMessageBox, QSizePolicy,
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel,
+    QPushButton, QSpinBox, QDoubleSpinBox, QGroupBox,
+    QFormLayout, QDialogButtonBox, QComboBox, QCheckBox,
+    QTabWidget, QWidget, QSizePolicy,
 )
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QPen, QColor, QBrush
 
 from estilos import SECUNDARIO_QSS
 import estilos_graficos as _gr

@@ -11,7 +11,7 @@ Uso:   python3 construir_deb.py [carpeta_de_salida]
 Empaqueta el código de SU PROPIA carpeta, así que basta con dejarlo junto a los
 módulos y correrlo. Requiere dpkg-deb y fakeroot (vienen con Debian/Ubuntu).
 """
-import os, shutil, subprocess, sys
+import shutil, subprocess, sys
 from pathlib import Path
 
 # La carpeta donde vive este script es la que se empaqueta. Antes apuntaba a
@@ -224,7 +224,7 @@ METAINFO.mkdir(parents=True, exist_ok=True)
 DEPENDS = ", ".join([
     "python3 (>= 3.10)", "python3-pyqt6", "python3-pyqtgraph", "python3-numpy",
     "python3-pandas", "python3-scipy", "python3-opencv", "python3-pil",
-    "python3-openpyxl", "python3-matplotlib",
+    "python3-openpyxl", "python3-odf", "python3-xlrd", "python3-matplotlib",
 ])
 (DEBIAN / "control").write_text(
     f"Package: {PAQUETE}\n"

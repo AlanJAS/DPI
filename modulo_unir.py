@@ -23,24 +23,20 @@ Reutiliza:
 from __future__ import annotations
 
 import os
-import re
 import pandas as pd
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QColor, QBrush
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QListWidget, QListWidgetItem, QFileDialog, QMessageBox,
-    QComboBox, QFrame, QLineEdit, QGroupBox, QRadioButton, QCheckBox,
-    QButtonGroup, QApplication,
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel,
+    QPushButton, QListWidget, QListWidgetItem, QFileDialog,
+    QMessageBox, QComboBox, QLineEdit, QGroupBox,
+    QRadioButton, QCheckBox, QButtonGroup, QApplication,
 )
 
 from modulo_formatos import leer_tucson_multi
 from estilos import SECUNDARIO_QSS, color_secundario
-from constantes import (
-    TUCSON_MAX_CHARS_ID, TUCSON_VALOR_FIN, TUCSON_VALOR_999,
-    TUCSON_DIVISOR,
-)
+from constantes import TUCSON_MAX_CHARS_ID, TUCSON_VALOR_FIN, TUCSON_DIVISOR
 
 
 # =============================================================================

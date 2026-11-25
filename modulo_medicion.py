@@ -26,22 +26,15 @@ from modulo_formatos import (leer_archivo_tucson, leer_wid, leer_dendro_auto,
                              _escribir_excel, _asegurar_extension,
                              _exportar_tabular, _exportar_tucson_ewlw, _escribir_tucson)
 
-from PyQt6.QtCore import QThread, pyqtSignal as Signal, QObject
 from PyQt6.QtWidgets import (
-    QApplication,
-    QGraphicsView, QGraphicsScene, QGraphicsPixmapItem,
-    QFileDialog, QPushButton, QVBoxLayout, QHBoxLayout,
-    QWidget, QLabel, QInputDialog, QMessageBox, QSpinBox,
-    QDoubleSpinBox,
+    QApplication, QGraphicsScene, QGraphicsPixmapItem, QFileDialog,
+    QPushButton, QVBoxLayout, QHBoxLayout, QWidget,
+    QLabel, QInputDialog, QMessageBox, QSpinBox,
     QComboBox, QButtonGroup, QLineEdit, QListWidget,
-    QSplitter, QListWidgetItem, QToolTip, QGraphicsEllipseItem,
-    QDialog, QDialogButtonBox,
+    QSplitter, QListWidgetItem, QDialog,
 )
-from PyQt6.QtGui import (
-    QImage, QPixmap, QPainter, QPen, QColor, QBrush,
-    QShortcut, QKeySequence, QCursor,
-)
-from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QSettings, QEvent
+from PyQt6.QtGui import QImage, QPixmap, QPen, QColor, QBrush, QShortcut, QKeySequence
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QSettings
 
 from estilos import SECUNDARIO_QSS, color_secundario
 import json_seguro as _js
@@ -65,23 +58,16 @@ from modulo_pith import (
     DialogoEstimacionPith,
 )
 from constantes import (
-    DPI_DEFECTO, MM_POR_PULGADA, PIXELES_POR_MM_DEFECTO,
-    MAX_PASOS_HISTORIAL,
-    TOLERANCIA_CLICK_PUNTO, TOLERANCIA_CLICK_SEGMENTO,
-    TUCSON_MAX_CHARS_ID, TUCSON_VALOR_FIN, TUCSON_VALOR_999,
-    INTERVALO_MARCADOR_DECADA, INTERVALO_MARCADOR_CINCUENTENA,
-    INTERVALO_MARCADOR_CENTENA,
-    COLOR_PUNTO_ACTIVO, COLOR_LINEA_ACTIVA, COLOR_SALTO,
-    COLOR_GUIA, COLOR_CALIBRACION, COLOR_PUNTO_INACTIVO,
-    COLOR_EWLW,
-    COLORES_SERIES_INACTIVAS,
-    TIPOS_ANOMALIA,
+    DPI_DEFECTO, MM_POR_PULGADA, PIXELES_POR_MM_DEFECTO, MAX_PASOS_HISTORIAL,
+    TOLERANCIA_CLICK_PUNTO, TOLERANCIA_CLICK_SEGMENTO, TUCSON_MAX_CHARS_ID, TUCSON_VALOR_FIN,
+    INTERVALO_MARCADOR_DECADA, INTERVALO_MARCADOR_CINCUENTENA, INTERVALO_MARCADOR_CENTENA, COLOR_PUNTO_ACTIVO,
+    COLOR_LINEA_ACTIVA, COLOR_SALTO, COLOR_GUIA, COLOR_CALIBRACION,
+    COLOR_PUNTO_INACTIVO, COLOR_EWLW, COLORES_SERIES_INACTIVAS, TIPOS_ANOMALIA,
 )
 
 logger = logging.getLogger(__name__)
 
 # Modos de interacción del lienzo
-
 
 
 # =============================================================================
@@ -93,11 +79,6 @@ logger = logging.getLogger(__name__)
 #   "espacio"    → tramo del quiebre intra-anillo (amarillo, NO suma, NO cierra)
 #   "quiebre_ini"→ inicio de quiebre (azul, SUMA distancia, NO cierra anillo)
 #   "ew_lw"      → límite earlywood/latewood (suma, NO cierra)
-
-
-
-
-
 
 
 # =============================================================================
@@ -243,34 +224,8 @@ class ExportadorDendro:
     _escribir_tucson = staticmethod(_escribir_tucson)
 
 
-# =============================================================================
-# LIENZO INTERACTIVO
-# =============================================================================
-
-# =============================================================================
-# WORKER — cómputo pesado en hilo separado con barra de progreso
-# =============================================================================
-
-
-
-
-
-
-
 def _ultima_carpeta(nueva_ruta: str | None = None) -> str:
     return ultima_carpeta("ultima_carpeta", nueva_ruta)
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 # =============================================================================
@@ -4906,4 +4861,3 @@ class PestanaImagen(QWidget):
     def _anomalias_modificadas(self):
         """Llamado desde la vista cuando el usuario cambia una anomalía."""
         self._guardar_sidecar_anom()
-

@@ -277,8 +277,7 @@ def escribir_rwl_intensidad(
 
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QFormLayout, QSpinBox,
-    QDialogButtonBox, QLabel, QGroupBox, QCheckBox, QHBoxLayout,
-    QFileDialog, QMessageBox,
+    QDialogButtonBox, QLabel, QGroupBox, QCheckBox,
 )
 
 class DialogoConfigBI(QDialog):

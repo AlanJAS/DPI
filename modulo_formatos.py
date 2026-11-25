@@ -35,7 +35,9 @@ def _leer_planilla(ruta: str, **kwargs):
             "'odfpy'.\n\nInstálalo con:  pip install odfpy\n\n"
             "Como alternativa, en LibreOffice usa «Archivo → Guardar como» y "
             "elige .xlsx o .csv.")
-    if ext in (".xlsx", ".xls") and importlib.util.find_spec("openpyxl") is None:
+    if ext == ".xls" and importlib.util.find_spec("xlrd") is None:
+        raise RuntimeError("Para leer planillas .xls instala xlrd: pip install xlrd")
+    if ext == ".xlsx" and importlib.util.find_spec("openpyxl") is None:
         raise RuntimeError(
             "Para leer planillas de Excel (.xlsx) falta el módulo "
             "'openpyxl'.\n\nInstálalo con:  pip install openpyxl")

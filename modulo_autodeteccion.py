@@ -22,13 +22,12 @@ import numpy as np
 from scipy.signal import find_peaks, savgol_filter
 
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QComboBox, QSpinBox, QDoubleSpinBox, QCheckBox,
-    QDialogButtonBox, QGroupBox, QSlider, QMessageBox,
-    QInputDialog, QFormLayout, QWidget,
+    QDialogButtonBox, QGroupBox, QSlider, QFormLayout,
+    QWidget,
 )
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QPen, QColor
+from PyQt6.QtCore import Qt
 
 import json_seguro as _js
 import estilos_graficos as _gr

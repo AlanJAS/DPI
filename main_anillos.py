@@ -19,7 +19,6 @@ from PyQt6.QtWidgets import (
     QPushButton, QFileDialog, QLabel, QLineEdit,
     QSpinBox, QComboBox, QCheckBox,
 )
-from PyQt6.QtGui import QIcon
 
 from constantes import (
     APP_NOMBRE, APP_SIGLA, VERSION, icono_app, ruta_icono)

@@ -32,7 +32,6 @@ cortas, las diferencias-log siguen siendo razonables.
 
 from __future__ import annotations
 
-import numpy as np
 import pandas as pd
 from modulo_estadistica import pearson, diferencias_log_anuales
 from modulo_cronologia import estandarizar_serie
