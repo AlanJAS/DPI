@@ -89,7 +89,7 @@ def _actualizar_panel_seleccion(self):
     no están en el panel: están en la barra principal."""
     if self._panel_seleccion is None:
         return
-    n = len(self._puntos_seleccionados)
+    n = len(self._seleccion.puntos)
     if n == 0:
         self._lbl_seleccion_count.setText(
             "🎯 Clic / arrastrá un área para seleccionar")
@@ -104,14 +104,14 @@ def _dibujar_marcadores_seleccion(self):
     """Dibuja un círculo amarillo brillante alrededor de cada anillo
     seleccionado. Se redibuja completo cada vez para simplificar."""
     # Limpiar marcadores previos
-    for item in self._items_seleccion:
+    for item in self._seleccion.items:
         try:
             self.scene().removeItem(item)
         except Exception:
             pass
-    self._items_seleccion.clear()
+    self._seleccion.items.clear()
 
-    if not self._puntos_seleccionados:
+    if not self._seleccion.puntos:
         return
 
     # Radio del círculo de selección en píxeles de PANTALLA constantes
@@ -123,39 +123,39 @@ def _dibujar_marcadores_seleccion(self):
     pen.setWidthF(3.0)
     brush = QBrush(Qt.BrushStyle.NoBrush)
 
-    for idx in self._puntos_seleccionados:
+    for idx in self._seleccion.puntos:
         if 0 <= idx < len(self.coordenadas_anillos):
             x, y = self.coordenadas_anillos[idx]
             e = self.scene().addEllipse(
                 x - r, y - r, 2 * r, 2 * r, pen, brush)
             e.setZValue(950)  # arriba de casi todo
-            self._items_seleccion.append(e)
+            self._seleccion.items.append(e)
 
 
 def _toggle_seleccion_punto(self, idx: int):
     """Alterna la selección de un punto: si estaba seleccionado lo
     deselecciona, si no lo agrega a la selección."""
-    if idx in self._puntos_seleccionados:
-        self._puntos_seleccionados.discard(idx)
+    if idx in self._seleccion.puntos:
+        self._seleccion.puntos.discard(idx)
     else:
-        self._puntos_seleccionados.add(idx)
+        self._seleccion.puntos.add(idx)
     self._dibujar_marcadores_seleccion()
     self._actualizar_panel_seleccion()
 
 
 def _limpiar_seleccion_completa(self):
     """Vacía la selección y oculta sus marcadores."""
-    self._puntos_seleccionados.clear()
+    self._seleccion.puntos.clear()
     self._dibujar_marcadores_seleccion()
     self._actualizar_panel_seleccion()
 
 
 def _editar_seleccion(self, tipo=None):
-    if not self._puntos_seleccionados:
+    if not self._seleccion.puntos:
         return
     self.guardar_en_historial()
-    self.modelo_medicion.editar_puntos(self._puntos_seleccionados, tipo)
-    self._puntos_seleccionados.clear()
+    self.modelo_medicion.editar_puntos(self._seleccion.puntos, tipo)
+    self._seleccion.puntos.clear()
     self._dibujar_marcadores_seleccion()
     self.recalcular_todas_las_distancias()
     self._actualizar_panel_seleccion()
@@ -174,24 +174,24 @@ def _iniciar_seleccion_mouse(self, x, y):
     # Esto permite seleccionar varios anillos rápidamente
     # arrastrando un área (request del usuario).
     idx = self._indice_punto_mas_cercano(x, y)
-    self._sel_click_pos = (x, y)
+    self._seleccion.posicion = (x, y)
     if idx is not None:
         # Posible toggle de un punto — lo decidiremos en release
-        self._sel_click_idx_candidato = idx
-        self._sel_drag_iniciado = False
-        self._sel_drag_start = (x, y)
+        self._seleccion.candidato = idx
+        self._seleccion.arrastre = False
+        self._seleccion.inicio = (x, y)
     else:
         # Click en área vacía → iniciar drag rectangle
-        self._sel_click_idx_candidato = None
-        self._sel_drag_iniciado = True
-        self._sel_drag_start = (x, y)
+        self._seleccion.candidato = None
+        self._seleccion.arrastre = True
+        self._seleccion.inicio = (x, y)
         # Si había un rectángulo previo (caso raro), removerlo
-        if self._sel_drag_rect_item is not None:
+        if self._seleccion.rectangulo is not None:
             try:
-                self.scene().removeItem(self._sel_drag_rect_item)
+                self.scene().removeItem(self._seleccion.rectangulo)
             except Exception:
                 pass
-            self._sel_drag_rect_item = None
+            self._seleccion.rectangulo = None
 
 
 def _actualizar_seleccion_mouse(self, x, y):
@@ -203,36 +203,36 @@ def _actualizar_seleccion_mouse(self, x, y):
     # toggle" en un drag-rectangle (cancela el candidato).
     if self.modo_actual == ModoMedicion.SELECCIONAR:
         mouse_se_movio = (
-            math.hypot(x - self._sel_click_pos[0],
-                       y - self._sel_click_pos[1])
+            math.hypot(x - self._seleccion.posicion[0],
+                       y - self._seleccion.posicion[1])
             > 4.0 * self._escala_vista()
         )
-        if (self._sel_click_idx_candidato is not None
-                and not self._sel_drag_iniciado
+        if (self._seleccion.candidato is not None
+                and not self._seleccion.arrastre
                 and mouse_se_movio):
             # El usuario empezó sobre un punto pero ahora está
             # arrastrando — convertir a drag-rectangle desde la pos
             # original.
-            self._sel_click_idx_candidato = None
-            self._sel_drag_iniciado = True
+            self._seleccion.candidato = None
+            self._seleccion.arrastre = True
             # _sel_drag_start ya está seteado en mousePress
 
-        if self._sel_drag_iniciado:
-            x0, y0 = self._sel_drag_start
+        if self._seleccion.arrastre:
+            x0, y0 = self._seleccion.inicio
             xa, ya = min(x0, x), min(y0, y)
             xb, yb = max(x0, x), max(y0, y)
             # Crear/actualizar el rectángulo de preview
-            if self._sel_drag_rect_item is None:
+            if self._seleccion.rectangulo is None:
                 pen = QPen(QColor("#FFEB3B"))
                 pen.setCosmetic(True)
                 pen.setWidthF(1.5)
                 pen.setStyle(Qt.PenStyle.DashLine)
                 brush = QBrush(QColor(255, 235, 59, 40))  # amarillo translúcido
-                self._sel_drag_rect_item = self.scene().addRect(
+                self._seleccion.rectangulo = self.scene().addRect(
                     xa, ya, xb - xa, yb - ya, pen, brush)
-                self._sel_drag_rect_item.setZValue(951)
+                self._seleccion.rectangulo.setZValue(951)
             else:
-                self._sel_drag_rect_item.setRect(xa, ya, xb - xa, yb - ya)
+                self._seleccion.rectangulo.setRect(xa, ya, xb - xa, yb - ya)
             return True
 
     return False

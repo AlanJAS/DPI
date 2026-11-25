@@ -54,6 +54,9 @@ from dpi.ui.medicion.herramientas.despacho import acciones_click
 from dpi.ui.medicion.herramientas.estado import EstadoCalibracion
 
 
+from dpi.ui.medicion.herramientas.estado import EstadoSeleccion
+
+
 class VistaInteractiva(QGraphicsView):
     """
     Vista de imagen con herramientas de marcado de anillos.
@@ -166,18 +169,12 @@ class VistaInteractiva(QGraphicsView):
         # Permite al usuario seleccionar varios anillos a la vez (clic
         # alterna selección por punto) y aplicarles una acción común:
         # borrarlos todos, convertirlos a salto o convertirlos a quiebre.
-        self._puntos_seleccionados: set[int] = set()
-        self._items_seleccion: list = []  # marcadores visuales (círculos amarillos)
+        self._seleccion = EstadoSeleccion()
 
         # Estado para selección por arrastre (rectángulo).
         # Cuando el usuario hace clic+drag en ModoMedicion.SELECCIONAR sobre un
         # área vacía, dibujamos un rectángulo de selección. Al soltar,
         # todos los anillos dentro del rectángulo se agregan a la selección.
-        self._sel_drag_iniciado: bool = False
-        self._sel_drag_start: tuple[float, float] = (0.0, 0.0)
-        self._sel_drag_rect_item = None
-        self._sel_click_idx_candidato: int | None = None  # punto sobre el que se hizo click
-        self._sel_click_pos: tuple[float, float] = (0.0, 0.0)
 
         # Panel flotante (HUD) con los botones de acción. Se muestra solo
         # en ModoMedicion.SELECCIONAR. Lo construimos perezosamente la primera vez
@@ -240,7 +237,7 @@ class VistaInteractiva(QGraphicsView):
 
     def aplicar_accion_seleccion(self, modo):
         """Aplica acciones masivas desde la barra sin exponer la selección."""
-        if self.modo_actual != ModoMedicion.SELECCIONAR or not self._puntos_seleccionados:
+        if self.modo_actual != ModoMedicion.SELECCIONAR or not self._seleccion.puntos:
             return modo
         acciones = {ModoMedicion.BORRAR: self._ejecutar_borrar_seleccionados,
                     ModoMedicion.SALTO: self._ejecutar_convertir_a_salto,
@@ -286,19 +283,19 @@ class VistaInteractiva(QGraphicsView):
         # Al entrar: mostrar panel + resetear estado de drag.
         # Al salir: limpiar selección, drag activo y panel.
         if nuevo_modo == ModoMedicion.SELECCIONAR:
-            self._sel_drag_iniciado = False
-            self._sel_click_idx_candidato = None
+            self._seleccion.arrastre = False
+            self._seleccion.candidato = None
             self._mostrar_panel_seleccion(True)
         elif modo_anterior == ModoMedicion.SELECCIONAR:
             # Si quedó un rectángulo de drag en la escena, removerlo
-            if self._sel_drag_rect_item is not None:
+            if self._seleccion.rectangulo is not None:
                 try:
-                    self.scene().removeItem(self._sel_drag_rect_item)
+                    self.scene().removeItem(self._seleccion.rectangulo)
                 except Exception:
                     pass
-                self._sel_drag_rect_item = None
-            self._sel_drag_iniciado = False
-            self._sel_click_idx_candidato = None
+                self._seleccion.rectangulo = None
+            self._seleccion.arrastre = False
+            self._seleccion.candidato = None
             self._limpiar_seleccion_completa()
             self._mostrar_panel_seleccion(False)
 
@@ -563,7 +560,7 @@ class VistaInteractiva(QGraphicsView):
         # Reescalar marcadores de selección si los hay (su radio se
         # calcula con _escala_vista() para mantener tamaño constante
         # en pantalla — al cambiar el zoom hay que regenerarlos).
-        if self._puntos_seleccionados:
+        if self._seleccion.puntos:
             self._dibujar_marcadores_seleccion()
         # Re-renderizar caminos inactivos para que labels y ticks usen
         # la escala nueva. Sin esto, los labels viejos quedan con el
@@ -946,9 +943,9 @@ class VistaInteractiva(QGraphicsView):
         # Si fue solo un click sobre un punto (sin arrastre): toggle.
         if (self.modo_actual == ModoMedicion.SELECCIONAR
                 and event.button() == Qt.MouseButton.LeftButton):
-            if self._sel_drag_iniciado and self._sel_drag_rect_item is not None:
+            if self._seleccion.arrastre and self._seleccion.rectangulo is not None:
                 # Calcular los bounds del rectángulo final
-                rect = self._sel_drag_rect_item.rect()
+                rect = self._seleccion.rectangulo.rect()
                 xa, ya = rect.left(), rect.top()
                 xb, yb = rect.right(), rect.bottom()
                 # Buscar anillos dentro
@@ -959,26 +956,26 @@ class VistaInteractiva(QGraphicsView):
                 # Agregar al set de seleccionados (no toggle, para que
                 # arrastres sucesivos sumen sin deseleccionar lo previo).
                 for i in indices_dentro:
-                    self._puntos_seleccionados.add(i)
+                    self._seleccion.puntos.add(i)
                 # Limpiar el preview del rectángulo
                 try:
-                    self.scene().removeItem(self._sel_drag_rect_item)
+                    self.scene().removeItem(self._seleccion.rectangulo)
                 except Exception:
                     pass
-                self._sel_drag_rect_item = None
-                self._sel_drag_iniciado = False
+                self._seleccion.rectangulo = None
+                self._seleccion.arrastre = False
                 # Redibujar marcadores + actualizar panel
                 self._dibujar_marcadores_seleccion()
                 self._actualizar_panel_seleccion()
                 return
-            elif self._sel_click_idx_candidato is not None:
+            elif self._seleccion.candidato is not None:
                 # No hubo arrastre: ejecutar el toggle del punto candidato
-                self._toggle_seleccion_punto(self._sel_click_idx_candidato)
-                self._sel_click_idx_candidato = None
+                self._toggle_seleccion_punto(self._seleccion.candidato)
+                self._seleccion.candidato = None
                 return
             # Si no hubo ni drag ni candidato, no hacemos nada
-            self._sel_drag_iniciado = False
-            self._sel_click_idx_candidato = None
+            self._seleccion.arrastre = False
+            self._seleccion.candidato = None
 
         # Botón central: fin del paneo
         if event.button() == Qt.MouseButton.MiddleButton:
