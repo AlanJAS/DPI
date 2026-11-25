@@ -25,8 +25,6 @@ from dpi.ciencia.comparacion_nucleo import SeriePreparada, comparar_serie
 import dpi.ciencia.transformacion as _tr
 import dpi.ciencia.estadistica as _est
 from dpi.ciencia.estadistica import (
-    _sensibilidad_media,
-    _autocorrelacion_ar1,
     gleichlaufigkeit,
     glk_significance,
     _filtro_hollstein,
