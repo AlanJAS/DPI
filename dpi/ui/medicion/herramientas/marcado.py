@@ -96,6 +96,8 @@ def _paso_medir(self, x: float, y: float):
         self.modelo_medicion.agregar((x, y), TipoMarca.NORMAL)
         self._resaltar_anclado(0)
         self.recalcular_todas_las_distancias()
+        if es_salto_modo:
+            self._cambiar_modo_usuario(ModoMedicion.MEDIR)
         self.progreso_modificado.emit()
         return
 
