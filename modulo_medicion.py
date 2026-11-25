@@ -11,6 +11,7 @@ from modulo_configuracion_ui import ajustes_ui
 from modulo_medicion_especial_ui import (ContextoRadio, ContextoImagen,
     ControlPith, ControlEWLW, ControlIntensidad)
 from modulo_worker_medicion import GestorTareasMedicion
+from modulo_exportacion_medicion_ui import ExportadorDendro
 
 
 import modulo_medicion_ui
@@ -68,104 +69,6 @@ from modulo_marcas_medicion import ModoMedicion, _es_ewlw
 from modulo_ewlw import anchos_ewlw_puntos
 
 
-
-
-class ExportadorDendro:
-    """Gestiona la exportación de mediciones a Tucson, CSV y Excel."""
-
-    def __init__(self, ventana_padre: QWidget):
-        self._parent = ventana_padre
-
-    def exportar_datos(self, id_serie: str, lista_mediciones: list[dict],
-                        anchos_ewlw: list | None = None):
-        """Exporta mediciones a Tucson, CSV o Excel.
-
-        Parameters
-        ----------
-        id_serie : str
-            Identificador de la serie (código).
-        lista_mediciones : list[dict]
-            Lista de dicts {anio, ancho_mm} con las mediciones totales por anillo.
-        anchos_ewlw : list[tuple], opcional
-            Lista paralela de (total_mm, ew_mm, lw_mm) para anillos con
-            límite EW/LW detectado. None en ew_mm/lw_mm si el anillo no
-            tiene split. Si se provee y al menos un anillo tiene split,
-            la exportación a CSV/Excel agregará columnas EW_mm y LW_mm.
-            Para formato Tucson, ofrece exportar archivos separados
-            (codigo.rwl + codigo_EW.rwl + codigo_LW.rwl).
-        """
-        if not lista_mediciones:
-            return QMessageBox.warning(self._parent, "Error", "No hay mediciones para exportar.")
-
-        orden = sorted(range(len(lista_mediciones)), key=lambda i: lista_mediciones[i]["anio"])
-        datos = [lista_mediciones[i] for i in orden]
-        if anchos_ewlw is not None and len(anchos_ewlw) == len(datos):
-            anchos_ewlw = [anchos_ewlw[i] for i in orden]
-        anios = [d["anio"] for d in datos]
-        anchos = [d["ancho_mm"] for d in datos]
-
-        # Detectar si hay info EW/LW útil para incluir
-        tiene_ewlw = False
-        if anchos_ewlw and len(anchos_ewlw) == len(datos):
-            tiene_ewlw = any(ew is not None and lw is not None
-                             for (_, ew, lw) in anchos_ewlw)
-
-        # Obtener última carpeta y armar la ruta sugerida
-        carpeta = _ultima_carpeta()
-        ruta_sugerida = os.path.join(carpeta, id_serie) if carpeta else id_serie
-
-        ruta, fmt = QFileDialog.getSaveFileName(
-            self._parent, "Guardar", ruta_sugerida,
-            "Formato Tucson (*.txt *.rwl);;Excel (*.xlsx);;CSV (*.csv)",
-            options=QFileDialog.Option.DontUseNativeDialog,
-        )
-        if not ruta:
-            return
-
-        ruta = _asegurar_extension(ruta, fmt)
-        _ultima_carpeta(ruta)
-
-        try:
-            if "*.csv" in fmt:
-                self._exportar_tabular(
-                    id_serie, anios, anchos, ruta, "csv",
-                    anchos_ewlw=anchos_ewlw if tiene_ewlw else None
-                )
-            elif "*.xlsx" in fmt:
-                self._exportar_tabular(
-                    id_serie, anios, anchos, ruta, "xlsx",
-                    anchos_ewlw=anchos_ewlw if tiene_ewlw else None
-                )
-            else:
-                mediciones_int = [int(round(m * 1000)) for m in anchos]
-                self._escribir_tucson(id_serie, anios[0], mediciones_int, ruta, anios=anios)
-
-                # Si hay EW/LW, ofrecer exportar archivos separados
-                # (convención CooRecorder/Velmex: _EW.rwl y _LW.rwl).
-                if tiene_ewlw:
-                    resp = QMessageBox.question(
-                        self._parent, "EW/LW detectado",
-                        f"Se detectaron límites EW/LW en algunos anillos.\n\n"
-                        f"¿Desea exportar también archivos Tucson separados\n"
-                        f"para earlywood y latewood?\n\n"
-                        f"Se crearán:\n"
-                        f"  • {id_serie}_EW.rwl (earlywood)\n"
-                        f"  • {id_serie}_LW.rwl (latewood)",
-                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-                    )
-                    if resp == QMessageBox.StandardButton.Yes:
-                        self._exportar_tucson_ewlw(
-                            id_serie, anios, anchos_ewlw, ruta
-                        )
-
-            QMessageBox.information(self._parent, "Éxito", f"Exportado a:\n{ruta}")
-        except Exception as exc:
-            logger.error("Error al exportar: %s", exc)
-            QMessageBox.critical(self._parent, "Error", f"Fallo al exportar:\n{exc}")
-
-    _exportar_tabular = staticmethod(_exportar_tabular)
-    _exportar_tucson_ewlw = staticmethod(_exportar_tucson_ewlw)
-    _escribir_tucson = staticmethod(_escribir_tucson)
 
 
 def _ultima_carpeta(nueva_ruta: str | None = None) -> str:
@@ -1862,16 +1765,16 @@ class PestanaImagen(QWidget):
                     anchos_ewlw = None
 
             if "*.csv" in fmt:
-                ExportadorDendro._exportar_tabular(
+                _exportar_tabular(
                     codigo, anios, anchos, ruta, "csv",
                     anchos_ewlw=anchos_ewlw)
             elif "*.xlsx" in fmt:
-                ExportadorDendro._exportar_tabular(
+                _exportar_tabular(
                     codigo, anios, anchos, ruta, "xlsx",
                     anchos_ewlw=anchos_ewlw)
             else:
                 mediciones_int = [int(round(m * 1000)) for m in anchos]
-                ExportadorDendro._escribir_tucson(codigo, anios[0], mediciones_int, ruta, anios=anios)
+                _escribir_tucson(codigo, anios[0], mediciones_int, ruta, anios=anios)
 
             # Exportar EW/LW si hay límites marcados en el radio elegido
             # (no en la vista en vivo, que puede ser distinta).

@@ -24,7 +24,8 @@ from PyQt6.QtWidgets import (
 from constantes import (
     APP_NOMBRE, APP_SIGLA, VERSION, icono_app, ruta_icono)
 from estilos import aplicar_tema, tema_del_sistema
-from modulo_medicion import PestanaImagen, ExportadorDendro
+from modulo_medicion import PestanaImagen
+from modulo_exportacion_medicion_ui import ExportadorDendro
 from modulo_codatacion import (
     PanelCodatacion, VentanaCronologia, VentanaSkeletonPlot)
 from modulo_unir import DialogoUnirRwl

@@ -97,7 +97,8 @@ def main():
     import pyqtgraph  # noqa
 
     splash_msg(splash, "Cargando interfaz de medición...")
-    from modulo_medicion import PestanaImagen, ExportadorDendro  # noqa
+    from modulo_medicion import PestanaImagen  # noqa
+    from modulo_exportacion_medicion_ui import ExportadorDendro  # noqa
 
     splash_msg(splash, "Cargando co-datación...")
     from modulo_codatacion import PanelCodatacion  # noqa
