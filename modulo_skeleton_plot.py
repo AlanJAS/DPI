@@ -7,7 +7,7 @@ import pyqtgraph as pg
 from modulo_widgets import _agregar_hover_anio
 import modulo_transformacion as _tr
 from modulo_estadistica import gleichlaufigkeit, glk_significance, t_baillie_pilcher
-from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFileDialog, QMessageBox, QSpinBox, QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QDialog, QComboBox, QCheckBox, QSlider
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFileDialog, QMessageBox, QSpinBox, QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QDialog, QComboBox, QCheckBox, QSlider
 from PyQt6.QtGui import QColor
 from PyQt6.QtCore import Qt, QEvent
 from estilos import SECUNDARIO_QSS, color_secundario

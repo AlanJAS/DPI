@@ -7,7 +7,7 @@ import pandas as pd
 import pyqtgraph as pg
 from modulo_widgets import _agregar_hover_anio
 from modulo_estadistica import gleichlaufigkeit, t_baillie_pilcher
-from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFileDialog, QMessageBox, QTableWidget, QTableWidgetItem, QHeaderView, QApplication
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFileDialog, QMessageBox, QTableWidget, QTableWidgetItem, QHeaderView, QApplication
 from PyQt6.QtGui import QColor
 from PyQt6.QtCore import Qt
 from estilos import color_secundario

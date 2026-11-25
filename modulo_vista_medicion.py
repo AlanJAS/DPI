@@ -3,7 +3,7 @@
 import math
 import numpy as np
 from modulo_modelo_medicion import ModeloMedicion, PuntoMedicion
-from PyQt6.QtWidgets import QGraphicsView, QGraphicsScene, QPushButton, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QDoubleSpinBox, QComboBox, QToolTip, QGraphicsEllipseItem, QDialogButtonBox
+from PyQt6.QtWidgets import QWidget, QDialog, QGraphicsView, QGraphicsScene, QPushButton, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QDoubleSpinBox, QComboBox, QToolTip, QGraphicsEllipseItem, QDialogButtonBox
 from PyQt6.QtGui import QPainter, QPen, QColor, QBrush
 from PyQt6.QtCore import Qt, pyqtSignal, QEvent
 from modulo_pith import MODO_PITH, ajustar_circulo_minimos_cuadrados
