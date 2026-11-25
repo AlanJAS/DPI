@@ -1,13 +1,6 @@
 """Compatibilidad con la API histórica de formatos."""
-import os
-import logging
-import re
-import numpy as np
-import pandas as pd
-import dpi.infraestructura.json_seguro as _js
 from constantes import (TUCSON_VALOR_FIN, TUCSON_VALOR_FALTANTE,
                         TUCSON_MAX_CHARS_ID, TUCSON_DIVISOR, DPI_DEFECTO, MM_POR_PULGADA)
-logger = logging.getLogger(__name__)
 from dpi.formatos.planillas import _es_planilla, _leer_planilla, _escribir_excel, escribir_excel_merge, EXTS_PLANILLA
 from dpi.formatos.pos import leer_pos, escribir_pos
 from dpi.formatos.exportacion import exportar_serie_2col, asegurar_extension
