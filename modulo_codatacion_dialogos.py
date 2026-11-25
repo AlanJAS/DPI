@@ -185,13 +185,13 @@ class DialogoEditarAnillos(QDialog):
         "QRadioButton:disabled{color:#666;}"
     )
 
-    def __init__(self, df_serie, nombre, panel_ref, parent=None,
+    def __init__(self, df_serie, nombre, reemplazar=None, parent=None,
                  sugerencia=None):
         super().__init__(parent)
         self.setWindowTitle(f"Editar anillos — {nombre}")
         self.resize(440, 600)
         self._nombre = nombre
-        self._panel = panel_ref
+        self._reemplazar = reemplazar
 
         df = df_serie.sort_index()
         self._anchos = [float(x) for x in
@@ -748,8 +748,8 @@ class DialogoEditarAnillos(QDialog):
             {"Ancho_mm": self._anchos},
             index=pd.Index(years, name="Anio"),
         )
-        if self._panel is not None and hasattr(self._panel, "reemplazar_serie"):
-            self._panel.reemplazar_serie(self._nombre, df_new)
+        if self._reemplazar is not None:
+            self._reemplazar(self._nombre, df_new)
         QMessageBox.information(
             self, "Listo",
             f"Serie '{self._nombre}' actualizada: {len(self._anchos)} anillos, "
@@ -770,7 +770,7 @@ class DialogoAlineamientoAnillos(QDialog):
 
     def __init__(self, serie_a, serie_b, shift_base, nombre_serie,
                  parent=None, penalizacion=3.0, max_correcciones=10,
-                 panel_ref=None, nombre_real=None):
+                 obtener_serie=None, reemplazar=None, nombre_real=None):
         super().__init__(parent)
         self.setWindowTitle(f"Alineamiento óptimo — {nombre_serie}")
         self.resize(760, 600)
@@ -780,7 +780,8 @@ class DialogoAlineamientoAnillos(QDialog):
         self._nombre = nombre_serie
         # Para abrir el editor de anillos: necesitamos el panel y el nombre
         # REAL de la serie (clave en series_datos), no el del título.
-        self._panel_ref = panel_ref
+        self._obtener_serie = obtener_serie
+        self._reemplazar = reemplazar
         self._nombre_real = nombre_real or nombre_serie
 
         layout = QVBoxLayout(self)
@@ -863,8 +864,7 @@ class DialogoAlineamientoAnillos(QDialog):
         fila_btn.addWidget(btn_exportar)
         # Botón para abrir el editor de anillos y aplicar las correcciones
         # que el análisis sugiere (insertar/eliminar conservando el ancho).
-        if (self._panel_ref is not None
-                and hasattr(self._panel_ref, "series_datos")):
+        if self._obtener_serie is not None and self._reemplazar is not None:
             btn_editar = QPushButton("✏️ Editar anillos de esta serie")
             btn_editar.setStyleSheet(
                 "QPushButton{background-color:#8e44ad; color:white; "
@@ -887,7 +887,7 @@ class DialogoAlineamientoAnillos(QDialog):
         """Abre el editor de anillos con la serie REAL (anchos en mm) del
         panel principal, para aplicar correcciones de anillos faltantes/
         sobrantes conservando el ancho."""
-        df = self._panel_ref.series_datos.get(self._nombre_real)
+        df = self._obtener_serie(self._nombre_real)
         if df is None or df.empty:
             QMessageBox.warning(
                 self, "Serie no encontrada",
@@ -903,7 +903,7 @@ class DialogoAlineamientoAnillos(QDialog):
                 f"El análisis sugiere: {resumen}.\n\n"
                 "En el editor, inserta o elimina los anillos en esos años. "
                 "Recuerda: la madera manda — verifica antes de aplicar.")
-        dlg = DialogoEditarAnillos(df, self._nombre_real, self._panel_ref,
+        dlg = DialogoEditarAnillos(df, self._nombre_real, self._reemplazar,
                                     parent=self)
         dlg.exec()
 

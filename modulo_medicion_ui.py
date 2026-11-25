@@ -594,7 +594,7 @@ def _construir_splitter_principal(self) -> QWidget:
     self._splitter_vistas.addWidget(self.vista)
 
     # Vista secundaria (panel dividido, oculto por defecto)
-    self.panel_split = PanelSplit(self.escena, self)
+    self.panel_split = PanelSplit(self.escena, self.vista, self._fuentes_split)
     self.panel_split.hide()
     self._splitter_vistas.addWidget(self.panel_split)
 

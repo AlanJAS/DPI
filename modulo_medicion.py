@@ -350,6 +350,17 @@ class PestanaImagen(QWidget):
             "🔼 Gráfico" if not visible else "🔽 Gráfico"
         )
 
+    def _fuentes_split(self):
+        tabs = getattr(self._ventana_padre, '_tabs_imagenes', None)
+        if tabs is None:
+            return ()
+        fuentes = []
+        for i in range(tabs.count()):
+            widget = tabs.widget(i)
+            if widget is not None and widget is not self and hasattr(widget, "escena"):
+                fuentes.append((id(widget), tabs.tabText(i), widget.escena))
+        return fuentes
+
     def _toggle_split_view(self):
         """Activa o desactiva la vista dividida."""
         es_visible = self.panel_split.isVisible()

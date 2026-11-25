@@ -64,9 +64,10 @@ class PanelSplit(QWidget):
     diferente de otra pestaña abierta.
     """
 
-    def __init__(self, escena_propia: QGraphicsScene, pestana: "PestanaImagen"):
+    def __init__(self, escena_propia: QGraphicsScene, vista_principal, fuentes=lambda: ()):
         super().__init__()
-        self._pestana = pestana
+        self._vista_principal = vista_principal
+        self._fuentes = fuentes
         self._escena_propia = escena_propia
 
         layout = QVBoxLayout(self)
@@ -120,18 +121,9 @@ class PanelSplit(QWidget):
         # Opción 1: misma imagen
         self.combo_fuente.addItem("📷 Misma imagen", userData="__self__")
 
-        # Opciones 2+: otras pestañas abiertas
-        try:
-            ventana = self._pestana._ventana_padre
-            tabs = getattr(ventana, '_tabs_imagenes', None)
-            if tabs is not None:
-                for i in range(tabs.count()):
-                    widget = tabs.widget(i)
-                    if widget is not self._pestana and widget is not None:
-                        nombre = tabs.tabText(i)
-                        self.combo_fuente.addItem(f"📷 {nombre}", userData=id(widget))
-        except Exception:
-            pass
+        # El origen de las otras escenas lo aporta el contenedor.
+        for clave, nombre, _ in self._fuentes():
+            self.combo_fuente.addItem(f"📷 {nombre}", userData=clave)
 
         # Restaurar selección
         if seleccion_actual is not None:
@@ -141,6 +133,8 @@ class PanelSplit(QWidget):
                     break
 
         self.combo_fuente.blockSignals(False)
+        if seleccion_actual is not None and self.combo_fuente.currentData() != seleccion_actual:
+            self._cambiar_fuente(self.combo_fuente.currentIndex())
 
     def _cambiar_fuente(self, idx):
         """Cambia la escena de la vista según la selección del combo."""
@@ -149,28 +143,18 @@ class PanelSplit(QWidget):
             self.vista.setScene(self._escena_propia)
             return
 
-        # Buscar la pestaña por id
-        try:
-            ventana = self._pestana._ventana_padre
-            tabs = getattr(ventana, '_tabs_imagenes', None)
-            if tabs is not None:
-                for i in range(tabs.count()):
-                    widget = tabs.widget(i)
-                    if id(widget) == data:
-                        self.vista.setScene(widget.escena)
-                        # Ajustar zoom para ver toda la imagen
-                        self.vista.fitInView(
-                            widget.escena.sceneRect(),
-                            Qt.AspectRatioMode.KeepAspectRatio)
-                        return
-        except Exception:
-            pass
+        for clave, _, escena in self._fuentes():
+            if clave == data:
+                self.vista.setScene(escena)
+                self.vista.fitInView(escena.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
+                return
+        self.vista.setScene(self._escena_propia)
 
     def _sincronizar_con_principal(self):
         """Copia zoom y posición de la vista principal."""
-        self.vista.setTransform(self._pestana.vista.transform())
-        center = self._pestana.vista.mapToScene(
-            self._pestana.vista.viewport().rect().center())
+        self.vista.setTransform(self._vista_principal.transform())
+        center = self._vista_principal.mapToScene(
+            self._vista_principal.viewport().rect().center())
         self.vista.centerOn(center)
 
 

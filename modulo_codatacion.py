@@ -1900,7 +1900,7 @@ class PanelCodatacion(QWidget):
             QMessageBox.warning(self, "Sin datos",
                                 "La serie seleccionada no tiene datos.")
             return
-        dlg = DialogoEditarAnillos(df, nombre, self, parent=self)
+        dlg = DialogoEditarAnillos(df, nombre, self.reemplazar_serie, parent=self)
         dlg.exec()
 
     def comparar_series_marcadas_vs_crono(self):
@@ -1971,7 +1971,9 @@ class PanelCodatacion(QWidget):
         if (cache is not None and cache.get("clave") == clave_actual
                 and cache.get("resultados")):
             dlg = DialogoComparacionMultiple(
-                cache["resultados"], cache["nombre_crono"], parent=self)
+                cache["resultados"], cache["nombre_crono"], parent=self,
+                obtener_serie=self.series_datos.get, aplicar_desfase=self.aplicar_desfase_a_serie,
+                reemplazar=self.reemplazar_serie)
             dlg.exec()
             return
 
@@ -2077,7 +2079,9 @@ class PanelCodatacion(QWidget):
             "nombre_crono": nombre_crono,
         }
 
-        dlg = DialogoComparacionMultiple(resultados, nombre_crono, parent=self)
+        dlg = DialogoComparacionMultiple(resultados, nombre_crono, parent=self,
+            obtener_serie=self.series_datos.get, aplicar_desfase=self.aplicar_desfase_a_serie,
+            reemplazar=self.reemplazar_serie)
         dlg.exec()
 
     def _clave_cache_comparacion(self, nombres: list[str]) -> tuple:
@@ -2132,7 +2136,8 @@ class PanelCodatacion(QWidget):
             serie_b=getattr(self, "_offset_serie_b_raw", None),
             parent=self,
             nombre_serie=getattr(self, "_offset_nombre_a", None),
-            panel_ref=self,
+            obtener_serie=self.series_datos.get, aplicar_desfase=self.aplicar_desfase_a_serie,
+            reemplazar=self.reemplazar_serie,
         )
         dialogo.exec()
 
@@ -2910,7 +2915,7 @@ class PanelCodatacion(QWidget):
             # El editor debe recibir la serie anterior a la prueba.
             self._descartar_prueba(silencioso=True)
             df = self.series_datos[nombre]
-            dlg = DialogoEditarAnillos(df, nombre, self, parent=self,
+            dlg = DialogoEditarAnillos(df, nombre, self.reemplazar_serie, parent=self,
                                        sugerencia=sug)
             dlg.exec()
         else:

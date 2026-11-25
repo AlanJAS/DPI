@@ -35,11 +35,13 @@ class VentanaTablaOffset(QDialog):
 
     def __init__(self, shifts, rs, glks=None, tbps=None, ns=None,
                  serie_a=None, serie_b=None, parent=None,
-                 nombre_serie=None, panel_ref=None):
+                 nombre_serie=None, *, obtener_serie=None, aplicar_desfase=None, reemplazar=None):
         super().__init__(parent)
         self.setWindowTitle("Resultados de Análisis de Desfases")
         self._nombre_serie = nombre_serie
-        self._panel_ref = panel_ref
+        self._obtener_serie = obtener_serie
+        self._aplicar_desfase = aplicar_desfase
+        self._reemplazar = reemplazar
         # Si vamos a mostrar gráfico, necesitamos más alto
         if serie_a is not None and serie_b is not None and len(shifts) > 0:
             self.resize(720, 720)
@@ -192,7 +194,7 @@ class VentanaTablaOffset(QDialog):
             fila_btns.addWidget(btn_alinear)
 
         # Botón para aplicar el desfase SELECCIONADO a la serie.
-        if self._panel_ref is not None and self._nombre_serie is not None:
+        if self._obtener_serie is not None and self._aplicar_desfase is not None and self._nombre_serie is not None:
             btn_aplicar = QPushButton("✅ Aplicar desfase seleccionado")
             btn_aplicar.setStyleSheet(
                 "QPushButton{background-color:#27ae60; color:white; "
@@ -222,7 +224,7 @@ class VentanaTablaOffset(QDialog):
                 except (ValueError, TypeError):
                     pass
 
-        df = self._panel_ref.series_datos.get(self._nombre_serie)
+        df = self._obtener_serie(self._nombre_serie)
         if df is None or df.empty:
             QMessageBox.warning(self, "Error",
                                 "No se encontró la serie en el panel.")
@@ -246,7 +248,7 @@ class VentanaTablaOffset(QDialog):
         if resp != QMessageBox.StandardButton.Yes:
             return
 
-        if self._panel_ref.aplicar_desfase_a_serie(self._nombre_serie, shift):
+        if self._aplicar_desfase(self._nombre_serie, shift):
             QMessageBox.information(
                 self, "Listo",
                 f"Serie '{self._nombre_serie}' re-datada a "
@@ -280,7 +282,7 @@ class VentanaTablaOffset(QDialog):
             self._serie_a, self._serie_b, shift_base,
             nombre, parent=self,
             penalizacion=3.0, max_correcciones=10,  # exploratorio por defecto
-            panel_ref=self._panel_ref,
+            obtener_serie=self._obtener_serie, reemplazar=self._reemplazar,
             nombre_real=self._nombre_serie,
         )
         dlg.exec()
@@ -529,12 +531,16 @@ class DialogoComparacionMultiple(QDialog):
     # (resaltar correlaciones débiles solo agrega ruido visual)
     UMBRAL_SCORE_PARA_RESALTAR = 0.30
 
-    def __init__(self, resultados: list[dict], nombre_crono: str, parent=None):
+    def __init__(self, resultados: list[dict], nombre_crono: str, parent=None, *,
+                 obtener_serie=None, aplicar_desfase=None, reemplazar=None):
         super().__init__(parent)
         self.setWindowTitle(
             f"Comparación múltiple vs cronología '{nombre_crono}'")
         self.resize(900, 600)
         self._resultados_originales = resultados
+        self._obtener_serie = obtener_serie
+        self._aplicar_desfase = aplicar_desfase
+        self._reemplazar = reemplazar
 
         layout = QVBoxLayout(self)
 
@@ -881,7 +887,8 @@ class DialogoComparacionMultiple(QDialog):
             parent=self,
             # Para poder aplicar el desfase seleccionado desde el detalle:
             nombre_serie=res.get("nombre_serie"),
-            panel_ref=self.parent() if hasattr(self.parent(), "series_datos") else None,
+            obtener_serie=self._obtener_serie, aplicar_desfase=self._aplicar_desfase,
+            reemplazar=self._reemplazar,
         )
         dlg.setWindowTitle(
             f"Desfases detallados — '{res.get('nombre_serie', '?')}' "

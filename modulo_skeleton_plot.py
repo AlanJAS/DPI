@@ -900,7 +900,7 @@ class VentanaSkeletonPlot(QWidget):
             return
         df = pd.DataFrame({"Ancho_mm": self._flo.values},
                           index=pd.Index(self._flo.index, name="Anio"))
-        dlg = DialogoEditarAnillos(df, self._flo_nombre_full, self, parent=self)
+        dlg = DialogoEditarAnillos(df, self._flo_nombre_full, self.reemplazar_serie, parent=self)
         dlg.exec()
 
     def _descartar_cambios(self):
