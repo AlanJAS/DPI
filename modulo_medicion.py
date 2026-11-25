@@ -1538,24 +1538,28 @@ class PestanaImagen(QWidget):
             anchos, self.spin_medula.value(), self.spin_corteza.value(),
             self.combo_dir.currentIndex() == 0)
 
+    def _ajustar_anios(self, n, ancla):
+        if not n:
+            return None
+        with QSignalBlocker(self.spin_medula), QSignalBlocker(self.spin_corteza):
+            if ancla == "medula":
+                self.spin_corteza.setValue(self.spin_medula.value() + n - 1)
+                return self.spin_corteza.value()
+            self.spin_medula.setValue(self.spin_corteza.value() - n + 1)
+            return self.spin_medula.value()
+
+    def _refrescar_medicion(self):
+        self.metadatos_cambiados.emit()
+        self._actualizar_grafico()
+        self.vista.redibujar_todo()
+
     def _recalcular_anios(self, ancla: str):
         n = len(self.datos_medidos)
         if not n:
             return
-        self.spin_medula.blockSignals(True)
-        self.spin_corteza.blockSignals(True)
-        try:
-            if ancla == "medula":
-                self.spin_corteza.setValue(self.spin_medula.value() + n - 1)
-            else:
-                self.spin_medula.setValue(self.spin_corteza.value() - n + 1)
-        finally:
-            self.spin_medula.blockSignals(False)
-            self.spin_corteza.blockSignals(False)
+        self._ajustar_anios(n, ancla)
         self._guardar_estado()
-        self.metadatos_cambiados.emit()
-        self._actualizar_grafico()
-        self.vista.redibujar_todo()
+        self._refrescar_medicion()
 
     def _aplicar_anio_medula(self):
         self._recalcular_anios("medula")
@@ -1572,27 +1576,14 @@ class PestanaImagen(QWidget):
 
     def _sincronizar_mediciones(self, lista_anchos: list[float]):
         n = len(lista_anchos)
-        self.spin_medula.blockSignals(True)
-        self.spin_corteza.blockSignals(True)
-        try:
-            if not n:
-                self.label_estado.setText("Listo para el primer anillo.")
-            else:
-                if self.combo_dir.currentIndex() == 0:
-                    extremo = self.spin_medula.value() + n - 1
-                    self.spin_corteza.setValue(extremo)
-                else:
-                    extremo = self.spin_corteza.value() - n + 1
-                    self.spin_medula.setValue(extremo)
-                self.label_estado.setText(
-                    f"Último: {lista_anchos[-1]:.3f} mm (año {extremo}) | Total: {n}"
-                )
-        finally:
-            self.spin_medula.blockSignals(False)
-            self.spin_corteza.blockSignals(False)
-        self.metadatos_cambiados.emit()
-        self._actualizar_grafico()
-        self.vista.redibujar_todo()
+        if not n:
+            self.label_estado.setText("Listo para el primer anillo.")
+        else:
+            ancla = "medula" if self.combo_dir.currentIndex() == 0 else "corteza"
+            extremo = self._ajustar_anios(n, ancla)
+            self.label_estado.setText(
+                f"Último: {lista_anchos[-1]:.3f} mm (año {extremo}) | Total: {n}")
+        self._refrescar_medicion()
 
     # -------------------------------------------------------------------------
     # Co-datación en vivo
