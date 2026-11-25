@@ -5,6 +5,15 @@ import modulo_transformacion as _tr
 from modulo_estadistica import pearson
 
 
+def normalizar_grafico(valores):
+    """Z-score gráfico, con ceros cuando la desviación es casi nula."""
+    arr = np.array(valores, dtype=float)
+    std = arr.std()
+    if std < 1e-9:
+        return [0.0] * len(valores)
+    return ((arr - arr.mean()) / std).tolist()
+
+
 def serie_medicion(anios, anchos):
     return pd.Series(anchos, index=anios).clip(lower=0.01)
 
