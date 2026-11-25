@@ -18,7 +18,7 @@ from modulo_intensidad_nucleo import valores_intensidad
 from modulo_pith import estimar_anillos_faltantes, DialogoMetodoPith, DialogoEstimacionPith
 from modulo_pith_nucleo import distancia_faltante_dap
 logger = logging.getLogger(__name__)
-from modulo_marcas_medicion import ModoMedicion, _es_ewlw
+from dpi.medicion.marcas import ModoMedicion, _es_ewlw
 from modulo_ewlw import detectar_ewlw_imagen
 from modulo_worker_medicion import GestorTareasMedicion
 def _ultima_carpeta(nueva_ruta: str | None = None) -> str:

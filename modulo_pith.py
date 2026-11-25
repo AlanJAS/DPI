@@ -49,7 +49,7 @@ from modulo_pith_nucleo import (
 # (se gestiona desde VistaInteractiva, igual que ModoMedicion.AUTODETECT)
 # =============================================================================
 
-from modulo_marcas_medicion import ModoMedicion
+from dpi.medicion.marcas import ModoMedicion
 
 
 # =============================================================================

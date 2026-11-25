@@ -64,7 +64,7 @@ logger = logging.getLogger(__name__)
 # EXPORTADOR
 # =============================================================================
 
-from modulo_marcas_medicion import ModoMedicion, _es_ewlw
+from dpi.medicion.marcas import ModoMedicion, _es_ewlw
 
 from modulo_ewlw import anchos_ewlw_puntos
 
