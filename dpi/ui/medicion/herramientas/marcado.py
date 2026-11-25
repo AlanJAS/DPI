@@ -42,6 +42,7 @@ def _borrar_punto_cercano(self, x, y):
     if idx is not None:
         self.guardar_en_historial()
         self.modelo_medicion.borrar(idx)
+        self._limpiar_anclado()
         self.recalcular_todas_las_distancias()
         self.progreso_modificado.emit()
 
