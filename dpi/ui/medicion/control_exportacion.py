@@ -6,6 +6,7 @@ from dpi.formatos.pos import leer_pos, escribir_pos
 from dpi.formatos.planillas import _escribir_excel
 from dpi.formatos.exportacion import asegurar_extension
 from dpi.formatos.tabular import exportar_tabular
+from dpi.infraestructura.escritura import ruta_atomica
 from dpi.formatos.tucson import exportar_tucson_ewlw, _escribir_tucson
 from PyQt6.QtWidgets import QFileDialog, QInputDialog, QMessageBox
 import dpi.infraestructura.json_seguro as _js
@@ -161,10 +162,9 @@ def _exportar_anomalias(self):
         ext = os.path.splitext(ruta)[1].lower()
         if ext == ".xlsx":
             _escribir_excel(df, ruta)
-        elif ext == ".txt":
-            df.to_csv(ruta, index=False, sep="\t")
         else:
-            df.to_csv(ruta, index=False, sep=";")
+            with ruta_atomica(ruta) as temporal:
+                df.to_csv(temporal, index=False, sep="\t" if ext == ".txt" else ";")
 
         cols_txt = ", ".join(nom for _, nom in tipos_cols)
         QMessageBox.information(
