@@ -271,13 +271,7 @@ class PanelCodatacion(QWidget):
         self._item_preview = None
         self._stats_actuales: dict | None = None
 
-        # Estado de PRUEBA de corrección (patrón probar → confirmar → aplicar):
-        # al probar una sugerencia, se aplica a series_datos de forma temporal
-        # (con respaldo) sin tocar series_originales; se confirma para hacerlo
-        # permanente o se descarta para revertir.
-        self._prueba_activa: bool = False
-        self._prueba_nombre: str = ""
-        self._prueba_backup: pd.DataFrame | None = None
+        # El modelo conserva el respaldo; aquí solo queda la sugerencia visual.
         self._prueba_sug: dict | None = None
 
         # Cronología activa
@@ -1576,6 +1570,7 @@ class PanelCodatacion(QWidget):
         if not items:
             return
 
+        self._descartar_prueba(silencioso=True)
         nombres_a_eliminar = [item.text() for item in items]
         nombres_set = set(nombres_a_eliminar)
 
@@ -1644,6 +1639,7 @@ class PanelCodatacion(QWidget):
             return
 
         nombre = items[0].text()
+        self._descartar_prueba(silencioso=True)
         df = self.series_datos.get(nombre)
         if df is None or df.empty:
             return
@@ -1919,21 +1915,25 @@ class PanelCodatacion(QWidget):
     # -------------------------------------------------------------------------
 
     def simular_insertar(self):
-        nombre = self._serie_para_accion("editar")
-        if nombre is None:
-            return
-        anio = self.spin_edit_year.value()
-        self.series_datos[nombre] = aplicar_correccion(
-            self.series_datos[nombre], anio, 1, anclaje=self._anclaje_actual())
-        self.graficar_series()
+        self._simular_correccion(1)
 
     def simular_borrar(self):
+        self._simular_correccion(-1)
+
+    def _simular_correccion(self, delta):
         nombre = self._serie_para_accion("editar")
         if nombre is None:
             return
+        self._descartar_prueba(silencioso=True)
         anio = self.spin_edit_year.value()
-        self.series_datos[nombre] = aplicar_correccion(
-            self.series_datos[nombre], anio, -1, anclaje=self._anclaje_actual())
+        corregido = aplicar_correccion(
+            self.series_datos[nombre], anio, delta, anclaje=self._anclaje_actual())
+        try:
+            self.modelo_series.actualizar(nombre, corregido)
+        except (ValueError, TypeError, KeyError) as exc:
+            QMessageBox.warning(self, "Corrección inválida", str(exc))
+            return
+        self._cache_comparacion = None
         self.graficar_series()
 
     def abrir_skeleton_plot(self):
@@ -1971,6 +1971,7 @@ class PanelCodatacion(QWidget):
                 f"'{nombre}' no tiene una copia original guardada "
                 "(no se le han aplicado correcciones).")
             return
+        self._descartar_prueba(silencioso=True)
         self.modelo_series.restablecer(nombre)
         self.graficar_series()
         QMessageBox.information(
@@ -1999,6 +2000,7 @@ class PanelCodatacion(QWidget):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
         if resp != QMessageBox.StandardButton.Yes:
             return
+        self._descartar_prueba(silencioso=True)
         self.modelo_series.restablecer(nombre)
         self._limpiar_preview()
         self._sugerencias.clear()
@@ -2252,6 +2254,7 @@ class PanelCodatacion(QWidget):
             este flag, la cronología aparecía DUPLICADA: una vez por
             `_agregar_crono` y otra por esta función.
         """
+        self._descartar_prueba(silencioso=True)
         self.cronologia_activa = df.copy()
         self.meta_cronologia = dict(meta) if meta else {}
         self._nombre_cronologia_activa = nombre or "Cronología"
@@ -2710,6 +2713,7 @@ class PanelCodatacion(QWidget):
 
         Devuelve True si aplicó algún cambio.
         """
+        self._descartar_prueba(silencioso=True)
         if not self.modelo_series.desplazar(nombre, shift):
             return False
         self._cache_comparacion = None
@@ -2722,6 +2726,7 @@ class PanelCodatacion(QWidget):
         """Reemplaza por completo los datos de una serie (usado por el
         editor de anillos, que cambia anchos y/o cantidad de anillos).
         Invalida la caché de comparación y regrafica."""
+        self._descartar_prueba(silencioso=True)
         self.modelo_series.actualizar(nombre, df_nuevo)
         self._cache_comparacion = None
         if regraficar:
@@ -2733,6 +2738,7 @@ class PanelCodatacion(QWidget):
         nombre = self._serie_para_accion("editar")
         if nombre is None:
             return
+        self._descartar_prueba(silencioso=True)
         # No se editan anchos de una cronología
         if nombre.startswith("📚"):
             QMessageBox.information(
@@ -3106,6 +3112,7 @@ class PanelCodatacion(QWidget):
 
     def buscar_errores(self):
         """Busca anillos faltantes/sobrantes + calcula stats móviles."""
+        self._descartar_prueba(silencioso=True)
         marcadas = self._series_marcadas()
         if len(marcadas) != 2:
             return QMessageBox.warning(self, "Atención", "Marque EXACTAMENTE dos series.")
@@ -3692,7 +3699,7 @@ class PanelCodatacion(QWidget):
     def _on_seleccion_sugerencia(self):
         fila = self.tabla_sugerencias.currentRow()
         # Cambiar de sugerencia descarta una prueba en curso (para no mezclar).
-        if self._prueba_activa:
+        if self.modelo_series.nombre_en_prueba is not None:
             self._descartar_prueba(silencioso=True)
         if fila < 0 or fila >= len(self._sugerencias):
             self.btn_probar.setEnabled(False)
@@ -3744,12 +3751,13 @@ class PanelCodatacion(QWidget):
             QMessageBox.warning(self, "Sin serie",
                                 "No se encontró la serie a corregir.")
             return
-        # Respaldar y aplicar temporalmente
-        self._prueba_backup = self.series_datos[nombre].copy()
-        self._prueba_nombre = nombre
+        try:
+            self.modelo_series.probar_correccion(nombre, df_corr)
+        except (ValueError, TypeError, KeyError) as exc:
+            QMessageBox.warning(self, "Corrección inválida", str(exc))
+            return
         self._prueba_sug = dict(sug)
-        self._prueba_activa = True
-        self.series_datos[nombre] = df_corr.copy()
+        self._cache_comparacion = None
 
         self._marcar_prueba_ui(True)
         self.btn_aplicar.setEnabled(True)
@@ -3769,16 +3777,11 @@ class PanelCodatacion(QWidget):
             self.lbl_prueba.setText("")
 
     def _descartar_prueba(self, silencioso: bool = False):
-        """Revierte una prueba en curso a la serie original."""
-        if not self._prueba_activa:
+        """Recupera la serie anterior a la prueba, no la original importada."""
+        if not self.modelo_series.descartar_correccion():
             return
-        if (self._prueba_backup is not None
-                and self._prueba_nombre in self.series_datos):
-            self.series_datos[self._prueba_nombre] = self._prueba_backup.copy()
-        self._prueba_activa = False
-        self._prueba_backup = None
-        self._prueba_nombre = ""
         self._prueba_sug = None
+        self._cache_comparacion = None
         self._marcar_prueba_ui(False)
         self.graficar_series()
         if not silencioso:
@@ -3793,9 +3796,9 @@ class PanelCodatacion(QWidget):
         o de forma automática (ancho promedio)."""
         # Determinar la sugerencia a aplicar: la que se está probando, o la
         # seleccionada en la tabla.
-        if self._prueba_activa and self._prueba_sug is not None:
+        if self.modelo_series.nombre_en_prueba is not None:
             sug = self._prueba_sug
-            nombre = self._prueba_nombre
+            nombre = self.modelo_series.nombre_en_prueba
         else:
             fila = self.tabla_sugerencias.currentRow()
             if fila < 0 or fila >= len(self._sugerencias):
@@ -3830,26 +3833,26 @@ class PanelCodatacion(QWidget):
             return  # cancelado
 
         if elegido is btn_ancho:
-            # Conservar ancho: revertir la prueba (si la hay) y abrir el editor
-            # posicionado en el año sugerido, que hace el commit definitivo.
-            if self._prueba_activa:
-                self.series_datos[self._prueba_nombre] = self._prueba_backup.copy()
-                self._prueba_activa = False
-                self._prueba_backup = None
-                self._marcar_prueba_ui(False)
+            # El editor debe recibir la serie anterior a la prueba.
+            self._descartar_prueba(silencioso=True)
             df = self.series_datos[nombre]
             dlg = DialogoEditarAnillos(df, nombre, self, parent=self,
                                        sugerencia=sug)
             dlg.exec()
         else:
-            # Automático: comprometer la serie corregida (ancho promedio).
-            df_corr = sug.get("df_corregido")
-            if df_corr is not None:
-                self.series_datos[nombre] = df_corr.copy()
-            self.series_originales[nombre] = self.series_datos[nombre].copy()
-            # Limpiar estado de prueba (ya comprometido)
-            self._prueba_activa = False
-            self._prueba_backup = None
+            try:
+                if self.modelo_series.nombre_en_prueba is not None:
+                    self.modelo_series.confirmar_correccion()
+                else:
+                    df_corr = sug.get("df_corregido")
+                    if df_corr is None:
+                        raise ValueError("La sugerencia no contiene datos corregidos")
+                    self.modelo_series.actualizar(nombre, df_corr)
+            except (ValueError, TypeError, KeyError) as exc:
+                QMessageBox.warning(self, "Corrección inválida", str(exc))
+                return
+            self._prueba_sug = None
+            self._cache_comparacion = None
             self._marcar_prueba_ui(False)
 
         # Refrescar tras aplicar
