@@ -1539,13 +1539,10 @@ class PanelCodatacion(QWidget):
         return _tr.serie_numerica(serie_mm)
 
     def _preparar_serie_comparacion(self, datos, es_crono):
-        cruda = pd.to_numeric(datos, errors="coerce").dropna()
-        if cruda.empty:
-            return SeriePreparada(cruda, cruda, cruda)
-        return SeriePreparada(
-            cruda, self._transformar_para_correlacion(datos, es_crono),
-            self._serie_para_glk(datos, es_crono),
-        )
+        from dpi.series.comparacion import preparar_serie
+        return preparar_serie(datos,
+            lambda serie: self._transformar_para_correlacion(serie, es_crono),
+            lambda serie: self._serie_para_glk(serie, es_crono))
 
     def _preparar_diferencias_log(self, n1: str, n2: str):
         """Prepara las series transformadas de un par para cofechado."""
