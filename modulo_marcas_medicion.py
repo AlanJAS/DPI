@@ -1,6 +1,6 @@
 """Componentes de medición de DPI."""
 from enum import IntEnum
-from modulo_modelo_medicion import TipoMarca
+from dpi.medicion.modelo import TipoMarca
 
 
 def _tipo(val):
@@ -66,4 +66,3 @@ def _es_quiebre(val) -> bool:
 def _excluye_intensidad(val) -> bool:
     tipo = _tipo(val)
     return tipo is not None and tipo.excluye_intensidad
-

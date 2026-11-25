@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 from functools import lru_cache
 import math
-from modulo_modelo_medicion import PuntoMedicion, TipoMarca
+from dpi.medicion.modelo import PuntoMedicion, TipoMarca
 
 
 def anchos_anillos(coords, marcas, ppm):

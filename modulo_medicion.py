@@ -26,7 +26,7 @@ import cv2
 import numpy as np
 from modulo_configuracion_ui import ultima_carpeta
 import dpi.ciencia.transformacion as _tr
-from modulo_modelo_medicion import ModeloSesionMedicion, RadioMedicion, TipoMarca
+from dpi.medicion.modelo import ModeloSesionMedicion, RadioMedicion, TipoMarca
 import pandas as pd
 from modulo_imagen import detectar_dpi, preparar_banda_rgb
 from modulo_formatos import leer_wid, leer_dendro_auto, leer_pos, escribir_pos, _escribir_excel, asegurar_extension, exportar_tabular, exportar_tucson_ewlw, _escribir_tucson

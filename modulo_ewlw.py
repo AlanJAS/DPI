@@ -3,7 +3,7 @@
 import math
 import numpy as np
 from modulo_calculo_medicion import calcular_anillos, puntos_desde_geometria
-from modulo_modelo_medicion import TipoMarca
+from dpi.medicion.modelo import TipoMarca
 
 
 def _calcular_ewlw_posiciones(sig_prog, gray, coords, saltos, banda,

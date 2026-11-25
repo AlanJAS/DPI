@@ -6,7 +6,7 @@ import logging
 from modulo_configuracion_ui import ultima_carpeta
 import math
 import cv2
-from modulo_modelo_medicion import PuntoMedicion, TipoMarca
+from dpi.medicion.modelo import PuntoMedicion, TipoMarca
 import pandas as pd
 import pyqtgraph as pg
 from PyQt6.QtWidgets import QFileDialog, QVBoxLayout, QMessageBox, QDialog

@@ -1,6 +1,6 @@
 """Proyecciones de medición y migración de radios, independientes de Qt."""
 from modulo_calculo_medicion import anchos_puntos, anios_medicion
-from modulo_modelo_medicion import PuntoMedicion, RadioMedicion
+from dpi.medicion.modelo import PuntoMedicion, RadioMedicion
 
 
 def mediciones_desde_anchos(anchos, medula, corteza, med_a_cor):

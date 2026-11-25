@@ -7,7 +7,7 @@ from modulo_render_medicion import RenderMedicion
 import math
 from modulo_calculo_medicion import anchos_puntos, anios_por_punto, dist_punto_segmento
 import numpy as np
-from modulo_modelo_medicion import ModeloMedicion, PuntoMedicion, HistorialMedicion, TipoMarca
+from dpi.medicion.modelo import ModeloMedicion, PuntoMedicion, HistorialMedicion, TipoMarca
 from PyQt6.QtWidgets import QWidget, QDialog, QGraphicsView, QGraphicsScene, QPushButton, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QDoubleSpinBox, QComboBox, QToolTip, QGraphicsEllipseItem, QDialogButtonBox
 from PyQt6.QtGui import QPainter, QPen, QColor, QBrush
 from PyQt6.QtCore import Qt, pyqtSignal, QEvent
@@ -2130,4 +2130,3 @@ class VistaInteractiva(QGraphicsView):
         self.modelo_medicion.cargar(coordenadas, es_salto)
         if redibujar:
             self.redibujar_todo()
-
