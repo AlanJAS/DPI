@@ -58,7 +58,7 @@ modulos = sorted(p.name for p in ORIGEN.glob("*.py") if p.name not in _FUERA)
 for nombre in modulos:
     shutil.copy2(ORIGEN / nombre, LIB / nombre)
 shutil.copy2(ORIGEN / "species_profiles.json", LIB / "species_profiles.json")
-shutil.copy2(ORIGEN / "dpi.ico", LIB / "dpi.ico")
+shutil.copy2(ORIGEN / "iconos" / "dpi.ico", LIB / "dpi.ico")
 print(f"código: {len(modulos)} módulos")
 
 # ── 2. Íconos ─────────────────────────────────────────────────────────────
@@ -69,7 +69,7 @@ from PIL import Image
 
 # El PNG grande ha viajado con dos nombres distintos entre carpetas; se prueban
 # ambos y se cae al .ico solo si no hay ninguno.
-_CANDIDATOS = ("dpi_icon.png", "DPI.png", "dpi.png", "dpi.ico")
+_CANDIDATOS = ("dpi_icon.png", "DPI.png", "dpi.png", "iconos/dpi.ico")
 _ruta_icono = next((ORIGEN / n for n in _CANDIDATOS if (ORIGEN / n).exists()), None)
 if _ruta_icono is None:
     sys.exit("No encuentro el ícono: se esperaba alguno de " + ", ".join(_CANDIDATOS))

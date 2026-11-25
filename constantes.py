@@ -103,8 +103,8 @@ VERSION = "2.4.1"
 # archivo vive en la raíz al correr desde el código fuente, y dentro de
 # "iconos/" en el empaquetado de Windows.
 _CANDIDATOS_ICONO = (
-    "dpi.ico",
     _os.path.join("iconos", "dpi.ico"),
+    "dpi.ico",
     "dpi_icon.ico",
     _os.path.join("iconos", "dpi_icon.ico"),
     "dpi.png",

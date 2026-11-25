@@ -15,12 +15,10 @@ Las tres ideas que hacen la diferencia:
    año son operaciones de numpy sobre filas completas, no bucles de Python
    con búsquedas en pandas.
 
-2. **Leave-one-out en forma cerrada.** El maestro es una media ponderada
-   biweight. Con los pesos fijados a partir de la muestra completa, quitar
-   una serie es restar su aporte al numerador y al denominador, de modo que
-   los 1600 maestros salen del mismo cálculo que el maestro global. Lo mismo
-   vale para las medias y desviaciones por año que usan las secciones [C]
-   y [E]. Ver `verificar_aproximacion_maestro` para el error que introduce.
+2. **Leave-one-out exacto.** Por defecto el maestro es una media aritmética:
+   se resta la contribución de cada serie a las sumas y los conteos por año.
+   El modo robusto biweight recalcula el maestro para cada exclusión.
+   Ver `verificar_leave_one_out` para comprobar la equivalencia numérica.
 
 3. **Sumas acumuladas para las correlaciones por segmento.** Para cada
    desfase se acumulan Σx, Σy, Σx², Σy², Σxy sobre las posiciones válidas.
