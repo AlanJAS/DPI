@@ -12,10 +12,10 @@ from estilos import color_secundario
 import estilos_graficos as _gr
 from dpi.formatos.planillas import _es_planilla, _escribir_excel
 from dpi.formatos.exportacion import asegurar_extension
+from dpi.infraestructura.escritura import ruta_atomica
 
 
-def _ultima_carpeta(nueva_ruta: str | None = None) -> str:
-    return ultima_carpeta("ultima_carpeta_codatacion", nueva_ruta)
+from dpi.ui.configuracion import carpeta_codatacion as _ultima_carpeta
 
 
 
@@ -268,12 +268,11 @@ def _mostrar_dialogo_eps_rbar(parent, meta: dict, nombre_cronologia: str):
             ext = os.path.splitext(ruta)[1].lower()
             if _es_planilla(ext):
                 _escribir_excel(df_export, ruta)
-            elif ext == ".csv":
-                df_export.to_csv(ruta, index=False, sep=";",
-                                 decimal=",", float_format="%.6f")
             else:
-                df_export.to_csv(ruta, index=False, sep="\t",
-                                 decimal=",", float_format="%.6f")
+                with ruta_atomica(ruta) as temporal:
+                    df_export.to_csv(temporal, index=False,
+                                     sep=";" if ext == ".csv" else "\t",
+                                     decimal=",", float_format="%.6f")
             QMessageBox.information(
                 dlg, "✅ Exportado",
                 f"EPS / Rbar exportados a:\n{ruta}\n\n"

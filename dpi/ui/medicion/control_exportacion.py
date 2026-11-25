@@ -1,6 +1,7 @@
 """Operaciones de interfaz extraídas; reciben explícitamente el contexto de la vista."""
 import os
 from dpi.medicion.datos import mediciones_radio
+from dpi.medicion.anomalias import tabla_eventos
 from dpi.medicion.modelo import TipoMarca
 from dpi.formatos.pos import leer_pos, escribir_pos
 from dpi.formatos.planillas import _escribir_excel
@@ -17,8 +18,7 @@ from dpi.medicion.ewlw import anchos_ewlw_puntos
 import logging
 logger = logging.getLogger(__name__)
 from dpi.ui.configuracion import ultima_carpeta
-def _ultima_carpeta(nueva_ruta=None):
-    return ultima_carpeta("ultima_carpeta", nueva_ruta)
+from dpi.ui.configuracion import carpeta_medicion as _ultima_carpeta
 
 def _importar_pos(self):
     if self.datos_medidos:
@@ -151,15 +151,7 @@ def _exportar_anomalias(self):
     _ultima_carpeta(ruta)
 
     try:
-        import pandas as pd
-        filas = []
-        for anio in todos_anios:
-            tipo_anio = anomalias.get(anio)
-            fila = {"Año": anio}
-            for tipo_cod, tipo_nom in tipos_cols:
-                fila[tipo_nom] = 1 if tipo_anio == tipo_cod else 0
-            filas.append(fila)
-        df = pd.DataFrame(filas)
+        df = tabla_eventos(todos_anios, anomalias, tipos_cols)
 
         ext = os.path.splitext(ruta)[1].lower()
         if ext == ".xlsx":

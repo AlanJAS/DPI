@@ -10,8 +10,7 @@ from dpi.formatos.tucson import exportar_tucson_ewlw, _escribir_tucson
 logger = logging.getLogger(__name__)
 
 
-def _ultima_carpeta(nueva_ruta=None):
-    return ultima_carpeta("ultima_carpeta", nueva_ruta)
+from dpi.ui.configuracion import carpeta_medicion as _ultima_carpeta
 
 
 class ExportadorDendro:

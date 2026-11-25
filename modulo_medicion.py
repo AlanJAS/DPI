@@ -79,8 +79,7 @@ from dpi.medicion.ewlw import anchos_ewlw_puntos
 
 
 
-def _ultima_carpeta(nueva_ruta: str | None = None) -> str:
-    return ultima_carpeta("ultima_carpeta", nueva_ruta)
+from dpi.ui.configuracion import carpeta_medicion as _ultima_carpeta
 
 
 # =============================================================================

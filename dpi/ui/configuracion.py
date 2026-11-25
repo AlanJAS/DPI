@@ -14,3 +14,11 @@ def ultima_carpeta(clave: str, nueva_ruta: str | None = None) -> str:
         cfg.setValue(clave, carpeta)
         return carpeta
     return cfg.value(clave, "")
+
+
+def carpeta_medicion(nueva_ruta=None):
+    return ultima_carpeta("ultima_carpeta", nueva_ruta)
+
+
+def carpeta_codatacion(nueva_ruta=None):
+    return ultima_carpeta("ultima_carpeta_codatacion", nueva_ruta)

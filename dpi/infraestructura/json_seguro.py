@@ -111,7 +111,14 @@ def cargar_json(archivo):
     def constante_invalida(valor):
         raise ValueError(f"Constante JSON inválida: {valor}")
 
-    return json.load(archivo, object_pairs_hook=pares_unicos, parse_constant=constante_invalida)
+    def real_finito(valor):
+        numero = float(valor)
+        if not math.isfinite(numero):
+            raise ValueError(f"Número JSON fuera de rango: {valor}")
+        return numero
+
+    return json.load(archivo, object_pairs_hook=pares_unicos,
+                     parse_constant=constante_invalida, parse_float=real_finito)
 
 
 def guardar_json(ruta: str, datos, *, indent: int | None = 2,
