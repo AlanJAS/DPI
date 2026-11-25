@@ -2,7 +2,7 @@
 
 import modulo_pith_ui
 
-import modulo_render_medicion
+from modulo_render_medicion import RenderMedicion
 
 import math
 from modulo_calculo_medicion import anchos_puntos, anios_por_punto, dist_punto_segmento
@@ -261,17 +261,13 @@ class VistaInteractiva(QGraphicsView):
         self._items_calibracion: list = []
         self._pixeles_por_mm: float = PIXELES_POR_MM_DEFECTO
 
-        # Elementos gráficos activos
-        self._items_puntos: list = []
-        self._items_lineas: list = []
-        self._items_textos: list = []
-        self.items_caminos_inactivos: dict = {}
+        self._render = RenderMedicion(self.scene, self._escala_vista,
+                                      self._grosor_tick_zoom, self._perp_tick)
 
         # Estado de interacción
         self.modo_actual: ModoMedicion = ModoMedicion.MEDIR
         # Anomalías: {anio: tipo_str}
         self.anomalias: dict[int, str] = {}
-        self._items_anomalias: list = []   # QGraphicsItems de marcas visuales
         self._punto_arrastrado_idx: int | None = None
         self._is_panning: bool = False
         self._last_pan_pos = None
@@ -340,12 +336,6 @@ class VistaInteractiva(QGraphicsView):
         # borrarlos todos, convertirlos a salto o convertirlos a quiebre.
         self._puntos_seleccionados: set[int] = set()
         self._items_seleccion: list = []  # marcadores visuales (círculos amarillos)
-
-        # Cache de los datos de caminos inactivos. Necesario para poder
-        # re-renderizar en cambios de zoom (los labels y ticks dependen
-        # de la escala). Antes los labels viejos quedaban con el tamaño
-        # de un zoom anterior y se veían enormes después de acercar.
-        self._caminos_inactivos_data: dict = {}
 
         # Estado para selección por arrastre (rectángulo).
         # Cuando el usuario hace clic+drag en ModoMedicion.SELECCIONAR sobre un
@@ -652,8 +642,17 @@ class VistaInteractiva(QGraphicsView):
         else:               # muy alejado
             return 0.8
 
+    def _datacion_render(self):
+        try:
+            return (self._pestana.spin_medula.value(), self._pestana.spin_corteza.value(),
+                    self._pestana.combo_dir.currentIndex() == 0)
+        except AttributeError:
+            return None
+
     def redibujar_todo(self):
-        return modulo_render_medicion.redibujar_todo(self)
+        self._render.redibujar_todo(self.modelo_medicion.captura(), self.pixeles_por_mm,
+            self._datacion_render(), self.anomalias,
+            (self._pen_punto, self._pen_linea, self._pen_salto, self._pen_ewlw))
 
     def _anio_en_indice(self, idx: int) -> int | None:
         """Devuelve el año calendario del punto en coordenadas_anillos[idx], o None."""
@@ -668,46 +667,8 @@ class VistaInteractiva(QGraphicsView):
         return anios[idx] if 0 <= idx < len(anios) else None
 
     def _dibujar_anomalias(self):
-        return modulo_render_medicion._dibujar_anomalias(self)
-
-    def _crear_marcador_decada(
-        self,
-        anio: int,
-        coord_actual: tuple,
-        coord_anterior: tuple,
-    ):
-        return modulo_render_medicion._crear_marcador_decada(self, anio, coord_actual, coord_anterior)
-
-    def _filtro_densidad_anio(self, anio: int, escala: float) -> bool:
-        return modulo_render_medicion._filtro_densidad_anio(self, anio, escala)
-
-    def _estimar_bbox_label_pantalla(
-        self,
-        texto: str,
-        coord_actual: tuple,
-        coord_anterior: tuple,
-        offset_perpendicular_px: float = 8.0,
-    ) -> tuple:
-        return modulo_render_medicion._estimar_bbox_label_pantalla(self, texto, coord_actual, coord_anterior, offset_perpendicular_px)
-
-    def _labels_se_solapan(self, bbox_a: tuple, bbox_b: tuple,
-                            margen_px: float = 2.0) -> bool:
-        return modulo_render_medicion._labels_se_solapan(self, bbox_a, bbox_b, margen_px)
-
-    def _crear_etiqueta_anio(
-        self,
-        texto: str,
-        color: str,
-        coord_actual: tuple,
-        coord_anterior: tuple,
-        offset_perpendicular_px: float = 8.0,
-        bg_color: str = "rgba(0,0,0,0.60)",
-    ):
-        return modulo_render_medicion._crear_etiqueta_anio(self, texto, color, coord_actual, coord_anterior, offset_perpendicular_px, bg_color)
-
-    # -------------------------------------------------------------------------
-    # Cálculos
-    # -------------------------------------------------------------------------
+        self._render._dibujar_anomalias(self.coordenadas_anillos, self.es_salto,
+                                        self._datacion_render(), self.anomalias)
 
     def recalcular_todas_las_distancias(self):
         """
@@ -967,7 +928,7 @@ class VistaInteractiva(QGraphicsView):
         # entonces al terminar un radio (que vacía la lista activa) los
         # caminos guardados se quedaban "congelados" al último zoom desde
         # el cual fueron renderizados.
-        if self.coordenadas_anillos or self._caminos_inactivos_data:
+        if self.coordenadas_anillos or self._render.hay_inactivos:
             if not hasattr(self, '_zoom_debounce_timer'):
                 from PyQt6.QtCore import QTimer
                 self._zoom_debounce_timer = QTimer(self)
@@ -988,8 +949,8 @@ class VistaInteractiva(QGraphicsView):
         # la escala nueva. Sin esto, los labels viejos quedan con el
         # tamaño de un zoom anterior (lo cual hace aparecer un "100"
         # enorme tras alejar/acercar).
-        if self._caminos_inactivos_data:
-            self.cargar_caminos_inactivos(self._caminos_inactivos_data)
+        if self._render.hay_inactivos:
+            self._render.redibujar_inactivos(self.pixeles_por_mm, self._pen_salto)
 
     def event(self, ev):
         """Intercepta el evento `ShortcutOverride` para que las teclas
@@ -2248,21 +2209,13 @@ class VistaInteractiva(QGraphicsView):
     # -------------------------------------------------------------------------
 
     def cargar_caminos_inactivos(self, caminos: dict):
-        # Cachear los datos: necesitamos volver a llamar a esta función
-        # cuando cambia el zoom (para que las etiquetas de año y los grosores
-        # de tick se rerenderan con la nueva escala). Sin esto los labels
-        # viejos quedaban con el tamaño en escena de un zoom anterior.
-        return modulo_render_medicion.cargar_caminos_inactivos(self, caminos)
+        self._render.cargar_caminos_inactivos(caminos, self.pixeles_por_mm, self._pen_salto)
+
+    def eliminar_camino_inactivo(self, nombre):
+        self._render.eliminar_inactivo(nombre)
 
     def toggle_camino_inactivo(self, nombre: str, visible: bool):
-        if nombre in self.items_caminos_inactivos:
-            visuales = self.items_caminos_inactivos[nombre]
-            for item in (
-                visuales.get("puntos", [])
-                + visuales.get("lineas", [])
-                + visuales.get("textos", [])
-            ):
-                item.setVisible(visible)
+        self._render.toggle_inactivo(nombre, visible)
 
     def cargar_camino_activo(self, coordenadas: list, es_salto: list, *, redibujar=True):
         self.modelo_medicion.cargar(coordenadas, es_salto)

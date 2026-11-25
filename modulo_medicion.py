@@ -1127,24 +1127,7 @@ class PestanaImagen(QWidget):
         self.vista.modelo_medicion.limpiar()
         self.vista.redibujar_todo()
 
-        if nombre in self.vista.items_caminos_inactivos:
-            # Remover TODOS los items del radio inactivo, incluyendo los
-            # textos de año (antes solo se removían puntos y líneas — eso
-            # dejaba etiquetas de año verdes huérfanas sobre la imagen,
-            # superpuestas con las del radio activo recién cargado).
-            visuales_inact = self.vista.items_caminos_inactivos[nombre]
-            for grupo in ("puntos", "lineas", "textos"):
-                for item in visuales_inact.get(grupo, []):
-                    try:
-                        self.escena.removeItem(item)
-                    except Exception:
-                        pass
-            del self.vista.items_caminos_inactivos[nombre]
-            # También quitar del caché de datos: si no lo hacemos, al
-            # próximo zoom `_redibujar_post_zoom` re-renderiza el radio
-            # como inactivo encima del activo, recreando el bug.
-            if hasattr(self.vista, "_caminos_inactivos_data"):
-                self.vista._caminos_inactivos_data.pop(nombre, None)
+        self.vista.eliminar_camino_inactivo(nombre)
 
         self.lista_caminos.takeItem(self.lista_caminos.row(items[0]))
 
