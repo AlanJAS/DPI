@@ -145,3 +145,10 @@ def ordenar_extremos_espacio(coords, p1, s1, p2, s2):
     if s1 > s2 or (s1 == s2 and math.dist(p1, coords[s1]) > math.dist(p2, coords[s1])):
         return p2, s2, p1, s1
     return p1, s1, p2, s2
+
+
+def escala_desde_dpi(dpi):
+    from dpi.medicion.constantes import MM_POR_PULGADA
+    if not math.isfinite(dpi) or dpi <= 0:
+        raise ValueError('DPI inválido')
+    return dpi / MM_POR_PULGADA

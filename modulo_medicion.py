@@ -17,7 +17,7 @@ from modulo_exportacion_medicion_ui import ExportadorDendro
 import modulo_medicion_ui
 
 import os
-from dpi.medicion.calculo import anchos_puntos
+from dpi.medicion.calculo import anchos_puntos, escala_desde_dpi
 import logging
 from dpi.medicion.datos import mediciones_desde_anchos, mediciones_radio
 from dpi.medicion.sesion import guardar_sesion, leer_sesion
@@ -475,7 +475,7 @@ class PestanaImagen(QWidget):
  
         dpi_detectado = self._detectar_dpi(ruta)
         if dpi_detectado and dpi_detectado > 0:
-            self.vista.pixeles_por_mm = dpi_detectado / MM_POR_PULGADA
+            self.vista.pixeles_por_mm = escala_desde_dpi(dpi_detectado)
             self._dpi_modo = "auto"
             msg_escala = f"Resolución detectada: {dpi_detectado:.0f} DPI."
             # Aviso NO modal (ver _mostrar_aviso_dpi). Se difiere 800 ms para
