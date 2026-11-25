@@ -435,7 +435,7 @@ def calcular_sss(n_por_anio, n_total, rbar):
     return out
 
 
-def _correlacion_por_desfase(serie_a: pd.Series, serie_b: pd.Series,
+def correlacion_por_desfase(serie_a: pd.Series, serie_b: pd.Series,
                               max_shift: int, min_overlap: int = 10
                               ) -> tuple[list[int], list[float]]:
     shifts, rs = [], []
@@ -454,7 +454,7 @@ def _correlacion_por_desfase(serie_a: pd.Series, serie_b: pd.Series,
     return shifts, rs
 
 
-def _estadisticos_por_desfase(
+def estadisticos_por_desfase(
     serie_a: pd.Series, serie_b: pd.Series,
     max_shift: int, min_overlap: int = 10,
     serie_a_raw: pd.Series | None = None,

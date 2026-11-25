@@ -7,14 +7,14 @@ import pyqtgraph as pg
 from modulo_widgets import _agregar_hover_anio, _crear_barra_zoom, SpinBoxFlechas, SeccionColapsable
 from modulo_estadistica import (sensibilidad_media, autocorrelacion_lag1,
                                 calcular_eps_rbar_movil, calcular_sss,
-                                _estadisticos_por_desfase)
+                                estadisticos_por_desfase)
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QListWidget, QListWidgetItem, QSplitter, QFileDialog, QMessageBox, QFormLayout, QComboBox, QCheckBox, QLineEdit, QTextEdit, QGroupBox, QApplication, QProgressDialog
 from PyQt6.QtCore import Qt, QEvent
 from estilos import color_secundario
 import estilos_graficos as _gr
 from modulo_comparacion_nucleo import resumir_desfases
 from modulo_datacion import score_compuesto, _serie_transformada_para_comparar
-from modulo_formatos import _es_planilla, _asegurar_extension
+from modulo_formatos import _es_planilla, asegurar_extension
 from modulo_formatos import leer_tucson_multi, leer_formato_compacto, leer_wid, leer_tabular
 from modulo_cronologia import _detrend_serie_indice, detectar_series_problematicas
 from modulo_cronologia import _construir_cronologia_desde_series
@@ -867,7 +867,7 @@ class VentanaCronologia(QWidget):
         )
         if not ruta:
             return
-        ruta = _asegurar_extension(ruta, fmt)
+        ruta = asegurar_extension(ruta, fmt)
         _ultima_carpeta(ruta)
         try:
             _exportar_cronologia_df(self.cronologia_df, ruta)
@@ -944,7 +944,7 @@ class VentanaCronologia(QWidget):
         s_b = self._serie_referencia_comparacion()
 
         # Cálculo de los TRES estadísticos por cada desfase
-        shifts, rs, glks, tbps, ns = _estadisticos_por_desfase(
+        shifts, rs, glks, tbps, ns = estadisticos_por_desfase(
             s_a, s_b,
             self.spin_shift.value(),
             self.spin_min_overlap.value(),
@@ -1039,7 +1039,7 @@ class VentanaCronologia(QWidget):
     def _comparar_multiple_con_cronologia(self, nombres: list[str]):
         """Modo batch: N>1 series → tabla resumen con una fila por serie.
 
-        Para cada serie ejecuta `_estadisticos_por_desfase` (mismo cálculo
+        Para cada serie ejecuta `estadisticos_por_desfase` (mismo cálculo
         que el modo individual) y guarda el resultado completo + el "mejor"
         según score compuesto + el score en shift=0 para calcular el Δ.
 
@@ -1062,7 +1062,7 @@ class VentanaCronologia(QWidget):
                 serie = self._series_cronologia[nombre]
                 s_a = _serie_transformada_para_comparar(serie, meta)
 
-                shifts, rs, glks, tbps, ns = _estadisticos_por_desfase(
+                shifts, rs, glks, tbps, ns = estadisticos_por_desfase(
                     s_a, s_b, max_shift_val, min_overlap_val,
                 )
 

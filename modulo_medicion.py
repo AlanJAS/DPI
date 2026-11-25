@@ -29,7 +29,7 @@ import modulo_transformacion as _tr
 from modulo_modelo_medicion import ModeloSesionMedicion, RadioMedicion, TipoMarca
 import pandas as pd
 from modulo_imagen import detectar_dpi, preparar_banda_rgb
-from modulo_formatos import leer_wid, leer_dendro_auto, leer_pos, escribir_pos, _escribir_excel, _asegurar_extension, _exportar_tabular, _exportar_tucson_ewlw, _escribir_tucson
+from modulo_formatos import leer_wid, leer_dendro_auto, leer_pos, escribir_pos, _escribir_excel, asegurar_extension, exportar_tabular, exportar_tucson_ewlw, _escribir_tucson
 
 from PyQt6.QtWidgets import QApplication, QGraphicsPixmapItem, QFileDialog, QPushButton, QVBoxLayout, QHBoxLayout, QWidget, QLabel, QInputDialog, QMessageBox, QSpinBox, QListWidgetItem, QDialog
 from PyQt6.QtGui import QImage, QPixmap, QPen, QColor, QBrush, QShortcut, QKeySequence
@@ -1519,7 +1519,7 @@ class PestanaImagen(QWidget):
         )
         if not ruta:
             return
-        ruta = _asegurar_extension(ruta, fmt)
+        ruta = asegurar_extension(ruta, fmt)
         _ultima_carpeta(ruta)
 
         try:
@@ -1716,7 +1716,7 @@ class PestanaImagen(QWidget):
 
         # Garantizar la extensión según el filtro elegido (el diálogo no
         # nativo no la agrega solo; sin ella, .xlsx/.pos no se reconocen).
-        ruta = _asegurar_extension(ruta, fmt)
+        ruta = asegurar_extension(ruta, fmt)
         # Guardar la ruta elegida
         _ultima_carpeta(ruta)
 
@@ -1765,11 +1765,11 @@ class PestanaImagen(QWidget):
                     anchos_ewlw = None
 
             if "*.csv" in fmt:
-                _exportar_tabular(
+                exportar_tabular(
                     codigo, anios, anchos, ruta, "csv",
                     anchos_ewlw=anchos_ewlw)
             elif "*.xlsx" in fmt:
-                _exportar_tabular(
+                exportar_tabular(
                     codigo, anios, anchos, ruta, "xlsx",
                     anchos_ewlw=anchos_ewlw)
             else:
@@ -1780,7 +1780,7 @@ class PestanaImagen(QWidget):
             # (no en la vista en vivo, que puede ser distinta).
             if anchos_ewlw and any(ew is not None and lw is not None
                                    for _, ew, lw in anchos_ewlw):
-                _exportar_tucson_ewlw(codigo, anios, anchos_ewlw, ruta,
+                exportar_tucson_ewlw(codigo, anios, anchos_ewlw, ruta,
                                      sufijos=("_ew", "_lw"), extension=".rwl")
 
             QMessageBox.information(self, "Éxito", f"Exportado a:\n{ruta}")

@@ -3,7 +3,7 @@ import os
 import logging
 from PyQt6.QtWidgets import QWidget, QFileDialog, QMessageBox
 from modulo_configuracion_ui import ultima_carpeta
-from modulo_formatos import _asegurar_extension, _exportar_tabular, _exportar_tucson_ewlw, _escribir_tucson
+from modulo_formatos import asegurar_extension, exportar_tabular, exportar_tucson_ewlw, _escribir_tucson
 
 logger = logging.getLogger(__name__)
 
@@ -64,17 +64,17 @@ class ExportadorDendro:
         if not ruta:
             return
 
-        ruta = _asegurar_extension(ruta, fmt)
+        ruta = asegurar_extension(ruta, fmt)
         _ultima_carpeta(ruta)
 
         try:
             if "*.csv" in fmt:
-                _exportar_tabular(
+                exportar_tabular(
                     id_serie, anios, anchos, ruta, "csv",
                     anchos_ewlw=anchos_ewlw if tiene_ewlw else None
                 )
             elif "*.xlsx" in fmt:
-                _exportar_tabular(
+                exportar_tabular(
                     id_serie, anios, anchos, ruta, "xlsx",
                     anchos_ewlw=anchos_ewlw if tiene_ewlw else None
                 )
@@ -96,7 +96,7 @@ class ExportadorDendro:
                         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
                     )
                     if resp == QMessageBox.StandardButton.Yes:
-                        _exportar_tucson_ewlw(
+                        exportar_tucson_ewlw(
                             id_serie, anios, anchos_ewlw, ruta
                         )
 

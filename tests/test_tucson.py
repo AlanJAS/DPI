@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 import pandas as pd
 from modulo_formatos import (escribir_tucson, leer_archivo_tucson, leer_tucson_multi,
-                            escribir_tucson_merge, _exportar_tucson_ewlw)
+                            escribir_tucson_merge, exportar_tucson_ewlw)
 
 class TucsonTests(unittest.TestCase):
     def test_roundtrip(self):
@@ -32,7 +32,7 @@ class TucsonTests(unittest.TestCase):
     def test_ewlw(self):
         with tempfile.TemporaryDirectory() as d:
             p = str(Path(d)/'a.rwl')
-            _exportar_tucson_ewlw('ABCDEFGH',[2000,2001,2003],[(2,.999,1.001),(2,None,None),(2,.998,1.002)],p)
+            exportar_tucson_ewlw('ABCDEFGH',[2000,2001,2003],[(2,.999,1.001),(2,None,None),(2,.998,1.002)],p)
             df,sid = leer_archivo_tucson(str(Path(d)/'a_EW.rwl'))
             self.assertEqual(sid,'ABCDE_EW')
             self.assertEqual(df.index.tolist(),[2000,2003])

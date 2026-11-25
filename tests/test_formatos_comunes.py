@@ -2,7 +2,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import pandas as pd
-from modulo_formatos import leer_series_auto, escribir_tucson_merge, _exportar_tucson_ewlw, leer_archivo_tucson, escribir_tabla
+from modulo_formatos import leer_series_auto, escribir_tucson_merge, exportar_tucson_ewlw, leer_archivo_tucson, escribir_tabla
 class Formatos(unittest.TestCase):
     def test_auto_tucson_y_tabla(self):
         with TemporaryDirectory() as d:
@@ -14,6 +14,6 @@ class Formatos(unittest.TestCase):
     def test_ewlw_extension_y_ausencia(self):
         with TemporaryDirectory() as d:
             p=Path(d)/'medicion.csv'
-            _exportar_tucson_ewlw('R',[2000,2001,2002],[(1,.4,.6),(1,None,None),(2,1,1)],str(p),sufijos=('_ew','_lw'),extension='.rwl')
+            exportar_tucson_ewlw('R',[2000,2001,2002],[(1,.4,.6),(1,None,None),(2,1,1)],str(p),sufijos=('_ew','_lw'),extension='.rwl')
             df,_=leer_archivo_tucson(str(Path(d)/'medicion_ew.rwl'))
             self.assertEqual(list(df.index),[2000,2002])

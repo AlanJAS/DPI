@@ -26,7 +26,7 @@ class ContinuidadAnual(unittest.TestCase):
         y = [2000, 2001, 2003, 2004, 2005, 2006]
         a = pd.Series([1., 2., 8., 9., 4., 5.], index=y)
         b = pd.Series([8., 9., 1., 2., 6., 7.], index=y)
-        r = e._estadisticos_por_desfase(a, b, 0, 3)
+        r = e.estadisticos_por_desfase(a, b, 0, 3)
         self.assertEqual(r[2][0], e.gleichlaufigkeit(a, b, 3)[0])
         self.assertAlmostEqual(r[3][0], e.t_baillie_pilcher(a, b, 3)[0])
 

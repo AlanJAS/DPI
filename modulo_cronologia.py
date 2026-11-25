@@ -755,7 +755,7 @@ def orden_ar_agrupado(indices: dict, pmax: int | None = None) -> tuple:
     return mejor_orden, rho
 
 
-def _normalizar_serie_para_tipo(serie_mm: pd.Series, tipo_cronologia: str,
+def normalizar_serie_para_tipo(serie_mm: pd.Series, tipo_cronologia: str,
                                   metodo_estandarizacion: str,
                                   ventana_mm: int | None = None,
                                   aplicar_log: bool = False,
@@ -1047,7 +1047,7 @@ def _construir_cronologia_desde_series(
             met = metodo_alterno
         if metodos_por_serie and nombre in metodos_por_serie:
             met = metodos_por_serie[nombre]
-        s_norm = _normalizar_serie_para_tipo(
+        s_norm = normalizar_serie_para_tipo(
             series[nombre]["Ancho_mm"], tipo_cronologia,
             met, ventana_mm=ventana_mm,
             aplicar_log=aplicar_log, arstan=arstan,

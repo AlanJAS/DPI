@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFile
 from PyQt6.QtCore import Qt
 from estilos import color_secundario
 import estilos_graficos as _gr
-from modulo_formatos import _es_planilla, _escribir_excel, _asegurar_extension
+from modulo_formatos import _es_planilla, _escribir_excel, asegurar_extension
 
 
 def _ultima_carpeta(nueva_ruta: str | None = None) -> str:
@@ -255,7 +255,7 @@ def _mostrar_dialogo_eps_rbar(parent, meta: dict, nombre_cronologia: str):
         )
         if not ruta:
             return
-        ruta = _asegurar_extension(ruta, fmt)
+        ruta = asegurar_extension(ruta, fmt)
         _ultima_carpeta(ruta)
         try:
             todos_anios = sorted(set(eps_dict.keys()) | set(rbar_dict.keys()))

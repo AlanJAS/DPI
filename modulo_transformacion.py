@@ -137,7 +137,7 @@ def transformar_para_correlacion(serie_mm: pd.Series, es_crono: bool, *, activo,
       serie (usarla cruda) si el usuario ya la subió estandarizada.
     """
     from modulo_datacion import aplicar_modo_cofecha
-    from modulo_cronologia import _normalizar_serie_para_tipo
+    from modulo_cronologia import normalizar_serie_para_tipo
     s_raw = pd.to_numeric(serie_mm, errors="coerce").astype(float).dropna()
     if not activo:
         return s_raw
@@ -192,7 +192,7 @@ def transformar_para_correlacion(serie_mm: pd.Series, es_crono: bool, *, activo,
     if tipo in ("residual", "standard"):
         try:
             aplicar_log = bool(meta.get("aplicar_log", False))
-            res = _normalizar_serie_para_tipo(
+            res = normalizar_serie_para_tipo(
                 serie_mm, tipo, metodo, aplicar_log=aplicar_log)
             if res is not None and not res.empty:
                 return res

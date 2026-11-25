@@ -5,7 +5,7 @@ import pandas as pd
 import modulo_estadistica as _est
 import modulo_quiebres as _qb
 from modulo_estadistica import _r_movil
-from modulo_cronologia import _normalizar_serie_para_tipo
+from modulo_cronologia import normalizar_serie_para_tipo
 from constantes import OVERLAP_MINIMO_ANALISIS, OVERLAP_MINIMO_GRAFICO
 
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ def score_compuesto(r: float, glk: float, t_bp: float) -> float:
 def _serie_transformada_para_comparar(df: pd.DataFrame, meta: dict) -> pd.Series:
     tipo = (meta.get("tipo_cronologia") or "raw").lower()
     metodo = meta.get("metodo_estandarizacion", "spline")
-    return _normalizar_serie_para_tipo(df["Ancho_mm"], tipo, metodo)
+    return normalizar_serie_para_tipo(df["Ancho_mm"], tipo, metodo)
 
 
 _glk_np = _est.glk_alineado

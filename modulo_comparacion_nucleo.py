@@ -3,7 +3,7 @@ import hashlib
 from dataclasses import dataclass
 import numpy as np
 import pandas as pd
-from modulo_estadistica import _estadisticos_por_desfase
+from modulo_estadistica import estadisticos_por_desfase
 from modulo_datacion import score_compuesto
 
 
@@ -49,7 +49,7 @@ def comparar_serie(nombre, serie: SeriePreparada, referencia: SeriePreparada,
 
     # r sobre alta frecuencia (s_*_corr); GLK/t-BP sobre
     # s_*_glk (transformada COFECHA si activo, cruda si no).
-    shifts, rs, glks, tbps, ns = _estadisticos_por_desfase(
+    shifts, rs, glks, tbps, ns = estadisticos_por_desfase(
         s_a_corr, s_b_corr, max_shift_dinamico, MIN_OVERLAP,
         serie_a_raw=s_a_glk, serie_b_raw=s_b_glk,
     )

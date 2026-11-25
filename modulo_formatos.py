@@ -165,7 +165,7 @@ def _escribir_excel(df, ruta: str, index: bool = False):
         "adicionales.")
 
 
-def _asegurar_extension(ruta: str, filtro: str) -> str:
+def asegurar_extension(ruta: str, filtro: str) -> str:
     """Garantiza que la ruta tenga una extensión coherente con el filtro
     elegido en el diálogo de guardado.
 
@@ -821,7 +821,7 @@ def _leer_cronologia_guardada(ruta: str) -> tuple[pd.DataFrame, dict]:
     return df, meta
 
 
-def _exportar_tabular(id_serie: str, anios: list, anchos: list, ruta: str,
+def exportar_tabular(id_serie: str, anios: list, anchos: list, ruta: str,
                        formato: str, anchos_ewlw: list | None = None):
     """Exporta a CSV o Excel. Si anchos_ewlw está presente, agrega columnas EW_mm y LW_mm."""
     data = {"ID_Serie": id_serie, "Anio": anios, "Ancho_mm": anchos}
@@ -839,7 +839,7 @@ def _exportar_tabular(id_serie: str, anios: list, anchos: list, ruta: str,
     else:
         _escribir_excel(df, ruta)
 
-def _exportar_tucson_ewlw(id_serie: str, anios: list,
+def exportar_tucson_ewlw(id_serie: str, anios: list,
                             anchos_ewlw: list, ruta_base: str, *,
                             sufijos=("_EW", "_LW"), extension=None):
     if not anios or len(anchos_ewlw) != len(anios):

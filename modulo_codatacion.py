@@ -36,8 +36,8 @@ from modulo_estadistica import (
     calcular_rbar,
     calcular_eps,
     calcular_sss,
-    _correlacion_por_desfase,
-    _estadisticos_por_desfase,
+    correlacion_por_desfase,
+    estadisticos_por_desfase,
     _r_movil,
     _stats_movil,
 )
@@ -94,7 +94,7 @@ from modulo_formatos import (
     _es_planilla,
     _leer_planilla,
     _escribir_excel,
-    _asegurar_extension,
+    asegurar_extension,
 )
 
 
@@ -172,7 +172,7 @@ from modulo_cronologia import (
     estabilizar_varianza,
     detrendar_para_cronologia,
     orden_ar_agrupado,
-    _normalizar_serie_para_tipo,
+    normalizar_serie_para_tipo,
     diagnosticar_curva,
     detectar_series_problematicas,
     elegir_metodo_para_grupo,
@@ -1213,7 +1213,7 @@ class PanelCodatacion(QWidget):
         )
         if not ruta:
             return
-        ruta = _asegurar_extension(ruta, fmt)
+        ruta = asegurar_extension(ruta, fmt)
         _ultima_carpeta(ruta)
         from modulo_formatos import exportar_serie_2col
         try:

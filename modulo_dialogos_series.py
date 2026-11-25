@@ -12,7 +12,7 @@ from PyQt6.QtCore import Qt
 from estilos import SECUNDARIO_QSS, color_secundario
 import estilos_graficos as _gr
 from modulo_datacion import alineamiento_optimo_anillos
-from modulo_formatos import _asegurar_extension
+from modulo_formatos import asegurar_extension
 from modulo_cronologia import _fit_trend, diagnosticar_curva, elegir_metodo_para_grupo, METODOS_DETREND
 from modulo_series_ui_util import ESTILO_CHK_COFECHA, _color_glk, _color_r, _ultima_carpeta
 
@@ -1028,7 +1028,7 @@ class DialogoAlineamientoAnillos(QDialog):
             self, "Exportar alineamiento", ruta_default, "CSV (*.csv)")
         if not ruta:
             return
-        ruta = _asegurar_extension(ruta, fmt)
+        ruta = asegurar_extension(ruta, fmt)
         _ultima_carpeta(ruta)
         try:
             with open(ruta, "w", newline="", encoding="utf-8") as f:

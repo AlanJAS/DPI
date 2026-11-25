@@ -13,7 +13,7 @@ from PyQt6.QtCore import Qt
 from estilos import color_secundario
 import estilos_graficos as _gr
 from modulo_datacion import score_compuesto
-from modulo_formatos import _asegurar_extension
+from modulo_formatos import asegurar_extension
 from modulo_series_ui_util import _color_compuesto, _color_glk, _color_r, _color_tbp, _ultima_carpeta
 from modulo_dialogos_series import DialogoAlineamientoAnillos
 
@@ -483,7 +483,7 @@ class VentanaTablaOffset(QDialog):
             self, "Exportar Datos", ruta_default, "CSV (*.csv)")
         if not ruta:
             return
-        ruta = _asegurar_extension(ruta, fmt)
+        ruta = asegurar_extension(ruta, fmt)
         _ultima_carpeta(ruta)
         ncols = self.tabla.columnCount()
         headers = [self.tabla.horizontalHeaderItem(c).text()
@@ -1040,7 +1040,7 @@ class DialogoComparacionMultiple(QDialog):
             self, "Exportar resumen", ruta_default, "CSV (*.csv)")
         if not ruta:
             return
-        ruta = _asegurar_extension(ruta, fmt)
+        ruta = asegurar_extension(ruta, fmt)
         _ultima_carpeta(ruta)
         try:
             with open(ruta, "w", newline="", encoding="utf-8") as f:
