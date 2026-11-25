@@ -7,7 +7,7 @@ from modulo_modelo_medicion import PuntoMedicion, TipoMarca
 
 def anchos_anillos(coords, marcas, ppm):
     """Adaptador para consumidores del formato histórico."""
-    puntos = tuple(PuntoMedicion(c, m) for c, m in zip(coords, marcas, strict=True))
+    puntos = puntos_desde_geometria(coords, marcas)
     return anchos_puntos(puntos, ppm)
 
 
@@ -16,6 +16,8 @@ class AnilloMedido:
     indice_inicio: int
     indice_fin: int
     ancho_mm: float
+    segmentos: tuple[int, ...] = ()  # índices finales de segmentos que suman ancho
+    completo: bool = True
 
 
 def calcular_anillos(puntos, ppm):
@@ -31,24 +33,31 @@ def _calcular_anillos(puntos, ppm):
     anillos = []
     acum = 0.0
     inicio = 0
-    fin = 0
+    segmentos = []
     for i, (anterior, actual) in enumerate(zip(puntos, puntos[1:]), 1):
         tipo = actual.tipo
         if tipo is TipoMarca.SALTO:
             if acum > 0:
-                anillos.append(AnilloMedido(inicio, fin, acum))
+                anillos.append(AnilloMedido(inicio, segmentos[-1], acum, tuple(segmentos), False))
             acum = 0.0
+            segmentos = []
             inicio = i
         elif tipo is not TipoMarca.ESPACIO:
             acum += math.dist(anterior.coordenada, actual.coordenada) / ppm
-            fin = i
+            segmentos.append(i)
             if tipo is TipoMarca.NORMAL:
-                anillos.append(AnilloMedido(inicio, fin, acum))
+                anillos.append(AnilloMedido(inicio, i, acum, tuple(segmentos)))
                 acum = 0.0
+                segmentos = []
                 inicio = i
     if acum > 0:
-        anillos.append(AnilloMedido(inicio, fin, acum))
+        anillos.append(AnilloMedido(inicio, segmentos[-1], acum, tuple(segmentos), False))
     return tuple(anillos)
+
+
+def puntos_desde_geometria(coords, marcas):
+    """Adaptador único de coordenadas/marcas históricas al modelo tipado."""
+    return tuple(PuntoMedicion(c, m) for c, m in zip(coords, marcas, strict=True))
 
 
 def anchos_puntos(puntos, ppm):
