@@ -2,7 +2,7 @@
 import numpy as np
 import pyqtgraph as pg
 from estilos import color_secundario
-from modulo_series_ui_util import _color_compuesto, _color_glk, _color_r, _color_tbp
+from dpi.ui.series_util import _color_compuesto, _color_glk, _color_r, _color_tbp
 from dpi.ciencia.datacion import score_compuesto
 
 

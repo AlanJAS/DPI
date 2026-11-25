@@ -5,7 +5,7 @@ import pyqtgraph as pg
 from dpi.ciencia.estadistica import sensibilidad_media, autocorrelacion_lag1, calcular_sss
 from PyQt6.QtCore import Qt
 from estilos import color_secundario
-from modulo_series_ui_util import _html_curvas_negativas
+from dpi.ui.series_util import _html_curvas_negativas
 
 def _hacer_leyenda_clicable(self, grafico, curvas: dict):
     """Hace clicables los ítems de la leyenda para mostrar/ocultar cada

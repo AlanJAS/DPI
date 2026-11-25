@@ -14,7 +14,7 @@ import estilos_graficos as _gr
 from dpi.ciencia.datacion import alineamiento_optimo_anillos
 from dpi.formatos.exportacion import asegurar_extension
 from dpi.ciencia.cronologia import _fit_trend, diagnosticar_curva, elegir_metodo_para_grupo, METODOS_DETREND
-from modulo_series_ui_util import ESTILO_CHK_COFECHA, _color_glk, _color_r, _ultima_carpeta
+from dpi.ui.series_util import ESTILO_CHK_COFECHA, _color_glk, _color_r, _ultima_carpeta
 
 
 class DialogoSeleccionCronologias(QDialog):

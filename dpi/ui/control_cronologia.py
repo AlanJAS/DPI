@@ -8,7 +8,7 @@ from dpi.formatos.exportacion import asegurar_extension
 from dpi.ciencia.cronologia import _detrend_serie_indice, detectar_series_problematicas
 from dpi.ciencia.cronologia import _construir_cronologia_desde_series
 from dpi.formatos.cronologias import _guardar_metadatos_cronologia, _exportar_cronologia_df, _leer_cronologia_guardada
-from modulo_series_ui_util import _ultima_carpeta
+from dpi.ui.series_util import _ultima_carpeta
 from modulo_dialogos_series import DialogoCurvasNegativas
 
 def generar_cronologia(self):

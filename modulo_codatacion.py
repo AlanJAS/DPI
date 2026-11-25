@@ -124,7 +124,7 @@ ESTILO_BTN_COFECHA = (
     "QPushButton:checked{border:2px solid #FF8C00; background:#FF8C00; color:white;}"
 )
 
-from modulo_series_ui_util import ESTILO_CHK_COFECHA
+from dpi.ui.series_util import ESTILO_CHK_COFECHA
 
 
 # =============================================================================
@@ -180,7 +180,7 @@ from dpi.formatos.tucson import escribir_tucson
 # =============================================================================
 
 
-from modulo_series_ui_util import (
+from dpi.ui.series_util import (
     _ultima_carpeta,
     _color_r,
     _color_glk,

@@ -19,7 +19,7 @@ from dpi.formatos.tucson import leer_tucson_multi
 from dpi.formatos.compacto import leer_formato_compacto
 from dpi.formatos.wid import leer_wid
 from dpi.formatos.tabular import leer_tabular, leer_como_columnas_o_tabular
-from modulo_series_ui_util import _color_r, _color_tbp, _ultima_carpeta
+from dpi.ui.series_util import _color_r, _color_tbp, _ultima_carpeta
 from modulo_dialogos_series import DialogoEditarAnillos
 
 

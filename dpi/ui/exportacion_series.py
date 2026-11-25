@@ -4,7 +4,7 @@ import pandas as pd
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
 from dpi.ciencia.datacion import aplicar_modo_cofecha
 from dpi.formatos.exportacion import asegurar_extension
-from modulo_series_ui_util import _ultima_carpeta
+from dpi.ui.series_util import _ultima_carpeta
 
 def _exportar_una_serie(self, nombre: str):
     """Exporta UNA serie por nombre (usado al exportar varias a la vez)."""
