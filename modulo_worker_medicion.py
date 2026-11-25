@@ -1,8 +1,10 @@
 """Componentes de medición de DPI."""
 
+from PyQt6.QtCore import QObject, QThread, Qt
 from PyQt6.QtCore import pyqtSignal as Signal
-from PyQt6.QtWidgets import QPushButton, QVBoxLayout, QLabel
-from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import (
+    QDialog, QPushButton, QVBoxLayout, QLabel, QProgressBar,
+)
 
 
 class _WorkerSignals(QObject):
@@ -60,7 +62,6 @@ class _DialogoProgreso(QDialog):
         layout = QVBoxLayout(self)
         self._lbl = QLabel("Iniciando...")
         layout.addWidget(self._lbl)
-        from PyQt6.QtWidgets import QProgressBar
         self._bar = QProgressBar()
         self._bar.setRange(0, 100)
         layout.addWidget(self._bar)

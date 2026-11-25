@@ -12,6 +12,7 @@ Uso:  python run_dpi.py
 import sys
 import os
 import logging
+from pathlib import Path
 
 logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -106,17 +107,30 @@ def main():
     ventana = VentanaAnillos()
     ventana.show()
     splash.finish(ventana)
-    sys.exit(app.exec())
+    return app.exec()
+
+
+def _ruta_registro_error():
+    """Registro por usuario, independiente del directorio de instalación."""
+    return Path.home() / ".dpi" / "crash_log.txt"
+
+
+def ejecutar():
+    """Conserva el código de salida de Qt y señala errores de arranque."""
+    try:
+        return main()
+    except Exception:
+        import traceback
+        logging.exception("Error fatal de DPI")
+        try:
+            log = _ruta_registro_error()
+            log.parent.mkdir(parents=True, exist_ok=True)
+            with log.open("w", encoding="utf-8") as f:
+                traceback.print_exc(file=f)
+        except OSError:
+            logging.exception("No se pudo escribir el registro de errores")
+        return 1
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    except SystemExit:
-        pass
-    except Exception:
-        import traceback
-        log = os.path.join(os.path.dirname(os.path.abspath(__file__)), "crash_log.txt")
-        with open(log, "w") as f:
-            traceback.print_exc(file=f)
-        traceback.print_exc()
+    sys.exit(ejecutar())
