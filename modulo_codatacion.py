@@ -1114,6 +1114,7 @@ class PanelCodatacion(QWidget):
                         n_duplicadas += 1
                         continue
                     self.modelo_series.registrar(id_serie, df_serie)
+                    self._series_modificadas(regraficar=False)
                     item = QListWidgetItem(id_serie)
                     item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
                     item.setCheckState(Qt.CheckState.Unchecked)
@@ -1458,6 +1459,7 @@ class PanelCodatacion(QWidget):
         if nombre in self.series_datos:
             return
         self.modelo_series.registrar(nombre, df)
+        self._series_modificadas(regraficar=False)
         item = QListWidgetItem(nombre)
         item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
         item.setCheckState(Qt.CheckState.Unchecked)
@@ -1576,6 +1578,7 @@ class PanelCodatacion(QWidget):
 
         for nombre in nombres_a_eliminar:
             self.modelo_series.eliminar(nombre)
+        self._series_modificadas(regraficar=False)
 
         for i in range(self.lista_series.count() - 1, -1, -1):
             if self.lista_series.item(i).text() in nombres_set:
@@ -1731,9 +1734,7 @@ class PanelCodatacion(QWidget):
         df_nuevo.sort_index(inplace=True)
 
         self.modelo_series.actualizar(nombre, df_nuevo)
-        self._cache_comparacion = None
-
-        self.graficar_series()
+        self._series_modificadas()
         QMessageBox.information(
             self, "Año actualizado",
             f"Serie '{nombre}' desplazada {delta:+d} años.\n"
@@ -1933,8 +1934,7 @@ class PanelCodatacion(QWidget):
         except (ValueError, TypeError, KeyError) as exc:
             QMessageBox.warning(self, "Corrección inválida", str(exc))
             return
-        self._cache_comparacion = None
-        self.graficar_series()
+        self._series_modificadas()
 
     def abrir_skeleton_plot(self):
         """Va a la pestaña Skeleton, importa las series de Co-Datación y, si
@@ -1973,7 +1973,7 @@ class PanelCodatacion(QWidget):
             return
         self._descartar_prueba(silencioso=True)
         self.modelo_series.restablecer(nombre)
-        self.graficar_series()
+        self._series_modificadas()
         QMessageBox.information(
             self, "Restaurada",
             f"'{nombre}' volvió a sus valores originales.")
@@ -2002,6 +2002,7 @@ class PanelCodatacion(QWidget):
             return
         self._descartar_prueba(silencioso=True)
         self.modelo_series.restablecer(nombre)
+        self._series_modificadas(regraficar=False)
         self._limpiar_preview()
         self._sugerencias.clear()
         self.tabla_sugerencias.setRowCount(0)
@@ -2080,6 +2081,12 @@ class PanelCodatacion(QWidget):
                 item.setForeground(COLOR_NORMAL)
 
             item.setToolTip(tooltip)
+
+    def _series_modificadas(self, *, regraficar=True):
+        """Invalida resultados de comparación tras cambiar datos o cronología."""
+        self._cache_comparacion = None
+        if regraficar:
+            self.graficar_series()
 
     def graficar_series(self):
         """Redibuja el gráfico principal con las series marcadas.
@@ -2258,6 +2265,7 @@ class PanelCodatacion(QWidget):
         self.cronologia_activa = df.copy()
         self.meta_cronologia = dict(meta) if meta else {}
         self._nombre_cronologia_activa = nombre or "Cronología"
+        self._series_modificadas(regraficar=False)
 
         if agregar_a_lista:
             # Agregar a la lista como 📚
@@ -2716,9 +2724,7 @@ class PanelCodatacion(QWidget):
         self._descartar_prueba(silencioso=True)
         if not self.modelo_series.desplazar(nombre, shift):
             return False
-        self._cache_comparacion = None
-        if regraficar:
-            self.graficar_series()
+        self._series_modificadas(regraficar=regraficar)
         return True
 
     def reemplazar_serie(self, nombre: str, df_nuevo: pd.DataFrame,
@@ -2728,9 +2734,7 @@ class PanelCodatacion(QWidget):
         Invalida la caché de comparación y regrafica."""
         self._descartar_prueba(silencioso=True)
         self.modelo_series.actualizar(nombre, df_nuevo)
-        self._cache_comparacion = None
-        if regraficar:
-            self.graficar_series()
+        self._series_modificadas(regraficar=regraficar)
 
     def _abrir_editor_anillos_marcada(self):
         """Abre el editor de anillos para la serie marcada (exactamente
@@ -3757,7 +3761,7 @@ class PanelCodatacion(QWidget):
             QMessageBox.warning(self, "Corrección inválida", str(exc))
             return
         self._prueba_sug = dict(sug)
-        self._cache_comparacion = None
+        self._series_modificadas(regraficar=False)
 
         self._marcar_prueba_ui(True)
         self.btn_aplicar.setEnabled(True)
@@ -3781,9 +3785,8 @@ class PanelCodatacion(QWidget):
         if not self.modelo_series.descartar_correccion():
             return
         self._prueba_sug = None
-        self._cache_comparacion = None
         self._marcar_prueba_ui(False)
-        self.graficar_series()
+        self._series_modificadas()
         if not silencioso:
             try:
                 self.buscar_errores()
@@ -3852,7 +3855,7 @@ class PanelCodatacion(QWidget):
                 QMessageBox.warning(self, "Corrección inválida", str(exc))
                 return
             self._prueba_sug = None
-            self._cache_comparacion = None
+            self._series_modificadas(regraficar=False)
             self._marcar_prueba_ui(False)
 
         # Refrescar tras aplicar

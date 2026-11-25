@@ -2416,7 +2416,7 @@ class PestanaImagen(QWidget):
             self.combo_dir.setCurrentIndex(datos["dir_idx"])
             self.spin_medula.setValue(datos["anio_medula"])
             self.spin_corteza.setValue(datos["anio_corteza"])
-            self.vista.cargar_camino_activo(datos["coords"], datos["es_salto"])
+            self.vista.cargar_camino_activo(datos["coords"], datos["es_salto"], redibujar=False)
         finally:
             self.combo_dir.blockSignals(False)
             self.spin_medula.blockSignals(False)
@@ -2645,12 +2645,8 @@ class PestanaImagen(QWidget):
         # Marcar el origen como manual para que el diálogo lo refleje
         # correctamente la próxima vez que se abra.
         self._dpi_modo = "manual"
-        # CRUCIAL: recalcular mediciones con el nuevo DPI. Sin esto los
-        # anchos en datos_medidos quedan basados en el DPI viejo y el
-        # cambio "no se nota".
+        # Recalcular y sincronizar una sola vez con la nueva escala.
         self.vista.recalcular_todas_las_distancias()
-        self.vista.redibujar_todo()
-        self._actualizar_grafico_rt()
         self._guardar_estado()
         self.label_estado.setText(
             f"📐 DPI cambiado manualmente: {dpi_nuevo} "
@@ -2730,7 +2726,6 @@ class PestanaImagen(QWidget):
         self.spin_corteza.blockSignals(False)
 
         self.input_codigo.setText(os.path.splitext(os.path.basename(ruta))[0][:TUCSON_MAX_CHARS_ID].upper())
-        self.vista.redibujar_todo()
         self.vista.recalcular_todas_las_distancias()
         self._guardar_estado()
         self.label_estado.setText(f"Archivo importado correctamente ({dpi_pos:.0f} DPI).")
@@ -2902,7 +2897,7 @@ class PestanaImagen(QWidget):
                 self.spin_corteza.setValue(activo["anio_corteza"])
                 self.vista.limpiar_historial()
                 self.vista.cargar_camino_activo(
-                    activo["coordenadas"], activo["es_salto"])
+                    activo["coordenadas"], activo["es_salto"], redibujar=False)
             self.vista.recalcular_todas_las_distancias()
         else:
             self._actualizar_grafico_rt()
@@ -3342,7 +3337,6 @@ class PestanaImagen(QWidget):
         self._guardar_sidecar_anom()
         self._guardar_estado()
         self.vista.recalcular_todas_las_distancias()
-        self.vista.redibujar_todo()
 
         self.label_estado.setText(
             f"↩ Estimación revertida · "
@@ -3374,7 +3368,6 @@ class PestanaImagen(QWidget):
         indices = [i for i, v in enumerate(self.vista.es_salto) if _es_ewlw(v)]
         for i in reversed(indices):
             self.vista.modelo_medicion.borrar(i)
-        self.vista.redibujar_todo()
         self.vista.recalcular_todas_las_distancias()
         self.vista.progreso_modificado.emit()
         self.label_estado.setText(
@@ -3540,7 +3533,6 @@ class PestanaImagen(QWidget):
             except Exception:
                 pass
 
-            self.vista.redibujar_todo()
             self.vista.recalcular_todas_las_distancias()
             self.vista.progreso_modificado.emit()
 
@@ -3682,7 +3674,6 @@ class PestanaImagen(QWidget):
             saltos = list(self.vista.es_salto)
             n = len(coords)
 
-        self.vista.redibujar_todo()
         self.vista.recalcular_todas_las_distancias()
         self.vista.progreso_modificado.emit()
         self.label_estado.setText(

@@ -384,21 +384,15 @@ class VistaInteractiva(QGraphicsView):
         self._historial.limpiar()
 
     def deshacer_ultimo(self):
-        if not self._historial.deshacer():
-            return
-        self._limpiar_anclado()
-        self.redibujar_todo()
-        if self._linea_guia:
-            self.scene().removeItem(self._linea_guia)
-            self._linea_guia = None
-        self.recalcular_todas_las_distancias()
-        self.progreso_modificado.emit()
+        if self._historial.deshacer():
+            self._actualizar_tras_historial()
 
     def rehacer_ultimo(self):
-        if not self._historial.rehacer():
-            return
+        if self._historial.rehacer():
+            self._actualizar_tras_historial()
+
+    def _actualizar_tras_historial(self):
         self._limpiar_anclado()
-        self.redibujar_todo()
         if self._linea_guia:
             self.scene().removeItem(self._linea_guia)
             self._linea_guia = None
@@ -1313,7 +1307,6 @@ class VistaInteractiva(QGraphicsView):
                 n_borrados += 1
         self._puntos_seleccionados.clear()
         self._dibujar_marcadores_seleccion()
-        self.redibujar_todo()
         self.recalcular_todas_las_distancias()
         self._actualizar_panel_seleccion()
         self.progreso_modificado.emit()
@@ -1329,7 +1322,6 @@ class VistaInteractiva(QGraphicsView):
                 self.modelo_medicion.marcar(i, True)
         self._puntos_seleccionados.clear()
         self._dibujar_marcadores_seleccion()
-        self.redibujar_todo()
         self.recalcular_todas_las_distancias()
         self._actualizar_panel_seleccion()
         self.progreso_modificado.emit()
@@ -1346,7 +1338,6 @@ class VistaInteractiva(QGraphicsView):
                 self.modelo_medicion.marcar(i, "espacio")
         self._puntos_seleccionados.clear()
         self._dibujar_marcadores_seleccion()
-        self.redibujar_todo()
         self.recalcular_todas_las_distancias()
         self._actualizar_panel_seleccion()
         self.progreso_modificado.emit()
@@ -2197,7 +2188,6 @@ class VistaInteractiva(QGraphicsView):
                 r = 9 * self._escala_vista()
                 m = self.scene().addEllipse(x-r, y-r, 2*r, 2*r, pen_v, brush_nulo)
                 self._items_espacio.append(m)
-                self.redibujar_todo()
                 self.recalcular_todas_las_distancias()
                 self.progreso_modificado.emit()
                 try:
@@ -2212,7 +2202,6 @@ class VistaInteractiva(QGraphicsView):
             self.modelo_medicion.agregar((x, y), "espacio")   # línea amarilla desde A, tick amarillo
             self._idx_espacio_inicio = None
             self._limpiar_espacio()
-            self.redibujar_todo()
             self.recalcular_todas_las_distancias()
             self.progreso_modificado.emit()
             try:
@@ -2315,7 +2304,6 @@ class VistaInteractiva(QGraphicsView):
             if j < len(self.es_salto) and self.es_salto[j] is False:
                 self.modelo_medicion.marcar(j, "espacio")
 
-        self.redibujar_todo()
         self.recalcular_todas_las_distancias()
         self.progreso_modificado.emit()
         try:
@@ -2383,7 +2371,6 @@ class VistaInteractiva(QGraphicsView):
         self.guardar_en_historial()
         self.modelo_medicion.insertar(seg_idx + 1, (px, py), "ew_lw")
 
-        self.redibujar_todo()
         self.recalcular_todas_las_distancias()
         self.progreso_modificado.emit()
         try:
@@ -2467,7 +2454,6 @@ class VistaInteractiva(QGraphicsView):
         if mejor_d < tol and mejor_idx != -1:
             self.guardar_en_historial()
             self.modelo_medicion.insertar(mejor_idx + 1, (x, y), False)
-            self.redibujar_todo()
             self.recalcular_todas_las_distancias()
             self.progreso_modificado.emit()
 
@@ -2476,7 +2462,6 @@ class VistaInteractiva(QGraphicsView):
         if idx is not None:
             self.guardar_en_historial()
             self.modelo_medicion.borrar(idx)
-            self.redibujar_todo()
             self.recalcular_todas_las_distancias()
             self.progreso_modificado.emit()
 
@@ -2637,14 +2622,8 @@ class VistaInteractiva(QGraphicsView):
                 f"  1 mm = {self.pixeles_por_mm:.2f} px\n"
                 f"  ≈ {self.pixeles_por_mm * MM_POR_PULGADA:.0f} DPI"
             )
-            # Recalcular distancias y redibujar — sin esto las mediciones
-            # existentes quedan en la escala vieja.
+            # La señal sincroniza años, gráfico y escena antes del guardado.
             self.recalcular_todas_las_distancias()
-            self.redibujar_todo()
-            try:
-                self._pestana._actualizar_grafico_rt()
-            except AttributeError:
-                pass
             self._pestana._guardar_estado()
             # Actualizar la etiqueta de la línea con los mm calibrados así
             # el usuario tiene un recordatorio visual de que la imagen
@@ -2728,7 +2707,6 @@ class VistaInteractiva(QGraphicsView):
             self.guardar_en_historial()
             self.modelo_medicion.agregar((x, y), False)
             self._resaltar_anclado(0)
-            self.redibujar_todo()
             self.recalcular_todas_las_distancias()
             self.progreso_modificado.emit()
             return
@@ -2786,7 +2764,6 @@ class VistaInteractiva(QGraphicsView):
         # El nuevo ancla pasa a ser el punto recién insertado
         self._resaltar_anclado(insert_pos)
 
-        self.redibujar_todo()
         self.recalcular_todas_las_distancias()
 
         if es_salto_modo:
@@ -2927,7 +2904,6 @@ class VistaInteractiva(QGraphicsView):
         # Arrastre de punto
         if self.modo_actual == MODO_MOVER and self._punto_arrastrado_idx is not None:
             self.modelo_medicion.mover(self._punto_arrastrado_idx, (x, y))
-            self.redibujar_todo()
             self.recalcular_todas_las_distancias()
             return True
 
@@ -3207,7 +3183,6 @@ class VistaInteractiva(QGraphicsView):
             for i, coord in enumerate(coordenadas):
                 self.modelo_medicion.insertar(insert_at + i, coord, False)
 
-        self.redibujar_todo()
         self.recalcular_todas_las_distancias()
         self.progreso_modificado.emit()
 
@@ -3357,7 +3332,8 @@ class VistaInteractiva(QGraphicsView):
             ):
                 item.setVisible(visible)
 
-    def cargar_camino_activo(self, coordenadas: list, es_salto: list):
+    def cargar_camino_activo(self, coordenadas: list, es_salto: list, *, redibujar=True):
         self.modelo_medicion.cargar(coordenadas, es_salto)
-        self.redibujar_todo()
+        if redibujar:
+            self.redibujar_todo()
 
