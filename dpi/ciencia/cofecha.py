@@ -27,10 +27,10 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-import modulo_cofecha_nucleo as _nuc
-from modulo_estadistica import sensibilidad_media, autocorrelacion_lag1, pearson
+import dpi.ciencia.cofecha_nucleo as _nuc
+from dpi.ciencia.estadistica import sensibilidad_media, autocorrelacion_lag1, pearson
 
-from modulo_cronologia import (
+from dpi.ciencia.cronologia import (
     _spline_cook,
     estandarizar_serie,
     _residualizar_indice,
@@ -384,7 +384,7 @@ def analizar_coleccion(series_mm: dict,
     Ambos son opcionales.
 
     Todo el trabajo pesado ocurre sobre matrices alineadas (ver
-    `modulo_cofecha_nucleo`): la versión anterior recorría las series con
+    `dpi.ciencia.cofecha_nucleo`): la versión anterior recorría las series con
     bucles de Python anidados y escalaba de forma cuadrática, hasta el punto
     de colgarse con colecciones de tamaño normal.
     """

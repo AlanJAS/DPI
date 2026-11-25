@@ -6,19 +6,19 @@ import numpy as np
 import pandas as pd
 import pyqtgraph as pg
 from modulo_widgets import _agregar_hover_anio, _crear_barra_zoom, SpinBoxFlechas, SeccionColapsable
-from modulo_estadistica import (sensibilidad_media, autocorrelacion_lag1,
+from dpi.ciencia.estadistica import (sensibilidad_media, autocorrelacion_lag1,
                                 calcular_eps_rbar_movil, calcular_sss,
                                 estadisticos_por_desfase)
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QListWidget, QListWidgetItem, QSplitter, QFileDialog, QMessageBox, QFormLayout, QComboBox, QCheckBox, QLineEdit, QTextEdit, QGroupBox, QApplication, QProgressDialog
 from PyQt6.QtCore import Qt, QEvent
 from estilos import color_secundario
 import estilos_graficos as _gr
-from modulo_comparacion_nucleo import resumir_desfases
-from modulo_datacion import score_compuesto, _serie_transformada_para_comparar
+from dpi.ciencia.comparacion_nucleo import resumir_desfases
+from dpi.ciencia.datacion import score_compuesto, _serie_transformada_para_comparar
 from modulo_formatos import _es_planilla, asegurar_extension
 from modulo_formatos import leer_tucson_multi, leer_formato_compacto, leer_wid, leer_tabular
-from modulo_cronologia import _detrend_serie_indice, detectar_series_problematicas
-from modulo_cronologia import _construir_cronologia_desde_series
+from dpi.ciencia.cronologia import _detrend_serie_indice, detectar_series_problematicas
+from dpi.ciencia.cronologia import _construir_cronologia_desde_series
 from modulo_formatos import _guardar_metadatos_cronologia, _exportar_cronologia_df, _leer_cronologia_guardada
 from modulo_series_ui_util import _html_curvas_negativas, _mostrar_dialogo_eps_rbar, _ultima_carpeta
 from modulo_dialogos_series import DialogoCurvasNegativas

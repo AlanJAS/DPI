@@ -26,7 +26,7 @@ año no depende del largo de ninguna ventana.
 Costo
 -----
 Ingenuamente sería O(años × desfases × largo). Con las sumas acumuladas de
-`modulo_cofecha_nucleo` cada partición se evalúa en tiempo constante, así que
+`dpi.ciencia.cofecha_nucleo` cada partición se evalúa en tiempo constante, así que
 el total queda en O(años × desfases): unos milisegundos para una serie de
 varios siglos y ±10 años de desfase.
 """
@@ -35,9 +35,9 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-from modulo_estadistica import pearson, centrar_escalar_correlacion
+from dpi.ciencia.estadistica import pearson, centrar_escalar_correlacion
 
-import modulo_cofecha_nucleo as _nuc
+import dpi.ciencia.cofecha_nucleo as _nuc
 
 
 def _alinear(serie_std: pd.Series, crono_std: pd.Series):

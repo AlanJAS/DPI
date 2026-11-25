@@ -1,6 +1,6 @@
 import unittest
 import pandas as pd
-from modulo_indice_anual import validar_anios
+from dpi.ciencia.indice_anual import validar_anios
 from modulo_modelo_series import ModeloSeries
 
 class Anios(unittest.TestCase):

@@ -580,12 +580,12 @@ Diccionario JSON ubicado en el directorio del ejecutable. Ejemplo de entrada:
 ├── main_anillos.py             # Ventana principal
 ├── modulo_medicion.py          # Visor interactivo, exportador, medición
 ├── modulo_codatacion.py        # Co-datación, skeleton, cronologías, spline
-├── modulo_quiebres.py          # Localizador del año del quiebre
-├── modulo_cofecha.py           # Motor del control de calidad
-├── modulo_cofecha_nucleo.py    # Álgebra vectorizada del motor
+├── dpi/ciencia/quiebres.py          # Localizador del año del quiebre
+├── dpi/ciencia/cofecha.py           # Motor del control de calidad
+├── dpi/ciencia/cofecha_nucleo.py    # Álgebra vectorizada del motor
 ├── modulo_cofecha_salida.py    # Formato del informe de siete partes
 ├── modulo_cofecha_ui.py        # Pestaña de control de calidad
-├── modulo_transformacion.py    # Transformaciones comunes de correlación
+├── dpi/ciencia/transformacion.py    # Transformaciones comunes de correlación
 ├── modulo_unir.py              # Unión y ordenamiento de archivos
 ├── modulo_autodeteccion.py     # Detección automática de límites
 ├── modulo_intensidad.py        # Blue/Red/Green Intensity

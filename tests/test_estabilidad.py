@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 import pandas as pd
-from modulo_estadistica import correlaciones_pares
+from dpi.ciencia.estadistica import correlaciones_pares
 
 
 class Estabilidad(unittest.TestCase):
@@ -20,7 +20,7 @@ class Estabilidad(unittest.TestCase):
         np.testing.assert_allclose(correlaciones_pares(np.c_[x, y]), [1])
 
     def test_cache(self):
-        from modulo_comparacion_nucleo import clave_cache_comparacion
+        from dpi.ciencia.comparacion_nucleo import clave_cache_comparacion
         df = pd.DataFrame({'Ancho_mm': [1., 2., 3.]}, index=[2000, 2001, 2002])
         args = dict(revision=None, series={'a': df}, nombre_crono='c',
                     cronologia=df.copy(), meta={})

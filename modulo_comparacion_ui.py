@@ -6,13 +6,13 @@ import numpy as np
 import pandas as pd
 import pyqtgraph as pg
 from modulo_widgets import _agregar_hover_anio
-from modulo_estadistica import gleichlaufigkeit, t_baillie_pilcher, pearson
+from dpi.ciencia.estadistica import gleichlaufigkeit, t_baillie_pilcher, pearson
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFileDialog, QMessageBox, QTableWidget, QTableWidgetItem, QHeaderView, QApplication
 from PyQt6.QtGui import QColor
 from PyQt6.QtCore import Qt
 from estilos import color_secundario
 import estilos_graficos as _gr
-from modulo_datacion import score_compuesto
+from dpi.ciencia.datacion import score_compuesto
 from modulo_formatos import asegurar_extension
 from modulo_series_ui_util import _color_compuesto, _color_glk, _color_r, _color_tbp, _ultima_carpeta
 from modulo_dialogos_series import DialogoAlineamientoAnillos
@@ -1059,4 +1059,4 @@ class DialogoComparacionMultiple(QDialog):
                                   f"No se pudo guardar:\n{e}")
 
 
-from modulo_comparacion_nucleo import resultado_sin_overlap
+from dpi.ciencia.comparacion_nucleo import resultado_sin_overlap

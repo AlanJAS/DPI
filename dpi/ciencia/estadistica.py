@@ -2,7 +2,7 @@
 import numpy as np
 import pandas as pd
 from constantes import OVERLAP_MINIMO_GRAFICO
-from modulo_codigos import clave_codigo_dendro
+from dpi.ciencia.codigos import clave_codigo_dendro
 
 
 BIWEIGHT_C = 9.0

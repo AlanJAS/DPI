@@ -1,8 +1,8 @@
 import unittest
 import numpy as np
 import pandas as pd
-import modulo_estadistica as e
-import modulo_transformacion as t
+import dpi.ciencia.estadistica as e
+import dpi.ciencia.transformacion as t
 
 
 class ContinuidadAnual(unittest.TestCase):

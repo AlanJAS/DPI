@@ -3,9 +3,9 @@ import unittest
 
 import numpy as np
 
-from modulo_estadistica import media_biweight
-from modulo_cronologia import _biweight_mean
-from modulo_cofecha_nucleo import Maestro, _media_biweight
+from dpi.ciencia.estadistica import media_biweight
+from dpi.ciencia.cronologia import _biweight_mean
+from dpi.ciencia.cofecha_nucleo import Maestro, _media_biweight
 
 
 def _referencia(x, c=9.0, minimo=6):

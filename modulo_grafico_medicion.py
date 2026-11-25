@@ -1,8 +1,8 @@
 """Preparación estadística de gráficos de medición sin Qt."""
 import numpy as np
 import pandas as pd
-import modulo_transformacion as _tr
-from modulo_estadistica import pearson
+import dpi.ciencia.transformacion as _tr
+from dpi.ciencia.estadistica import pearson
 
 
 def normalizar_grafico(valores):

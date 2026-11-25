@@ -28,13 +28,13 @@ from PyQt6.QtWidgets import (
     QApplication, QAbstractItemView, QProgressBar,
 )
 
-import modulo_cofecha as _cof
+import dpi.ciencia.cofecha as _cof
 import modulo_cofecha_salida as _sal
 from estilos import SECUNDARIO_QSS, color_secundario
 from modulo_formatos import (
     leer_tucson_multi, leer_tabular, leer_columna_multi_hojas, _es_planilla,
 )
-from modulo_cronologia import RIGIDEZ_SPLINE_DEFECTO
+from dpi.ciencia.cronologia import RIGIDEZ_SPLINE_DEFECTO
 
 
 class _HiloAnalisis(QThread):

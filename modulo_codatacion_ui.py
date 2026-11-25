@@ -9,7 +9,7 @@ from PyQt6.QtGui import QFont, QKeySequence, QShortcut
 from PyQt6.QtCore import Qt
 import estilos_graficos as _gr
 from constantes import VENTANA_COFECHADO_DEFECTO
-from modulo_datacion import MAX_CORRECCION
+from dpi.ciencia.datacion import MAX_CORRECCION
 TOOLTIP_STATS = (
     "<b>Estadísticos de cofechado:</b><br><br>"
     "<b>r (Pearson):</b> correlación lineal.<br>"

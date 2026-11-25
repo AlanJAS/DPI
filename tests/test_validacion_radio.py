@@ -1,5 +1,5 @@
 import unittest
-from modulo_indice_anual import validar_anios
+from dpi.ciencia.indice_anual import validar_anios
 from modulo_modelo_medicion import RadioMedicion
 class Validacion(unittest.TestCase):
     def test_bool(self):

@@ -3,8 +3,8 @@ import hashlib
 from dataclasses import dataclass
 import numpy as np
 import pandas as pd
-from modulo_estadistica import estadisticos_por_desfase
-from modulo_datacion import score_compuesto
+from dpi.ciencia.estadistica import estadisticos_por_desfase
+from dpi.ciencia.datacion import score_compuesto
 
 
 @dataclass(frozen=True, slots=True)
@@ -118,7 +118,7 @@ def resultado_sin_overlap(nombre: str) -> dict:
 def analizar_desfases(m_diff, t_diff, serie_a_glk, serie_b_glk):
     """Barrido de desfase de dos series; conserva el criterio de solape flotante."""
     from constantes import OVERLAP_MINIMO_ANALISIS, OVERLAP_MINIMO_FLOTANTE
-    from modulo_estadistica import pearson as _r_pearson, gleichlaufigkeit, t_baillie_pilcher
+    from dpi.ciencia.estadistica import pearson as _r_pearson, gleichlaufigkeit, t_baillie_pilcher
     s_min = int(t_diff.index.min() - m_diff.index.max() + OVERLAP_MINIMO_ANALISIS - 1)
     s_max = int(t_diff.index.max() - m_diff.index.min() - OVERLAP_MINIMO_ANALISIS + 1)
 

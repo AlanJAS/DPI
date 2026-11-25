@@ -6,17 +6,17 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 NUCLEOS = (
     'modulo_calculo_medicion', 'modulo_modelo_medicion', 'modulo_modelo_series',
-    'modulo_estadistica', 'modulo_cronologia', 'modulo_datacion', 'modulo_quiebres',
-    'modulo_cofecha', 'modulo_cofecha_nucleo', 'modulo_comparacion_nucleo',
-    'modulo_pith_nucleo', 'modulo_intensidad_nucleo', 'modulo_indice_anual',
-    'modulo_autodeteccion', 'modulo_transformacion', 'modulo_grafico_medicion', 'modulo_datos_medicion',
+    'dpi.ciencia.estadistica', 'dpi.ciencia.cronologia', 'dpi.ciencia.datacion', 'dpi.ciencia.quiebres',
+    'dpi.ciencia.cofecha', 'dpi.ciencia.cofecha_nucleo', 'dpi.ciencia.comparacion_nucleo',
+    'modulo_pith_nucleo', 'modulo_intensidad_nucleo', 'dpi.ciencia.indice_anual',
+    'modulo_autodeteccion', 'dpi.ciencia.transformacion', 'modulo_grafico_medicion', 'modulo_datos_medicion',
 )
 
 class DependenciasCientificas(unittest.TestCase):
     def test_importaciones_sin_interfaz(self):
         for modulo in NUCLEOS:
             with self.subTest(modulo=modulo):
-                arbol = ast.parse((RAIZ / (modulo + '.py')).read_text(encoding='utf-8'))
+                arbol = ast.parse((RAIZ / (modulo.replace('.', '/') + '.py')).read_text(encoding='utf-8'))
                 for nodo in ast.walk(arbol):
                     if isinstance(nodo, ast.Import):
                         nombres = [a.name for a in nodo.names]

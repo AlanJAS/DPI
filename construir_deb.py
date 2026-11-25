@@ -57,6 +57,7 @@ _FUERA = {"instalar_lanzador_linux.py", "construir_deb.py"}
 modulos = sorted(p.name for p in ORIGEN.glob("*.py") if p.name not in _FUERA)
 for nombre in modulos:
     shutil.copy2(ORIGEN / nombre, LIB / nombre)
+shutil.copytree(ORIGEN / "dpi", LIB / "dpi", ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
 shutil.copy2(ORIGEN / "species_profiles.json", LIB / "species_profiles.json")
 shutil.copy2(ORIGEN / "iconos" / "dpi.ico", LIB / "dpi.ico")
 print(f"código: {len(modulos)} módulos")

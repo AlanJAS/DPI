@@ -265,7 +265,7 @@ class SeccionColapsable(QWidget):
         self._contenido_layout.addLayout(layout)
 
 
-import modulo_transformacion as _tr
+import dpi.ciencia.transformacion as _tr
 
 
 def crear_selector(parent=None, metodo_inicial: str = _tr.DIFFLOG):

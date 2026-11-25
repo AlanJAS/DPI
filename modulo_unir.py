@@ -43,7 +43,7 @@ from constantes import TUCSON_MAX_CHARS_ID, TUCSON_VALOR_FIN, TUCSON_DIVISOR
 # Helpers de ordenamiento
 # =============================================================================
 
-from modulo_codigos import (
+from dpi.ciencia.codigos import (
     _clave_orden_natural,
     clave_codigo_dendro,
 )

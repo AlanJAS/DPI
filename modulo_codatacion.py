@@ -21,10 +21,10 @@ from modulo_widgets import (
     SpinBoxFlechas, SeccionColapsable,
 )
 from modulo_modelo_series import ModeloSeries
-from modulo_comparacion_nucleo import SeriePreparada, comparar_serie
-import modulo_transformacion as _tr
-import modulo_estadistica as _est
-from modulo_estadistica import (
+from dpi.ciencia.comparacion_nucleo import SeriePreparada, comparar_serie
+import dpi.ciencia.transformacion as _tr
+import dpi.ciencia.estadistica as _est
+from dpi.ciencia.estadistica import (
     _sensibilidad_media,
     _autocorrelacion_ar1,
     gleichlaufigkeit,
@@ -41,7 +41,7 @@ from modulo_estadistica import (
     _r_movil,
     _stats_movil,
 )
-import modulo_quiebres as _qb
+import dpi.ciencia.quiebres as _qb
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QListWidget, QListWidgetItem, QSplitter,
@@ -65,7 +65,7 @@ from constantes import (
 
 logger = logging.getLogger(__name__)
 
-from modulo_datacion import (
+from dpi.ciencia.datacion import (
     score_compuesto,
     _serie_transformada_para_comparar,
     alineamiento_optimo_anillos,
@@ -98,7 +98,7 @@ from modulo_formatos import (
 )
 
 
-from modulo_cronologia import (
+from dpi.ciencia.cronologia import (
     agrupar_por_arbol,
     rbar_entre_arboles,
 )
@@ -159,7 +159,7 @@ from modulo_formatos import (
 # CRONOLOGÍA: NORMALIZACIÓN Y CONSTRUCCIÓN
 # =============================================================================
 
-from modulo_cronologia import (
+from dpi.ciencia.cronologia import (
     _biweight_mean,
     _spline_cook,
     _fit_trend,
@@ -183,7 +183,7 @@ from modulo_cronologia import (
 )
 
 
-from modulo_cronologia import (
+from dpi.ciencia.cronologia import (
     _construir_cronologia_desde_series,
 )
 
@@ -1789,7 +1789,7 @@ class PanelCodatacion(QWidget):
         # en 'Series múltiples vs Crono'. Antes se desplazaba la segunda
         # serie, lo que daba desfases negativos para series flotantes y
         # resultaba confuso e inconsistente entre los dos análisis.
-        from modulo_comparacion_nucleo import analizar_desfases
+        from dpi.ciencia.comparacion_nucleo import analizar_desfases
         (self._shifts_actuales, self._r_actuales, self._glk_actuales,
          self._tbp_actuales, self._n_actuales) = analizar_desfases(
             m_diff, t_diff, serie_a_glk, serie_b_glk)
@@ -2136,7 +2136,7 @@ class PanelCodatacion(QWidget):
             )
         except Exception:
             cof = ()
-        from modulo_comparacion_nucleo import clave_cache_comparacion
+        from dpi.ciencia.comparacion_nucleo import clave_cache_comparacion
         modelo = getattr(self, "modelo_series", None)
         return clave_cache_comparacion(nombres,
             revision=modelo.revision if modelo is not None else None,

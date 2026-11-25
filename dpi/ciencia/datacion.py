@@ -2,10 +2,10 @@
 import logging
 import numpy as np
 import pandas as pd
-import modulo_estadistica as _est
-import modulo_quiebres as _qb
-from modulo_estadistica import _r_movil
-from modulo_cronologia import normalizar_serie_para_tipo
+import dpi.ciencia.estadistica as _est
+import dpi.ciencia.quiebres as _qb
+from dpi.ciencia.estadistica import _r_movil
+from dpi.ciencia.cronologia import normalizar_serie_para_tipo
 from constantes import OVERLAP_MINIMO_ANALISIS, OVERLAP_MINIMO_GRAFICO
 
 logger = logging.getLogger(__name__)
@@ -533,7 +533,7 @@ def _buscar_y_priorizar(ref, problema, mitad_ventana, max_corr,
                     coleccion=coleccion_std,
                     excluir=nombre_serie)
                 quiebres = _qb.mapa_de_quiebres(
-                    s_std, d_ref, max_desfase=10, 
+                    s_std, d_ref, max_desfase=10,
                     max_quiebres=3)
             except Exception:
                 quiebres = []

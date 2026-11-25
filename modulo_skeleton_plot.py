@@ -6,14 +6,14 @@ import pandas as pd
 import pyqtgraph as pg
 from modulo_widgets import _agregar_hover_anio
 from modulo_widgets import crear_selector
-import modulo_transformacion as _tr
-from modulo_estadistica import gleichlaufigkeit, glk_significance, t_baillie_pilcher, pearson
+import dpi.ciencia.transformacion as _tr
+from dpi.ciencia.estadistica import gleichlaufigkeit, glk_significance, t_baillie_pilcher, pearson
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFileDialog, QMessageBox, QSpinBox, QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QDialog, QComboBox, QCheckBox, QSlider
 from PyQt6.QtGui import QColor
 from PyQt6.QtCore import Qt, QEvent
 from estilos import SECUNDARIO_QSS, color_secundario
 import estilos_graficos as _gr
-from modulo_datacion import score_compuesto, alineamiento_optimo_anillos
+from dpi.ciencia.datacion import score_compuesto, alineamiento_optimo_anillos
 from modulo_formatos import _es_planilla
 from modulo_formatos import leer_tucson_multi, leer_formato_compacto, leer_wid, leer_tabular, leer_como_columnas_o_tabular
 from modulo_series_ui_util import _color_r, _color_tbp, _ultima_carpeta

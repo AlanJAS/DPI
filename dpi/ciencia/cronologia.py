@@ -2,7 +2,7 @@
 
 import numpy as np
 import pandas as pd
-from modulo_estadistica import (
+from dpi.ciencia.estadistica import (
     serie_anual, agrupar_por_arbol, rbar_entre_arboles, correlaciones_pares, calcular_eps, pearson,
     BIWEIGHT_C, media_biweight,
 )
@@ -14,7 +14,7 @@ def _bloques_anuales(serie):
     return [s.iloc[a:b] for a, b in zip([0, *cortes], [*cortes, len(s)]) if a < b]
 
 
-# Adaptador histórico: el cálculo reside únicamente en modulo_estadistica.
+# Adaptador histórico: el cálculo reside únicamente en dpi.ciencia.estadistica.
 def _biweight_mean(values, c: float = BIWEIGHT_C, minimo: int = 6) -> float:
     return media_biweight(values, c=c, minimo=minimo)
 

@@ -33,8 +33,8 @@ cortas, las diferencias-log siguen siendo razonables.
 from __future__ import annotations
 
 import pandas as pd
-from modulo_estadistica import pearson, diferencias_log_anuales
-from modulo_cronologia import estandarizar_serie
+from dpi.ciencia.estadistica import pearson, diferencias_log_anuales
+from dpi.ciencia.cronologia import estandarizar_serie
 
 DIFFLOG = "difflog"
 COFECHA = "cofecha"
@@ -136,8 +136,8 @@ def transformar_para_correlacion(serie_mm: pd.Series, es_crono: bool, *, activo,
       El checkbox 'Serie' permite desactivar la estandarización de la
       serie (usarla cruda) si el usuario ya la subió estandarizada.
     """
-    from modulo_datacion import aplicar_modo_cofecha
-    from modulo_cronologia import normalizar_serie_para_tipo
+    from dpi.ciencia.datacion import aplicar_modo_cofecha
+    from dpi.ciencia.cronologia import normalizar_serie_para_tipo
     s_raw = pd.to_numeric(serie_mm, errors="coerce").astype(float).dropna()
     if not activo:
         return s_raw

@@ -4,10 +4,10 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from modulo_codigos import clave_codigo_dendro
-from modulo_cofecha_nucleo import AcumuladosPar, Matriz
-from modulo_cronologia import _construir_cronologia_desde_series
-from modulo_estadistica import calcular_eps, pearson
+from dpi.ciencia.codigos import clave_codigo_dendro
+from dpi.ciencia.cofecha_nucleo import AcumuladosPar, Matriz
+from dpi.ciencia.cronologia import _construir_cronologia_desde_series
+from dpi.ciencia.estadistica import calcular_eps, pearson
 
 
 class NucleoCientifico(unittest.TestCase):

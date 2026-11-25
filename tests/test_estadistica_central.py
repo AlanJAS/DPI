@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 import pandas as pd
-import modulo_estadistica as e
+import dpi.ciencia.estadistica as e
 
 
 class TestEstadisticaCentral(unittest.TestCase):

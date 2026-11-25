@@ -25,7 +25,7 @@ from modulo_sesion_medicion import guardar_sesion, leer_sesion
 import cv2
 import numpy as np
 from modulo_configuracion_ui import ultima_carpeta
-import modulo_transformacion as _tr
+import dpi.ciencia.transformacion as _tr
 from modulo_modelo_medicion import ModeloSesionMedicion, RadioMedicion, TipoMarca
 import pandas as pd
 from modulo_imagen import detectar_dpi, preparar_banda_rgb

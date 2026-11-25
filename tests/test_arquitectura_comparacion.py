@@ -1,6 +1,6 @@
 import unittest
 import pandas as pd
-from modulo_comparacion_nucleo import comparar_serie, SeriePreparada
+from dpi.ciencia.comparacion_nucleo import comparar_serie, SeriePreparada
 class Comparacion(unittest.TestCase):
     def test_sin_solape_posible(self):
         a = pd.Series([1.,2.], index=[2000,2001])
@@ -17,7 +17,7 @@ class Comparacion(unittest.TestCase):
         self.assertIs(r['serie_a'], a)
 
     def test_resumen_comun(self):
-        from modulo_comparacion_nucleo import resumir_desfases
+        from dpi.ciencia.comparacion_nucleo import resumir_desfases
         a = pd.Series([1.,2.], index=[2000,2001])
         resultado = resumir_desfases('A', [0, 1], [0.1, 0.9], [0.5, 0.9], [1., 8.], [20, 20], a, a)
         self.assertEqual(resultado['mejor_shift'], 1)
@@ -30,7 +30,7 @@ class Comparacion(unittest.TestCase):
 
     def test_desfase_positivo(self):
         import numpy as np
-        from modulo_comparacion_nucleo import analizar_desfases
+        from dpi.ciencia.comparacion_nucleo import analizar_desfases
         rng = np.random.default_rng(47)
         a = pd.Series(rng.uniform(1, 5, 70), index=range(100,170))
         b = pd.Series(a.values.copy(), index=range(2000,2070))

@@ -4,7 +4,7 @@ from collections.abc import Callable
 from modulo_widgets import crear_boton
 from modulo_grafico_medicion_ui import GraficoMedicion
 from modulo_widgets import crear_selector
-import modulo_transformacion as _tr
+import dpi.ciencia.transformacion as _tr
 import pyqtgraph as pg
 from PyQt6.QtWidgets import QGraphicsScene, QPushButton, QVBoxLayout, QHBoxLayout, QWidget, QLabel, QSpinBox, QComboBox, QButtonGroup, QLineEdit, QListWidget, QSplitter
 from PyQt6.QtGui import QShortcut, QKeySequence

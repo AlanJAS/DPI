@@ -4,7 +4,7 @@ from collections.abc import Mapping
 
 import pandas as pd
 import numpy as np
-from modulo_indice_anual import validar_anios
+from dpi.ciencia.indice_anual import validar_anios
 
 
 @dataclass(frozen=True)

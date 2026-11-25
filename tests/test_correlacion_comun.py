@@ -1,10 +1,10 @@
 import unittest
 import numpy as np
-from modulo_estadistica import pearson, pearson_desde_sumas
-from modulo_cofecha_nucleo import AcumuladosPar, r_de_sumas, r_quitando_cada_punto
-from modulo_quiebres import _acumulados_por_desfase
+from dpi.ciencia.estadistica import pearson, pearson_desde_sumas
+from dpi.ciencia.cofecha_nucleo import AcumuladosPar, r_de_sumas, r_quitando_cada_punto
+from dpi.ciencia.quiebres import _acumulados_por_desfase
 from modulo_grafico_medicion import correlacion_deslizante
-from modulo_transformacion import DIFFLOG
+from dpi.ciencia.transformacion import DIFFLOG
 
 
 class TestCorrelacionComun(unittest.TestCase):

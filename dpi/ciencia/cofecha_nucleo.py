@@ -3,7 +3,7 @@ MoiCedrus — DPI · Núcleo vectorizado del análisis tipo COFECHA
 ==============================================================
 
 Este módulo contiene la maquinaria numérica del análisis de cofechado. Se
-separó de `modulo_cofecha.py` (que conserva la API pública y las funciones
+separó de `dpi.ciencia.cofecha.py` (que conserva la API pública y las funciones
 de una sola serie) porque la versión anterior escalaba de forma cuadrática y
 se volvía inusable con colecciones reales: 48 series tardaban 41 s y 1600
 habrían tardado horas.
@@ -29,8 +29,8 @@ Las tres ideas que hacen la diferencia:
 from __future__ import annotations
 
 import numpy as np
-from modulo_indice_anual import validar_anios
-from modulo_estadistica import (pearson, pearson_desde_sumas,
+from dpi.ciencia.indice_anual import validar_anios
+from dpi.ciencia.estadistica import (pearson, pearson_desde_sumas,
                                 centrar_escalar_correlacion,
                                 BIWEIGHT_C, media_biweight)
 
