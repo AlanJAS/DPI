@@ -108,3 +108,35 @@ class ModeloMedicion:
         if not all(isinstance(p, PuntoMedicion) for p in puntos):
             raise ValueError("Captura de medición inválida")
         self._puntos = puntos
+
+
+class HistorialMedicion:
+    """Historial de capturas de puntos, independiente de Qt."""
+    def __init__(self, modelo, limite):
+        self.modelo = modelo
+        self.limite = limite
+        self._undo = []
+        self._redo = []
+
+    def guardar(self):
+        self._undo.append(self.modelo.captura())
+        if len(self._undo) > self.limite:
+            self._undo.pop(0)
+        self._redo.clear()
+
+    def limpiar(self):
+        self._undo.clear()
+        self._redo.clear()
+
+    def _cambiar(self, origen, destino):
+        if not origen:
+            return False
+        destino.append(self.modelo.captura())
+        self.modelo.restaurar(origen.pop())
+        return True
+
+    def deshacer(self):
+        return self._cambiar(self._undo, self._redo)
+
+    def rehacer(self):
+        return self._cambiar(self._redo, self._undo)

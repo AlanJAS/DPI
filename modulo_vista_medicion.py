@@ -2,7 +2,7 @@
 
 import math
 import numpy as np
-from modulo_modelo_medicion import ModeloMedicion, PuntoMedicion
+from modulo_modelo_medicion import ModeloMedicion, PuntoMedicion, HistorialMedicion
 from PyQt6.QtWidgets import QWidget, QDialog, QGraphicsView, QGraphicsScene, QPushButton, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QDoubleSpinBox, QComboBox, QToolTip, QGraphicsEllipseItem, QDialogButtonBox
 from PyQt6.QtGui import QPainter, QPen, QColor, QBrush
 from PyQt6.QtCore import Qt, pyqtSignal, QEvent
@@ -277,8 +277,7 @@ class VistaInteractiva(QGraphicsView):
         self._item_anclado = None               # resaltado visual del ancla
 
         # Historial de deshacer
-        self._historial: list[tuple[PuntoMedicion, ...]] = []
-        self._historial_redo: list[tuple[PuntoMedicion, ...]] = []
+        self._historial = HistorialMedicion(self.modelo_medicion, MAX_PASOS_HISTORIAL)
 
         # Auto-detección: almacena los dos puntos (médula, corteza)
         self._puntos_autodetect: list[tuple[float, float]] = []
@@ -378,22 +377,14 @@ class VistaInteractiva(QGraphicsView):
         return self.modelo_medicion.marcas
 
     def guardar_en_historial(self):
-        self._historial.append(self.modelo_medicion.captura())
-        if len(self._historial) > MAX_PASOS_HISTORIAL:
-            self._historial.pop(0)
-        self._historial_redo.clear()  # Nueva acción invalida el redo
+        self._historial.guardar()
 
     def limpiar_historial(self):
-        self._historial.clear()
-        self._historial_redo.clear()
+        self._historial.limpiar()
 
     def deshacer_ultimo(self):
-        if not self._historial:
+        if not self._historial.deshacer():
             return
-        # Guardar estado actual en redo antes de restaurar
-        self._historial_redo.append(
-            self.modelo_medicion.captura())
-        self.modelo_medicion.restaurar(self._historial.pop())
         self._limpiar_anclado()
         self.redibujar_todo()
         if self._linea_guia:
@@ -403,12 +394,8 @@ class VistaInteractiva(QGraphicsView):
         self.progreso_modificado.emit()
 
     def rehacer_ultimo(self):
-        if not self._historial_redo:
+        if not self._historial.rehacer():
             return
-        # Guardar estado actual en historial
-        self._historial.append(
-            self.modelo_medicion.captura())
-        self.modelo_medicion.restaurar(self._historial_redo.pop())
         self._limpiar_anclado()
         self.redibujar_todo()
         if self._linea_guia:
