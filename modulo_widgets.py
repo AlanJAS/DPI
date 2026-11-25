@@ -6,6 +6,15 @@ import estilos_graficos as _gr
 from modulo_dialogos_archivo import ultima_carpeta
 
 
+def crear_boton(texto, accion, *, tooltip=None, checkable=False):
+    boton = QPushButton(texto)
+    boton.setCheckable(checkable)
+    if tooltip is not None:
+        boton.setToolTip(tooltip)
+    boton.clicked.connect(accion)
+    return boton
+
+
 def _ultima_carpeta():
     return ultima_carpeta("ultima_carpeta_codatacion")
 
