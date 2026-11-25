@@ -1,5 +1,6 @@
 """Operaciones extraídas sin modificar sus algoritmos."""
 import os
+from dpi.infraestructura.escritura import ruta_atomica
 import numpy as np
 import pandas as pd
 from dpi.formatos.constantes import TUCSON_VALOR_FIN, TUCSON_VALOR_FALTANTE, TUCSON_MAX_CHARS_ID
@@ -117,8 +118,9 @@ def _lineas_tucson(serie, codigo, factor=1000.0):
 
 
 def _guardar_lineas_tucson(ruta, lineas):
-    with open(ruta, "w", encoding="utf-8", newline="\r\n") as f:
-        f.write("\n".join(lineas) + "\n")
+    with ruta_atomica(ruta) as temporal:
+        with open(temporal, "w", encoding="utf-8", newline="\r\n") as f:
+            f.write("\n".join(lineas) + "\n")
 
 
 def escribir_tucson(serie: pd.Series, ruta: str, codigo: str = "CRONO",

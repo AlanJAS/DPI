@@ -1,5 +1,6 @@
 """Operaciones extraídas sin modificar sus algoritmos."""
 import os
+from dpi.infraestructura.escritura import ruta_atomica
 import re
 import numpy as np
 from dpi.medicion.constantes import DPI_DEFECTO, MM_POR_PULGADA
@@ -91,5 +92,6 @@ def escribir_pos(ruta, coords_px, saltos, dpi, anio_corteza, codigo, ruta_imagen
     if buffer_linea:
         lineas.append(" ".join(buffer_linea))
 
-    with open(ruta, "w", encoding="utf-8") as f:
-        f.write("\n".join(lineas) + "\n")
+    with ruta_atomica(ruta) as temporal:
+        with open(temporal, "w", encoding="utf-8") as f:
+            f.write("\n".join(lineas) + "\n")
