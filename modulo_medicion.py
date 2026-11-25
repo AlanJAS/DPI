@@ -18,6 +18,7 @@ import cv2
 import numpy as np
 from modulo_dialogos_archivo import ultima_carpeta
 import modulo_transformacion as _tr
+from modulo_modelo_medicion import ModeloMedicion, PuntoMedicion
 import pandas as pd
 import pyqtgraph as pg
 from PIL import Image
@@ -887,8 +888,7 @@ class VistaInteractiva(QGraphicsView):
         )
 
         # Estado de medición
-        self.coordenadas_anillos: list[tuple[float, float]] = []
-        self.es_salto: list = []  # False | True | "espacio"
+        self.modelo_medicion = ModeloMedicion()
         self.puntos_calibracion: list[tuple[float, float]] = []
         # Items visuales de calibración (puntos, línea, texto) — se limpian
         # al cancelar/aceptar/reiniciar la calibración.
@@ -916,8 +916,8 @@ class VistaInteractiva(QGraphicsView):
         self._item_anclado = None               # resaltado visual del ancla
 
         # Historial de deshacer
-        self._historial: list[tuple] = []
-        self._historial_redo: list[tuple] = []
+        self._historial: list[tuple[PuntoMedicion, ...]] = []
+        self._historial_redo: list[tuple[PuntoMedicion, ...]] = []
 
         # Auto-detección: almacena los dos puntos (médula, corteza)
         self._puntos_autodetect: list[tuple[float, float]] = []
@@ -1008,8 +1008,16 @@ class VistaInteractiva(QGraphicsView):
     # Historial
     # -------------------------------------------------------------------------
 
+    @property
+    def coordenadas_anillos(self):
+        return self.modelo_medicion.coordenadas
+
+    @property
+    def es_salto(self):
+        return self.modelo_medicion.marcas
+
     def guardar_en_historial(self):
-        self._historial.append((self.coordenadas_anillos.copy(), self.es_salto.copy()))
+        self._historial.append(self.modelo_medicion.captura())
         if len(self._historial) > MAX_PASOS_HISTORIAL:
             self._historial.pop(0)
         self._historial_redo.clear()  # Nueva acción invalida el redo
@@ -1023,10 +1031,8 @@ class VistaInteractiva(QGraphicsView):
             return
         # Guardar estado actual en redo antes de restaurar
         self._historial_redo.append(
-            (self.coordenadas_anillos.copy(), self.es_salto.copy()))
-        coords, saltos = self._historial.pop()
-        self.coordenadas_anillos = coords.copy()
-        self.es_salto = saltos.copy()
+            self.modelo_medicion.captura())
+        self.modelo_medicion.restaurar(self._historial.pop())
         self._limpiar_anclado()
         self.redibujar_todo()
         if self._linea_guia:
@@ -1040,10 +1046,8 @@ class VistaInteractiva(QGraphicsView):
             return
         # Guardar estado actual en historial
         self._historial.append(
-            (self.coordenadas_anillos.copy(), self.es_salto.copy()))
-        coords, saltos = self._historial_redo.pop()
-        self.coordenadas_anillos = coords.copy()
-        self.es_salto = saltos.copy()
+            self.modelo_medicion.captura())
+        self.modelo_medicion.restaurar(self._historial_redo.pop())
         self._limpiar_anclado()
         self.redibujar_todo()
         if self._linea_guia:
@@ -1991,9 +1995,7 @@ class VistaInteractiva(QGraphicsView):
         n_borrados = 0
         for i in indices:
             if 0 <= i < len(self.coordenadas_anillos):
-                self.coordenadas_anillos.pop(i)
-                if i < len(self.es_salto):
-                    self.es_salto.pop(i)
+                self.modelo_medicion.borrar(i)
                 n_borrados += 1
         self._puntos_seleccionados.clear()
         self._dibujar_marcadores_seleccion()
@@ -2010,7 +2012,7 @@ class VistaInteractiva(QGraphicsView):
         self.guardar_en_historial()
         for i in self._puntos_seleccionados:
             if 0 <= i < len(self.es_salto):
-                self.es_salto[i] = True
+                self.modelo_medicion.marcar(i, True)
         self._puntos_seleccionados.clear()
         self._dibujar_marcadores_seleccion()
         self.redibujar_todo()
@@ -2027,7 +2029,7 @@ class VistaInteractiva(QGraphicsView):
         self.guardar_en_historial()
         for i in self._puntos_seleccionados:
             if 0 <= i < len(self.es_salto):
-                self.es_salto[i] = "espacio"
+                self.modelo_medicion.marcar(i, "espacio")
         self._puntos_seleccionados.clear()
         self._dibujar_marcadores_seleccion()
         self.redibujar_todo()
@@ -2898,8 +2900,7 @@ class VistaInteractiva(QGraphicsView):
             # Primer clic: punto A — suma distancia pero NO cierra anillo
             if self._idx_espacio_inicio is None:
                 self.guardar_en_historial()
-                coords.append((x, y))
-                self.es_salto.append("quiebre_ini")   # línea azul, suma, no cierra
+                self.modelo_medicion.agregar((x, y), "quiebre_ini")   # línea azul, suma, no cierra
                 self._idx_espacio_inicio = len(coords) - 1
                 self._espacio_p1   = (x, y)
                 self._espacio_seg1 = -1
@@ -2919,8 +2920,7 @@ class VistaInteractiva(QGraphicsView):
 
             # Segundo clic: punto B — línea AMARILLA desde A, tick amarillo
             self.guardar_en_historial()
-            coords.append((x, y))
-            self.es_salto.append("espacio")   # línea amarilla desde A, tick amarillo
+            self.modelo_medicion.agregar((x, y), "espacio")   # línea amarilla desde A, tick amarillo
             self._idx_espacio_inicio = None
             self._limpiar_espacio()
             self.redibujar_todo()
@@ -3011,22 +3011,20 @@ class VistaInteractiva(QGraphicsView):
         #   4) Segmentos intermedios si s1 < s2 → también "espacio"
 
         # 1) Insertar p2
-        self.coordenadas_anillos.insert(s2 + 1, p2)
-        self.es_salto.insert(s2 + 1, False)   # p2→siguiente: reanuda normal
+        self.modelo_medicion.insertar(s2 + 1, p2, False)   # p2→siguiente: reanuda normal
 
         # 2) Insertar p1 con es_salto="quiebre_ini" (suma distancia antes del quiebre)
-        self.coordenadas_anillos.insert(s1 + 1, p1)
-        self.es_salto.insert(s1 + 1, "quiebre_ini")  # prev→p1: azul, suma
+        self.modelo_medicion.insertar(s1 + 1, p1, "quiebre_ini")  # prev→p1: azul, suma
 
         # 3) Segmento p1→p2 = "espacio"
         idx_tramo = s1 + 2
         if idx_tramo < len(self.es_salto):
-            self.es_salto[idx_tramo] = "espacio"
+            self.modelo_medicion.marcar(idx_tramo, "espacio")
 
         # 4) Segmentos intermedios (si s1 < s2)
         for j in range(idx_tramo + 1, s2 + 2):
             if j < len(self.es_salto) and self.es_salto[j] is False:
-                self.es_salto[j] = "espacio"
+                self.modelo_medicion.marcar(j, "espacio")
 
         self.redibujar_todo()
         self.recalcular_todas_las_distancias()
@@ -3094,8 +3092,7 @@ class VistaInteractiva(QGraphicsView):
         py = y1 + t * (y2 - y1)
 
         self.guardar_en_historial()
-        self.coordenadas_anillos.insert(seg_idx + 1, (px, py))
-        self.es_salto.insert(seg_idx + 1, "ew_lw")
+        self.modelo_medicion.insertar(seg_idx + 1, (px, py), "ew_lw")
 
         self.redibujar_todo()
         self.recalcular_todas_las_distancias()
@@ -3180,8 +3177,7 @@ class VistaInteractiva(QGraphicsView):
                 mejor_d, mejor_idx = d, i
         if mejor_d < tol and mejor_idx != -1:
             self.guardar_en_historial()
-            self.coordenadas_anillos.insert(mejor_idx + 1, (x, y))
-            self.es_salto.insert(mejor_idx + 1, False)
+            self.modelo_medicion.insertar(mejor_idx + 1, (x, y), False)
             self.redibujar_todo()
             self.recalcular_todas_las_distancias()
             self.progreso_modificado.emit()
@@ -3190,8 +3186,7 @@ class VistaInteractiva(QGraphicsView):
         idx = self._indice_punto_mas_cercano(x, y)
         if idx is not None:
             self.guardar_en_historial()
-            self.coordenadas_anillos.pop(idx)
-            self.es_salto.pop(idx)
+            self.modelo_medicion.borrar(idx)
             self.redibujar_todo()
             self.recalcular_todas_las_distancias()
             self.progreso_modificado.emit()
@@ -3442,8 +3437,7 @@ class VistaInteractiva(QGraphicsView):
         # ── Serie vacía: primer punto ────────────────────────────────────
         if not coords:
             self.guardar_en_historial()
-            coords.append((x, y))
-            self.es_salto.append(False)
+            self.modelo_medicion.agregar((x, y), False)
             self._resaltar_anclado(0)
             self.redibujar_todo()
             self.recalcular_todas_las_distancias()
@@ -3498,8 +3492,7 @@ class VistaInteractiva(QGraphicsView):
             insert_pos = idx_a + 1 if d_sig < d_prev else idx_a
 
         self.guardar_en_historial()
-        self.coordenadas_anillos.insert(insert_pos, (x, y))
-        self.es_salto.insert(insert_pos, es_salto_modo)
+        self.modelo_medicion.insertar(insert_pos, (x, y), es_salto_modo)
 
         # El nuevo ancla pasa a ser el punto recién insertado
         self._resaltar_anclado(insert_pos)
@@ -3627,7 +3620,7 @@ class VistaInteractiva(QGraphicsView):
 
         # Arrastre de punto
         if self.modo_actual == MODO_MOVER and self._punto_arrastrado_idx is not None:
-            self.coordenadas_anillos[self._punto_arrastrado_idx] = (x, y)
+            self.modelo_medicion.mover(self._punto_arrastrado_idx, (x, y))
             self.redibujar_todo()
             self.recalcular_todas_las_distancias()
             return
@@ -3863,8 +3856,7 @@ class VistaInteractiva(QGraphicsView):
         if idx_ancla is None:
             # Sin ancla: añadir al final
             for coord in coordenadas:
-                self.coordenadas_anillos.append(coord)
-                self.es_salto.append(False)
+                self.modelo_medicion.agregar(coord, False)
         else:
             n = len(self.coordenadas_anillos)
             # Detectar dirección: ¿los nuevos puntos van después o antes del ancla?
@@ -3888,8 +3880,7 @@ class VistaInteractiva(QGraphicsView):
                         if math.hypot(kx - ultimo_x, ky - ultimo_y) < self._tolerancia_punto() * 3:
                             fin_tramo = k + 1
                             break
-                    del self.coordenadas_anillos[insert_at:fin_tramo]
-                    del self.es_salto[insert_at:fin_tramo]
+                    self.modelo_medicion.borrar(slice(insert_at, fin_tramo))
             else:
                 insert_at = idx_ancla
                 coordenadas = list(reversed(coordenadas))
@@ -3901,13 +3892,11 @@ class VistaInteractiva(QGraphicsView):
                         if math.hypot(kx - ultimo_x, ky - ultimo_y) < self._tolerancia_punto() * 3:
                             ini_tramo = k
                             break
-                    del self.coordenadas_anillos[ini_tramo:insert_at]
-                    del self.es_salto[ini_tramo:insert_at]
+                    self.modelo_medicion.borrar(slice(ini_tramo, insert_at))
                     insert_at = ini_tramo
 
             for i, coord in enumerate(coordenadas):
-                self.coordenadas_anillos.insert(insert_at + i, coord)
-                self.es_salto.insert(insert_at + i, False)
+                self.modelo_medicion.insertar(insert_at + i, coord, False)
 
         self.redibujar_todo()
         self.recalcular_todas_las_distancias()
@@ -4060,8 +4049,7 @@ class VistaInteractiva(QGraphicsView):
                 item.setVisible(visible)
 
     def cargar_camino_activo(self, coordenadas: list, es_salto: list):
-        self.coordenadas_anillos = [tuple(c) for c in coordenadas]
-        self.es_salto = list(es_salto)
+        self.modelo_medicion.cargar(coordenadas, es_salto)
         self.redibujar_todo()
 
 
@@ -6453,8 +6441,7 @@ class PestanaImagen(QWidget):
 
         self.vista.limpiar_historial()
         self.datos_medidos.clear()
-        self.vista.coordenadas_anillos.clear()
-        self.vista.es_salto.clear()
+        self.vista.modelo_medicion.limpiar()
         self.vista.redibujar_todo()
 
         self.spin_medula.blockSignals(True)
@@ -6486,8 +6473,7 @@ class PestanaImagen(QWidget):
 
         self.vista.limpiar_historial()
         self.datos_medidos.clear()
-        self.vista.coordenadas_anillos.clear()
-        self.vista.es_salto.clear()
+        self.vista.modelo_medicion.limpiar()
         self.vista.redibujar_todo()
 
         # deepcopy: la lista en datos["datos_medidos"] viene del save
@@ -6829,8 +6815,7 @@ class PestanaImagen(QWidget):
 
         self.vista.limpiar_historial()
         self.vista.pixeles_por_mm = dpi_pos / MM_POR_PULGADA
-        self.vista.coordenadas_anillos = coords_px
-        self.vista.es_salto = saltos
+        self.vista.modelo_medicion.cargar(coords_px, saltos)
 
         # Detectar automáticamente médula/corteza:
         # el año más reciente (#C DATED) = corteza; el más antiguo = médula.
@@ -7064,7 +7049,7 @@ class PestanaImagen(QWidget):
                 "caminos_guardados": self.caminos_guardados,
                 "camino_activo": {
                     "coordenadas": [list(c) for c in self.vista.coordenadas_anillos],
-                    "es_salto": self.vista.es_salto,
+                    "es_salto": list(self.vista.es_salto),
                     "datos_medidos": self.datos_medidos,
                     "anio_medula": self.spin_medula.value(),
                     "anio_corteza": self.spin_corteza.value(),
@@ -7593,8 +7578,7 @@ class PestanaImagen(QWidget):
         # Eliminar de atrás hacia adelante para no invalidar índices
         indices = [i for i, v in enumerate(self.vista.es_salto) if _es_ewlw(v)]
         for i in reversed(indices):
-            self.vista.coordenadas_anillos.pop(i)
-            self.vista.es_salto.pop(i)
+            self.vista.modelo_medicion.borrar(i)
         self.vista.redibujar_todo()
         self.vista.recalcular_todas_las_distancias()
         self.vista.progreso_modificado.emit()
@@ -7744,9 +7728,7 @@ class PestanaImagen(QWidget):
             CHUNK = 100
             for i in range(0, len(inv), CHUNK):
                 for insert_at, px_ins, py_ins in inv[i:i + CHUNK]:
-                    self.vista.coordenadas_anillos.insert(
-                        insert_at, (px_ins, py_ins))
-                    self.vista.es_salto.insert(insert_at, "ew_lw")
+                    self.vista.modelo_medicion.insertar(insert_at, (px_ins, py_ins), "ew_lw")
                 # Permitir que la UI procese eventos pendientes
                 # (re-pintar diálogo, atender clicks, etc.)
                 QApplication.processEvents()
@@ -7898,8 +7880,7 @@ class PestanaImagen(QWidget):
             # Insertar punto "ew_lw" entre idx_seg_prev e idx_seg_curr
             # (usar idx_seg_curr como posición de inserción)
             insert_at = idx_seg_curr
-            self.vista.coordenadas_anillos.insert(insert_at, (px_ins, py_ins))
-            self.vista.es_salto.insert(insert_at, "ew_lw")
+            self.vista.modelo_medicion.insertar(insert_at, (px_ins, py_ins), "ew_lw")
             insertar_count += 1
             # Actualizar coords/saltos locales para los siguientes anillos
             coords = list(self.vista.coordenadas_anillos)
