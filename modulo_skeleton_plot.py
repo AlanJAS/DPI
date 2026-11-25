@@ -16,8 +16,8 @@ import estilos_graficos as _gr
 from modulo_datacion import score_compuesto, alineamiento_optimo_anillos
 from modulo_formatos import _es_planilla
 from modulo_formatos import leer_tucson_multi, leer_formato_compacto, leer_wid, leer_tabular, leer_como_columnas_o_tabular
-from modulo_codatacion_util import _color_r, _color_tbp, _ultima_carpeta
-from modulo_codatacion_dialogos import DialogoEditarAnillos
+from modulo_series_ui_util import _color_r, _color_tbp, _ultima_carpeta
+from modulo_dialogos_series import DialogoEditarAnillos
 
 
 class VentanaSkeletonPlot(QWidget):

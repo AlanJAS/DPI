@@ -132,7 +132,7 @@ ESTILO_BTN_COFECHA = (
     "QPushButton:checked{border:2px solid #FF8C00; background:#FF8C00; color:white;}"
 )
 
-from modulo_codatacion_util import ESTILO_CHK_COFECHA
+from modulo_series_ui_util import ESTILO_CHK_COFECHA
 
 
 # =============================================================================
@@ -204,7 +204,7 @@ from modulo_formatos import (
 # =============================================================================
 
 
-from modulo_codatacion_util import (
+from modulo_series_ui_util import (
     _ultima_carpeta,
     _color_r,
     _color_glk,
@@ -217,7 +217,7 @@ from modulo_codatacion_util import (
     _mostrar_dialogo_eps_rbar,
 )
 
-from modulo_codatacion_dialogos import (
+from modulo_dialogos_series import (
     DialogoSeleccionCronologias,
     DialogoCofecha,
     DialogoEditarAnillos,
@@ -225,7 +225,7 @@ from modulo_codatacion_dialogos import (
     DialogoCurvasNegativas,
 )
 
-from modulo_codatacion_comparacion import (
+from modulo_comparacion_ui import (
     VentanaTablaOffset,
     DialogoComparacionMultiple,
 )

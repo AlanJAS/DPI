@@ -19,9 +19,9 @@ from modulo_formatos import leer_tucson_multi, leer_formato_compacto, leer_wid, 
 from modulo_cronologia import _detrend_serie_indice, detectar_series_problematicas
 from modulo_cronologia import _construir_cronologia_desde_series
 from modulo_formatos import _guardar_metadatos_cronologia, _exportar_cronologia_df, _leer_cronologia_guardada
-from modulo_codatacion_util import _html_curvas_negativas, _mostrar_dialogo_eps_rbar, _ultima_carpeta
-from modulo_codatacion_dialogos import DialogoCurvasNegativas
-from modulo_codatacion_comparacion import DialogoComparacionMultiple, VentanaTablaOffset
+from modulo_series_ui_util import _html_curvas_negativas, _mostrar_dialogo_eps_rbar, _ultima_carpeta
+from modulo_dialogos_series import DialogoCurvasNegativas
+from modulo_comparacion_ui import DialogoComparacionMultiple, VentanaTablaOffset
 
 
 class VentanaCronologia(QWidget):

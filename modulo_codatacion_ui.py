@@ -36,7 +36,7 @@ ESTILO_BTN_COFECHA = (
     "QPushButton:hover{border:2px solid #FF8C00;}"
     "QPushButton:checked{border:2px solid #FF8C00; background:#FF8C00; color:white;}"
 )
-from modulo_codatacion_util import ESTILO_CHK_COFECHA
+from modulo_series_ui_util import ESTILO_CHK_COFECHA
 
 
 @dataclass(frozen=True)
