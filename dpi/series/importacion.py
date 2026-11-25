@@ -4,4 +4,9 @@ from dpi.formatos.deteccion import leer_series_auto
 
 def importar_archivo(modelo, ruta):
     """Registra un archivo completo o no modifica el modelo."""
-    return modelo.registrar_lote(leer_series_auto(ruta))
+    series = leer_series_auto(ruta)
+    from dpi.series.modelo import validar_anchos_fisicos
+    for nombre, datos in series.items():
+        if nombre not in modelo.datos:
+            validar_anchos_fisicos(datos['Ancho_mm'])
+    return modelo.registrar_lote(series)

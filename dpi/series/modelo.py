@@ -162,3 +162,12 @@ class ModeloSeries:
         nuevo.index = pd.Index([int(a) + int(shift) for a in nuevo.index], name=nuevo.index.name)
         self.actualizar(nombre, nuevo)
         return True
+
+
+def validar_anchos_fisicos(anchos):
+    """Los anchos físicos admiten cero y faltantes, no negativos ni booleanos."""
+    if any(isinstance(v, (bool, np.bool_)) for v in anchos):
+        raise ValueError('Anchos booleanos')
+    valores = pd.to_numeric(anchos, errors='raise')
+    if (valores < 0).any():
+        raise ValueError('Anchos negativos')
