@@ -1,8 +1,11 @@
 """Contrastes nulos con localizador de quiebres inyectado."""
 from __future__ import annotations
+import logging
 import numpy as np
 import pandas as pd
 from dpi.ciencia.estadistica import pearson
+
+logger = logging.getLogger(__name__)
 
 
 def _fase_aleatoria(x: np.ndarray, rng) -> np.ndarray:
@@ -191,6 +194,7 @@ def nulo_de_coleccion(localizar_quiebre, series_std: dict, crono_std, excluir: s
         try:
             q = localizar_quiebre(serie, crono_std, **kwargs)
         except Exception:
+            logger.debug("Falló evaluación de serie del nulo", exc_info=True)
             continue
         g = q.get("ganancia", np.nan)
         if np.isfinite(g):

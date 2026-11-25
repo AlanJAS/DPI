@@ -341,6 +341,7 @@ def puntaje_consistencia(serie_std: pd.Series, crono_std: pd.Series,
     try:
         d = diagnosticar_datacion(serie_std, crono_std, **kwargs)
     except Exception:
+        logger.debug("Falló evaluación de datación", exc_info=True)
         return {"limpia": 0, "residuo": 10 ** 6, "n_tramos": 99,
                 "diag": "error", "r_medio": float("nan")}
 
@@ -482,6 +483,7 @@ def _buscar_y_priorizar(ref, problema, mitad_ventana, max_corr,
                         tr_prob(df2["Ancho_mm"]).dropna(), d_ref,
                         ventana=12, paso=2, min_overlap=6)
                 except Exception:
+                    logger.debug("Falló evaluación de datación", exc_info=True)
                     pass
 
             def _clave(s):
@@ -537,6 +539,7 @@ def _buscar_y_priorizar(ref, problema, mitad_ventana, max_corr,
                     s_std, d_ref, max_desfase=10,
                     max_quiebres=3)
             except Exception:
+                logger.debug("Falló evaluación de datación", exc_info=True)
                 quiebres = []
 
             por_quiebre = []
@@ -599,6 +602,7 @@ def _buscar_y_priorizar(ref, problema, mitad_ventana, max_corr,
                                                  int(informe["delta"]),
                                                  anclaje=anclaje)
                     except Exception:
+                        logger.debug("Falló evaluación de datación", exc_info=True)
                         continue
                     r_v = _eval_r(df2)
                     if not np.isfinite(r_v):
@@ -639,6 +643,7 @@ def _buscar_y_priorizar(ref, problema, mitad_ventana, max_corr,
                     df2 = aplicar_correccion(problema, int(q["anio"]),
                                              int(q["delta"]), anclaje=anclaje)
                 except Exception:
+                    logger.debug("Falló evaluación de datación", exc_info=True)
                     continue
                 r_v = _eval_r(df2)
                 if not np.isfinite(r_v):
@@ -703,6 +708,7 @@ def _buscar_y_priorizar(ref, problema, mitad_ventana, max_corr,
             if informe is not None:
                 _informe_zona = informe
         except Exception:
+            logger.debug("Falló evaluación de datación", exc_info=True)
             pass
 
     # Un quiebre CONFIABLE manda sobre el diagnóstico por ventanas. El
@@ -764,6 +770,7 @@ def _buscar_y_priorizar(ref, problema, mitad_ventana, max_corr,
                 df2 = aplicar_correccion(problema, int(anio), int(delta_ok),
                                          anclaje=anclaje)
             except Exception:
+                logger.debug("Falló evaluación de datación", exc_info=True)
                 continue
             r_v = _eval_r(df2)
             if not np.isfinite(r_v):
