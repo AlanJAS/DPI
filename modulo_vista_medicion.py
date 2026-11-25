@@ -2,7 +2,7 @@
 
 from modulo_pith_ui import HerramientaPith
 
-from modulo_render_medicion import RenderMedicion
+from dpi.ui.medicion.render import RenderMedicion
 
 import math
 from dpi.medicion.calculo import anchos_puntos, anios_por_punto, dist_punto_segmento
