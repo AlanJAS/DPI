@@ -2276,10 +2276,9 @@ class PanelCodatacion(QWidget):
             df_serie = pd.DataFrame({"Ancho_mm": df[col_val]}, index=df.index)
             df_serie = df_serie.dropna()
 
-            if nombre_lista in self.series_datos:
-                self.modelo_series.registrar(nombre_lista, df_serie)
-            else:
-                self.modelo_series.registrar(nombre_lista, df_serie)
+            existe = nombre_lista in self.series_datos
+            self.modelo_series.registrar(nombre_lista, df_serie)
+            if not existe:
                 item = QListWidgetItem(nombre_lista)
                 item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
                 item.setCheckState(Qt.CheckState.Unchecked)

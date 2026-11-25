@@ -64,3 +64,15 @@ def anios_por_punto(puntos, ppm, medula, corteza, med_a_cor):
 
 def anios_medicion(n, medula, corteza, med_a_cor):
     return [medula + i if med_a_cor else corteza - i for i in range(n)]
+
+
+def dist_punto_segmento(
+    px: float, py: float,
+    x1: float, y1: float,
+    x2: float, y2: float,
+) -> float:
+    l2 = (x1 - x2) ** 2 + (y1 - y2) ** 2
+    if l2 == 0:
+        return math.hypot(px - x1, py - y1)
+    t = max(0.0, min(1.0, ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2))
+    return math.hypot(px - (x1 + t * (x2 - x1)), py - (y1 + t * (y2 - y1)))

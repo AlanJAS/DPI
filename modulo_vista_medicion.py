@@ -1,7 +1,7 @@
 """Componentes de medición de DPI."""
 
 import math
-from modulo_calculo_medicion import anchos_puntos, anios_por_punto
+from modulo_calculo_medicion import anchos_puntos, anios_por_punto, dist_punto_segmento
 import numpy as np
 from modulo_modelo_medicion import ModeloMedicion, PuntoMedicion, HistorialMedicion, TipoMarca
 from PyQt6.QtWidgets import QWidget, QDialog, QGraphicsView, QGraphicsScene, QPushButton, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QDoubleSpinBox, QComboBox, QToolTip, QGraphicsEllipseItem, QDialogButtonBox
@@ -1096,17 +1096,7 @@ class VistaInteractiva(QGraphicsView):
         distancias = anchos_puntos(self.modelo_medicion.captura(), self.pixeles_por_mm)
         self.mediciones_actualizadas.emit(distancias)
 
-    @staticmethod
-    def _dist_punto_segmento(
-        px: float, py: float,
-        x1: float, y1: float,
-        x2: float, y2: float,
-    ) -> float:
-        l2 = (x1 - x2) ** 2 + (y1 - y2) ** 2
-        if l2 == 0:
-            return math.hypot(px - x1, py - y1)
-        t = max(0.0, min(1.0, ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2))
-        return math.hypot(px - (x1 + t * (x2 - x1)), py - (y1 + t * (y2 - y1)))
+    _dist_punto_segmento = staticmethod(dist_punto_segmento)
 
     def _tolerancia_punto(self) -> float:
         return TOLERANCIA_CLICK_PUNTO / self.transform().m11()
