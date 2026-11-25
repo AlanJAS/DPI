@@ -19,8 +19,6 @@ import math
 import logging
 import numpy as np
 from modulo_calculo_medicion import calcular_anillos, puntos_desde_geometria
-from modulo_marcas_medicion import (_es_normal, _es_salto_real,
-                                     _es_quiebre, _excluye_intensidad, _es_espacio)
 
 logger = logging.getLogger(__name__)
 
@@ -159,13 +157,6 @@ def extraer_intensidad_por_anillo(
             signal_progreso.emit(int(100 * (indice + 1) / len(anillos)),
                                  f"Anillo {indice+1}/{len(anillos)} · banda {banda_px}px")
     return resultados
-
-
-def _es_amarillo_sal(val) -> bool:
-    return _excluye_intensidad(val)
-
-def _es_espacio_sal(val) -> bool:
-    return _es_quiebre(val)
 
 
 def valores_intensidad(datos, canal, metrica):

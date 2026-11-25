@@ -4,7 +4,6 @@ import math
 import numpy as np
 from modulo_calculo_medicion import calcular_anillos, puntos_desde_geometria
 from modulo_modelo_medicion import TipoMarca
-from modulo_marcas_medicion import _es_ewlw, _excluye_intensidad
 
 
 def _calcular_ewlw_posiciones(sig_prog, gray, coords, saltos, banda,
@@ -51,8 +50,8 @@ def _calcular_ewlw_posiciones(sig_prog, gray, coords, saltos, banda,
             continue
 
         # Si ya tiene ew_lw, saltar
-        if any(_es_ewlw(saltos[j])
-               for j in anillo_idxs[1:] if j < len(saltos)):
+        if any(puntos[j].tipo is TipoMarca.EW_LW
+               for j in anillo_idxs[1:]):
             continue
 
         # ── Construir perfil pixel a pixel ──────────────────────────────
@@ -68,9 +67,8 @@ def _calcular_ewlw_posiciones(sig_prog, gray, coords, saltos, banda,
             ic = anillo_idxs[k]
             if ic >= n:
                 break
-            val_k = saltos[ic] if ic < len(saltos) else False
             # Saltar quiebres y espacios (pero no ew_lw que ya filtramos)
-            if _excluye_intensidad(val_k):
+            if puntos[ic].tipo.excluye_intensidad:
                 continue
 
             x0, y0 = coords[ip]
