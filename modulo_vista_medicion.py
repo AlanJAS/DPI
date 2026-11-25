@@ -10,7 +10,7 @@ from PyQt6.QtCore import Qt, pyqtSignal, QEvent
 from modulo_pith import ajustar_circulo_minimos_cuadrados
 from constantes import MM_POR_PULGADA, PIXELES_POR_MM_DEFECTO, MAX_PASOS_HISTORIAL, TOLERANCIA_CLICK_PUNTO, TOLERANCIA_CLICK_SEGMENTO, INTERVALO_MARCADOR_DECADA, INTERVALO_MARCADOR_CINCUENTENA, INTERVALO_MARCADOR_CENTENA, COLOR_PUNTO_ACTIVO, COLOR_LINEA_ACTIVA, COLOR_SALTO, COLOR_GUIA, COLOR_CALIBRACION, COLOR_PUNTO_INACTIVO, COLOR_EWLW, TIPOS_ANOMALIA
 from modulo_marcas_medicion import _es_amarillo, _es_espacio, _es_ewlw, _es_quiebre_ini, _es_salto_real
-from modulo_marcas_medicion import MODO_ANADIR, MODO_MEDIR, MODO_CALIBRAR, MODO_MOVER, MODO_SALTO, MODO_INSERTAR, MODO_BORRAR, MODO_AUTODETECT, MODO_ANOMALIA, MODO_PITH, MODO_ESPACIO, MODO_EWLW, MODO_SELECCIONAR
+from modulo_marcas_medicion import MODO_MEDIR, MODO_CALIBRAR, MODO_MOVER, MODO_SALTO, MODO_INSERTAR, MODO_BORRAR, MODO_AUTODETECT, MODO_ANOMALIA, MODO_PITH, MODO_ESPACIO, MODO_EWLW, MODO_SELECCIONAR
 
 
 class VistaSplitView(QGraphicsView):
@@ -264,7 +264,7 @@ class VistaInteractiva(QGraphicsView):
         self.items_caminos_inactivos: dict = {}
 
         # Estado de interacción
-        self.modo_actual: int = MODO_ANADIR
+        self.modo_actual: int = MODO_MEDIR
         # Anomalías: {anio: tipo_str}
         self.anomalias: dict[int, str] = {}
         self._items_anomalias: list = []   # QGraphicsItems de marcas visuales
@@ -363,7 +363,7 @@ class VistaInteractiva(QGraphicsView):
         self._btn_quiebre_sel = None
         self._btn_limpiar_sel = None
 
-        self.cambiar_modo(MODO_ANADIR)
+        self.cambiar_modo(MODO_MEDIR)
 
     # -------------------------------------------------------------------------
     # Historial
@@ -463,7 +463,7 @@ class VistaInteractiva(QGraphicsView):
             self._linea_guia = None
         cursores = {
             MODO_MEDIR:       Qt.CursorShape.CrossCursor,
-            MODO_ANADIR:      Qt.CursorShape.CrossCursor,
+            MODO_MEDIR:      Qt.CursorShape.CrossCursor,
             MODO_CALIBRAR:    Qt.CursorShape.CrossCursor,
             MODO_SALTO:       Qt.CursorShape.CrossCursor,
             MODO_MOVER:       Qt.CursorShape.OpenHandCursor,

@@ -3,7 +3,7 @@ import unittest
 
 from modulo_modelo_medicion import ModeloMedicion, TipoMarca
 from modulo_marcas_medicion import (
-    MODO_ANADIR, MODO_MEDIR, MODO_PITH, _es_normal, _es_salto_real,
+    MODO_MEDIR, MODO_PITH, _es_normal, _es_salto_real,
     _es_espacio, _es_ewlw, _es_quiebre_ini, _es_amarillo,
     _es_quiebre, _excluye_intensidad,
 )
@@ -40,6 +40,6 @@ class TestMarcasMedicion(unittest.TestCase):
         self.assertIs(modelo.captura()[-1].tipo, TipoMarca.NORMAL)
 
     def test_modos(self):
-        self.assertEqual(MODO_ANADIR, MODO_MEDIR)
+        self.assertEqual(MODO_MEDIR)
         self.assertEqual(MODO_MEDIR, 1)
         self.assertEqual(MODO_PITH, 9)

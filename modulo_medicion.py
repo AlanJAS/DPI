@@ -96,7 +96,6 @@ from modulo_marcas_medicion import (
     _es_quiebre_ini,
     _es_ewlw,
     _es_amarillo,
-    MODO_ANADIR,
     MODO_MEDIR,
     MODO_CALIBRAR,
     MODO_MOVER,

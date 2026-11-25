@@ -1,4 +1,5 @@
 """Componentes de medición de DPI."""
+from enum import IntEnum
 from modulo_modelo_medicion import TipoMarca
 
 
@@ -8,31 +9,33 @@ def _tipo(val):
     except ValueError:
         return None
 
-MODO_MEDIR = 1   # botón «Medir»
-MODO_ANADIR = MODO_MEDIR   # alias histórico
+class ModoMedicion(IntEnum):
+    MEDIR = 1
+    CALIBRAR = 2
+    MOVER = 3
+    SALTO = 4
+    INSERTAR = 5
+    BORRAR = 6
+    AUTODETECT = 7
+    ANOMALIA = 8
+    PITH = 9
+    ESPACIO = 10
+    EWLW = 11
+    SELECCIONAR = 12
 
-MODO_CALIBRAR = 2
 
-MODO_MOVER = 3
-
-MODO_SALTO = 4
-
-MODO_INSERTAR = 5
-
-MODO_BORRAR = 6
-
-MODO_AUTODETECT = 7   # Marcar médula y corteza para auto-detección
-
-MODO_ANOMALIA   = 8   # Marcar anomalías sobre anillos ya medidos
-
-MODO_PITH       = 9   # Marcar puntos del arco para estimar médula faltante
-
-MODO_ESPACIO    = 10  # Marcar espacio dentro de un anillo (intra-ring gap)
-
-MODO_EWLW       = 11  # Marcar límite earlywood/latewood dentro de un anillo
-
-MODO_SELECCIONAR = 12  # Seleccionar múltiples anillos para borrar/convertir
-
+MODO_MEDIR = ModoMedicion.MEDIR
+MODO_CALIBRAR = ModoMedicion.CALIBRAR
+MODO_MOVER = ModoMedicion.MOVER
+MODO_SALTO = ModoMedicion.SALTO
+MODO_INSERTAR = ModoMedicion.INSERTAR
+MODO_BORRAR = ModoMedicion.BORRAR
+MODO_AUTODETECT = ModoMedicion.AUTODETECT
+MODO_ANOMALIA = ModoMedicion.ANOMALIA
+MODO_PITH = ModoMedicion.PITH
+MODO_ESPACIO = ModoMedicion.ESPACIO
+MODO_EWLW = ModoMedicion.EWLW
+MODO_SELECCIONAR = ModoMedicion.SELECCIONAR
 
 
 def _es_salto_real(val) -> bool:
