@@ -4,7 +4,7 @@ import logging
 import re
 import numpy as np
 import pandas as pd
-import json_seguro as _js
+import dpi.infraestructura.json_seguro as _js
 from constantes import (TUCSON_VALOR_FIN, TUCSON_VALOR_FALTANTE,
                         TUCSON_MAX_CHARS_ID, TUCSON_DIVISOR, DPI_DEFECTO, MM_POR_PULGADA)
 

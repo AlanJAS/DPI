@@ -1,7 +1,7 @@
 """Operaciones extraídas sin modificar sus algoritmos."""
 import os
 import pandas as pd
-import json_seguro as _js
+import dpi.infraestructura.json_seguro as _js
 import logging
 logger = logging.getLogger(__name__)
 from dpi.formatos.planillas import _es_planilla, _leer_planilla, _escribir_excel

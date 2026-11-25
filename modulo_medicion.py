@@ -36,7 +36,7 @@ from PyQt6.QtGui import QImage, QPixmap, QPen, QColor, QBrush, QShortcut, QKeySe
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QSettings, QSignalBlocker
 
 from estilos import SECUNDARIO_QSS
-import json_seguro as _js
+import dpi.infraestructura.json_seguro as _js
 from modulo_autodeteccion import (
     cargar_perfiles, guardar_perfiles,
     extraer_perfil, detectar_limites, posiciones_a_coordenadas,

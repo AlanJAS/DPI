@@ -3,7 +3,7 @@ import math
 import os
 from numbers import Real
 
-from json_seguro import guardar_json, cargar_json
+from dpi.infraestructura.json_seguro import guardar_json, cargar_json
 from dpi.medicion.datos import normalizar_radio, radio_desde_dict
 from dpi.medicion.modelo import RadioMedicion
 

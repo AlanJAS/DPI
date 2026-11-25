@@ -20,7 +20,7 @@ import cv2
 import numpy as np
 from scipy.signal import find_peaks, savgol_filter
 
-import json_seguro as _js
+import dpi.infraestructura.json_seguro as _js
 
 logger = logging.getLogger(__name__)
 
