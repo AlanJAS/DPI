@@ -315,8 +315,14 @@ class VentanaAnillos(QMainWindow):
             return
         for i in range(self._tabs_imagenes.count()):
             widget = self._tabs_imagenes.widget(i)
-            if widget is not None:
-                widget.guardar_pendiente()
+            if widget is not None and not widget.guardar_pendiente():
+                from PyQt6.QtWidgets import QMessageBox
+                if QMessageBox.question(self, "Guardado pendiente",
+                    "No se pudo guardar una sesión. ¿Cerrar sin guardar?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No) != QMessageBox.StandardButton.Yes:
+                    event.ignore()
+                    return
         cfg = QSettings("MoiCedrus", "DendroAnillos")
         cfg.setValue("tema_oscuro", str(self._modo_oscuro).lower())
         # Recordar tamaño/posición y si quedó maximizada, para reabrir la
@@ -472,13 +478,19 @@ class VentanaAnillos(QMainWindow):
             from PyQt6.QtWidgets import QMessageBox
             QMessageBox.warning(self, "Tareas en curso", "Cancele o espere a que termine la tarea antes de cerrar la pestaña.")
             return
+        if widget is not None and not widget.guardar_pendiente():
+            from PyQt6.QtWidgets import QMessageBox
+            if QMessageBox.question(self, "Guardado pendiente",
+                "No se pudo guardar la sesión. ¿Cerrar sin guardar?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No) != QMessageBox.StandardButton.Yes:
+                return
         # Si esta era la pestaña ACTIVA cuyos widgets estaban en el top bar,
         # sacarlos antes de borrar la pestaña para evitar que el layout
         # quede con referencias a widgets que se van a destruir.
         if widget is not None and widget is self._pestana_activa():
             self._actualizar_widgets_top_bar(None)
         if widget:
-            widget.guardar_pendiente()
             widget.deleteLater()
         self._tabs_imagenes.removeTab(index)
         # Si después de cerrar quedan otras pestañas, mostrar los widgets

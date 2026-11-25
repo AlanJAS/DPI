@@ -252,6 +252,7 @@ class PestanaImagen(QWidget):
         self.ruta_imagen_actual = ruta_imagen
         # No escribir antes de comprobar si existe una sesión previa.
         self._sesion_protegida = ruta_imagen
+        self._guardado_pendiente = False
         self.caminos_guardados: dict = {}
         self.serie_maestra: pd.DataFrame | None = None
         self.nombre_maestra: str = "Ninguna"
@@ -2868,18 +2869,21 @@ class PestanaImagen(QWidget):
         )
 
     def _programar_guardado(self):
+        self._guardado_pendiente = True
         self._timer_autoguardado.start()
 
     def guardar_pendiente(self):
-        if self._timer_autoguardado.isActive():
-            self._guardar_estado()
+        if self._guardado_pendiente or self._timer_autoguardado.isActive():
+            return self._guardar_estado()
+        return True
 
     def _guardar_estado(self):
         timer = getattr(self, "_timer_autoguardado", None)
         if timer is not None:
             timer.stop()
         if getattr(self, "_sesion_protegida", None) == self.ruta_imagen_actual:
-            return
+            return False
+        self._guardado_pendiente = True
         try:
             guardar_sesion(
                 self.ruta_imagen_actual,
@@ -2889,6 +2893,11 @@ class PestanaImagen(QWidget):
             )
         except Exception:
             logger.exception("No se pudo guardar el estado")
+            if hasattr(self, "label_estado"):
+                self.label_estado.setText("Error de guardado: hay cambios pendientes.")
+            return False
+        self._guardado_pendiente = False
+        return True
 
     def _cargar_estado(self) -> bool:
         self._sesion_protegida = None
