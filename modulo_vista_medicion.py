@@ -1,6 +1,7 @@
 """Componentes de medición de DPI."""
 
 import math
+from modulo_calculo_medicion import anchos_anillos
 import numpy as np
 from modulo_modelo_medicion import ModeloMedicion, PuntoMedicion, HistorialMedicion
 from PyQt6.QtWidgets import QWidget, QDialog, QGraphicsView, QGraphicsScene, QPushButton, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QDoubleSpinBox, QComboBox, QToolTip, QGraphicsEllipseItem, QDialogButtonBox
@@ -1119,42 +1120,7 @@ class VistaInteractiva(QGraphicsView):
         (el límite del anillo) o al final del camino.
         Los segmentos ew_lw se acumulan junto con los False del mismo anillo.
         """
-        coords = self.coordenadas_anillos
-        n = len(coords)
-        distancias = []
-        acum = 0.0
-
-        for i in range(1, n):
-            val = self.es_salto[i]
-            d = math.hypot(
-                coords[i][0] - coords[i-1][0],
-                coords[i][1] - coords[i-1][1],
-            ) / self.pixeles_por_mm
-
-            if _es_salto_real(val):
-                # Salto real: emitir lo acumulado y reiniciar
-                if acum > 0:
-                    distancias.append(acum)
-                acum = 0.0
-
-            elif _es_espacio(val):
-                # Quiebre: no suma, no cierra
-                pass
-
-            elif _es_ewlw(val) or _es_quiebre_ini(val):
-                # Límite EW/LW o inicio de quiebre: suma pero no cierra
-                acum += d
-
-            else:
-                # val is False: segmento normal, suma y cierra el anillo
-                acum += d
-                distancias.append(acum)
-                acum = 0.0
-
-        # Si quedó algo al final (último anillo sin límite explícito)
-        if acum > 0:
-            distancias.append(acum)
-
+        distancias = anchos_anillos(self.coordenadas_anillos, self.es_salto, self.pixeles_por_mm)
         self.mediciones_actualizadas.emit(distancias)
 
     @staticmethod

@@ -9,6 +9,7 @@ Contiene:
 
 import os
 import math
+from modulo_calculo_medicion import anchos_anillos, anios_medicion
 import json
 import re
 import logging
@@ -2277,33 +2278,8 @@ class PestanaImagen(QWidget):
         def _anchos_desde_coords(coords, saltos, anio_medula, anio_corteza,
                                   med_a_cor, ppm):
             """Recalcula anchos y años desde coordenadas (misma lógica que recalcular)."""
-            n = len(coords)
-            distancias = []
-            acum = 0.0
-            for i in range(1, n):
-                val = saltos[i]
-                d = math.hypot(coords[i][0]-coords[i-1][0],
-                               coords[i][1]-coords[i-1][1]) / ppm
-                if val is True:
-                    if acum > 0: distancias.append(acum)
-                    acum = 0.0
-                elif _es_espacio(val):
-                    pass
-                elif _es_ewlw(val) or _es_quiebre_ini(val):
-                    acum += d          # EW o inicio quiebre: suma pero no cierra
-                else:                  # False: suma y cierra
-                    acum += d
-                    distancias.append(acum)
-                    acum = 0.0
-            if acum > 0:
-                distancias.append(acum)
-            # Asignar años
-            anios, anchos = [], []
-            for k, ancho in enumerate(distancias):
-                anio = (anio_medula + k) if med_a_cor else (anio_corteza - k)
-                anios.append(anio)
-                anchos.append(ancho)
-            return anios, anchos
+            anchos = anchos_anillos(coords, saltos, ppm)
+            return anios_medicion(len(anchos), anio_medula, anio_corteza, med_a_cor), anchos
 
         entradas = []
         for i, (nombre, datos) in enumerate(self.caminos_guardados.items()):
