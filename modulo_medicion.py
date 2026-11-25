@@ -40,8 +40,8 @@ import json_seguro as _js
 from modulo_autodeteccion import (
     cargar_perfiles, guardar_perfiles,
     extraer_perfil, detectar_limites, posiciones_a_coordenadas,
-    DialogoEspecie, DialogoPreviewDeteccion,
-)
+ )
+from modulo_autodeteccion_ui import DialogoEspecie, DialogoPreviewDeteccion
 from constantes import DPI_DEFECTO, MM_POR_PULGADA, PIXELES_POR_MM_DEFECTO, TUCSON_MAX_CHARS_ID, TIPOS_ANOMALIA
 
 logger = logging.getLogger(__name__)
