@@ -995,3 +995,9 @@ def escribir_tabla(df, ruta, *, separador_csv=";", decimal=",", precision="%.6f"
                   decimal=decimal, float_format=precision)
     else:
         raise ValueError(f"Formato tabular no compatible: {ext}")
+
+
+def escribir_rwl_intensidad(codigo, anio_inicio, valores, ruta):
+    """Adaptador histórico para series de intensidad consecutivas."""
+    escribir_tucson(pd.Series(valores, index=range(anio_inicio, anio_inicio + len(valores))),
+                     ruta, codigo=codigo)

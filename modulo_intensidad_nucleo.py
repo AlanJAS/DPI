@@ -168,18 +168,6 @@ def _es_espacio_sal(val) -> bool:
     return _es_quiebre(val)
 
 
-# =============================================================================
-# EXPORTACIÓN EN FORMATO TUCSON (.rwl)
-# =============================================================================
-
-def escribir_rwl_intensidad(codigo, anio_inicio, valores, ruta):
-    """Adaptador histórico para series de intensidad consecutivas."""
-    import pandas as pd
-    from modulo_formatos import escribir_tucson
-    escribir_tucson(pd.Series(valores, index=range(anio_inicio, anio_inicio + len(valores))),
-                     ruta, codigo=codigo)
-
-
 def valores_intensidad(datos, canal, metrica):
     """Extrae una métrica o razón de canales, común a todos los formatos."""
     if canal in ("B_R", "B_G"):

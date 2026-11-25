@@ -4,8 +4,10 @@ import logging
 import numpy as np
 from modulo_intensidad_nucleo import (
     CANALES, extraer_intensidad_por_anillo, _es_amarillo_sal,
-    _es_espacio_sal, escribir_rwl_intensidad,
+    _es_espacio_sal,
 )
+from modulo_formatos import escribir_rwl_intensidad
+
 logger = logging.getLogger(__name__)
 
 
