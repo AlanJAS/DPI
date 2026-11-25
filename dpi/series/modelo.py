@@ -49,6 +49,9 @@ class ModeloSeries:
         self.originales = _LecturaSeries(self._series, "original")
         self.datos = _LecturaSeries(self._series, "actual")
 
+    def nombres(self):
+        return tuple(self._series)
+
     @property
     def revision(self):
         return self._revision
