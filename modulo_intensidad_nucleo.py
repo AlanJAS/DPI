@@ -48,6 +48,7 @@ def extraer_intensidad_por_anillo(
     porcentaje: float = 1.0,    # fracción del anillo a medir (0-1)
     alineacion: str = "centro", # "ew" | "centro" | "lw"
     med_a_cor: bool = True,
+    cancelado=None,
 ) -> list[dict]:
     """
     Extrae B/G/R/Gray Intensity por anillo de forma eficiente en memoria.
@@ -133,6 +134,8 @@ def extraer_intensidad_por_anillo(
 
     anillos = segmentos_banda_intensidad(coordenadas, es_salto)
     for indice, segmentos in enumerate(anillos):
+        if cancelado is not None and cancelado():
+            return []
         acum = _nuevo_acum()
         longitud = sum(math.dist(coordenadas[ip], coordenadas[ic]) for ip, ic in segmentos)
         recorte = 1.0 - porcentaje
@@ -140,6 +143,8 @@ def extraer_intensidad_por_anillo(
         fin = inicio + longitud * porcentaje
         pos = 0.0
         for ip, ic in segmentos:
+            if cancelado is not None and cancelado():
+                return []
             x0, y0 = coordenadas[ip]
             x1, y1 = coordenadas[ic]
             largo = math.dist((x0,y0), (x1,y1))

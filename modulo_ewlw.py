@@ -9,7 +9,7 @@ from modulo_marcas_medicion import (_es_normal, _es_salto_real, _es_ewlw,
 
 
 def _calcular_ewlw_posiciones(sig_prog, gray, coords, saltos, banda,
-                              cancel_flag=None):
+                              cancel_flag=None, med_a_cor=True):
     """
     Detecta EW/LW procesando el perfil de intensidad gris PIXEL A PIXEL
     a lo largo de cada anillo completo. Inserta un límite en TODOS los anillos.
@@ -37,8 +37,11 @@ def _calcular_ewlw_posiciones(sig_prog, gray, coords, saltos, banda,
 
     n_anillos = len(anillos)
 
+    def cancelado():
+        return cancel_flag() if callable(cancel_flag) else bool(cancel_flag and cancel_flag.get("stop"))
+
     for a_num, anillo_idxs in enumerate(anillos):
-        if cancel_flag is not None and cancel_flag.get("stop"):
+        if cancelado():
             return inserciones
 
         if sig_prog is not None:
@@ -60,6 +63,8 @@ def _calcular_ewlw_posiciones(sig_prog, gray, coords, saltos, banda,
         perfil_pos  = []   # (px, py, seg_idx) en cada muestra
 
         for k in range(1, len(anillo_idxs)):
+            if cancelado():
+                return []
             ip = anillo_idxs[k - 1]
             ic = anillo_idxs[k]
             if ic >= n:
@@ -105,6 +110,9 @@ def _calcular_ewlw_posiciones(sig_prog, gray, coords, saltos, banda,
         if len(perfil_vals) < 10:
             continue
 
+        if not med_a_cor:
+            perfil_vals.reverse()
+            perfil_pos.reverse()
         arr = np.array(perfil_vals, dtype=np.float32)
 
         # Suavizado con ventana ~10% del anillo, mínimo 5 puntos
@@ -189,7 +197,7 @@ def _calcular_anchos_ewlw_por_anillo(coords, saltos, ppm, med_a_cor=True):
     return resultado
 
 
-def detectar_ewlw_imagen(sig_prog, img_bgr, c, s, b, ruta_disco, cancel_flag=None):
+def detectar_ewlw_imagen(sig_prog, img_bgr, c, s, b, ruta_disco, cancel_flag=None, med_a_cor=True):
     """Ejecuta en thread secundario. NO toca widgets Qt directamente."""
     import cv2 as _cv2
     if img_bgr is None:
@@ -200,7 +208,7 @@ def detectar_ewlw_imagen(sig_prog, img_bgr, c, s, b, ruta_disco, cancel_flag=Non
                 "No se pudo leer la imagen desde el disco para detectar EW/LW.")
     gray = _cv2.cvtColor(img_bgr, _cv2.COLOR_BGR2GRAY).astype(np.float32)
     return _calcular_ewlw_posiciones(
-        sig_prog, gray, c, s, b, cancel_flag)
+        sig_prog, gray, c, s, b, cancel_flag, med_a_cor)
 
 
 def calcular_anchos_ewlw(coords, saltos, datos_medidos, ppm, med_a_cor=None):

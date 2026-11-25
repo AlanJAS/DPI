@@ -118,11 +118,6 @@ from modulo_vista_medicion import (
     VistaInteractiva,
 )
 
-from modulo_worker_medicion import (
-    _WorkerSignals,
-    _Worker,
-    _DialogoProgreso,
-)
 
 
 class ExportadorDendro:

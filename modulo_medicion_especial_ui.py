@@ -21,7 +21,7 @@ from modulo_pith_nucleo import distancia_faltante_dap
 logger = logging.getLogger(__name__)
 from modulo_marcas_medicion import ModoMedicion, _es_salto_real, _es_normal, _es_espacio, _es_ewlw, _es_amarillo
 from modulo_ewlw import detectar_ewlw_imagen, calcular_anchos_ewlw
-from modulo_worker_medicion import _Worker, _DialogoProgreso
+from modulo_worker_medicion import GestorTareasMedicion
 def _ultima_carpeta(nueva_ruta: str | None = None) -> str:
     return ultima_carpeta("ultima_carpeta", nueva_ruta)
 
@@ -75,8 +75,7 @@ class ControlMedicionEspecial:
         self._pith_usar_ref = False
         self._pith_dap_mm = 200.0
         self._pith_metodo_calculo = "rg"
-        self._bi_worker = None
-        self._ewlw_worker = None
+        self._tareas = GestorTareasMedicion(parent)
 
     @property
     def datos_medidos(self):
@@ -104,8 +103,7 @@ class ControlMedicionEspecial:
 
     @property
     def tareas_en_curso(self):
-        return any(w is not None and w.isRunning()
-                   for w in (self._ewlw_worker, self._bi_worker))
+        return self._tareas.en_curso
 
     def restaurar_estimacion(self, datos):
         if not datos.get("pith_estimated"):
@@ -448,173 +446,46 @@ class ControlMedicionEspecial:
 
 
     def _detectar_ewlw_automatico(self):
-        """Detecta EW/LW automáticamente en hilo separado.
-
-        Bug histórico (causaba freezes y en un caso reinicio de la PC):
-          1. cv2.imread() corría en el MAIN thread → bloqueaba la UI varios
-             segundos en imágenes grandes (scanners a 2400dpi).
-          2. No había protección contra doble clic → se podían lanzar varios
-             workers concurrentes, cada uno con su propia copia del array
-             gris en memoria (decenas/cientos de MB) → OOM kill.
-          3. dlg.cancelado.connect(worker.terminate) — QThread.terminate()
-             es UNSAFE según docs de Qt: para el thread sin limpiar
-             recursos, puede corromper memoria si estaba en numpy/cv2.
-          4. Re-leía la imagen del disco aunque self._img_bgr_original ya
-             la tuviera cacheada en RAM.
-
-        Fixes aplicados:
-          - Si hay otro worker activo, mensaje y bail (sin lanzar segundo).
-          - Reusa self._img_bgr_original cuando está disponible.
-          - Mueve cv2.cvtColor también fuera del main thread.
-          - Cancelación cooperativa con flag en vez de terminate().
-          - Limpia self._ewlw_worker al terminar para liberar memoria.
-        """
-        # Protección contra doble lanzamiento — uno de los caminos al crash.
-        worker_previo = getattr(self, "_ewlw_worker", None)
-        if worker_previo is not None and worker_previo.isRunning():
-            QMessageBox.information(
-                self._parent, "Detección en curso",
-                "Ya se está ejecutando una detección de EW/LW.\n"
-                "Espera a que termine o cancela el diálogo de progreso."
-            )
+        """Detecta límites en segundo plano y aplica una sola edición validada."""
+        if self.tareas_en_curso:
+            QMessageBox.information(self._parent, "Tarea en curso", "Hay una tarea de medición activa.")
             return
-
-        if not self.vista.coordenadas_anillos or len(self.vista.coordenadas_anillos) < 2:
-            QMessageBox.information(
-                self._parent, "Sin anillos",
-                "No hay anillos marcados todavía. Marca al menos un anillo antes.")
-            return
-
-        # Capturar estado antes de lanzar el hilo
         coords = list(self.vista.coordenadas_anillos)
         saltos = list(self.vista.es_salto)
-        banda  = self._bi_banda
-        ruta   = self.ruta_imagen_actual
-        # Usar la imagen cacheada si existe (común: ya cargada al abrir
-        # la pestaña). Solo re-leemos del disco si por algún motivo no
-        # está disponible.
-        img_cached = self._img_bgr_original
+        if len(coords) < 2:
+            QMessageBox.information(self._parent, "Sin anillos", "Marca al menos un anillo.")
+            return
+        banda, ruta = self._bi_banda, self.ruta_imagen_actual
+        imagen = self._img_bgr_original
+        direccion = self.combo_dir.currentIndex()
 
-        dlg = _DialogoProgreso("Detectando límites EW/LW", parent=self._parent)
-        # Flag de cancelación cooperativa — más seguro que terminate().
-        # Se chequea dentro del loop principal de la función worker.
-        cancel_flag = {"stop": False}
-        dlg.show()
+        def tarea(progreso, cancelado):
+            return detectar_ewlw_imagen(progreso, imagen, coords, saltos, banda,
+                                         ruta, cancelado, direccion == 0)
 
-        worker = _Worker(detectar_ewlw_imagen, img_cached, coords, saltos, banda, ruta, cancel_flag)
-        self._ewlw_worker = worker
-
-        worker.signals.progreso.connect(dlg.actualizar)
-
-        def _on_error(e):
-            dlg.close()
-            QMessageBox.critical(self._parent, "Error EW/LW", e)
-        worker.signals.error.connect(_on_error)
-
-        def _on_ewlw(inserciones):
-            """Callback que aplica los resultados del worker EW/LW.
-
-            Bug arreglado (causaba el "crash al 99%"):
-              - Antes: aplicaba TODAS las inserciones (incluso parciales
-                de una cancelación) y llamaba redibujar_todo de forma
-                sincrónica. Con 200+ inserts + redibujar el main thread
-                quedaba freezeado varios segundos → usuario veía el
-                progreso pegado al 99% y pensaba que crasheaba.
-              - Ahora: (1) si se canceló, descarta los parciales sin
-                aplicar nada; (2) si hay resultados, los aplica en
-                chunks con QApplication.processEvents() entre chunks
-                para que la UI responda; (3) muestra el estado del
-                proceso en el diálogo ("Aplicando...", "Redibujando...")
-                en vez de quedar 99% silencioso.
-            """
-            # ── Caso 1: el usuario canceló ──
-            # Descartar parciales para no aplicar 200 EW/LW que no quería.
-            if cancel_flag.get("stop"):
-                try:
-                    dlg.close()
-                except Exception:
-                    pass
-                self.label_estado.setText(
-                    "🛑 Detección EW/LW cancelada — sin cambios aplicados."
-                )
-                return
-
-            # ── Caso 2: sin resultados ──
-            if not inserciones:
-                try:
-                    dlg.close()
-                except Exception:
-                    pass
-                self.label_estado.setText(
-                    "🍂 No se encontraron límites EW/LW."
-                )
-                return
-
-            if (self.ruta_imagen_actual != ruta
+        def aplicar(inserciones):
+            if (self.ruta_imagen_actual != ruta or self.combo_dir.currentIndex() != direccion
                     or list(self.vista.coordenadas_anillos) != coords
                     or list(self.vista.es_salto) != saltos):
-                dlg.close()
                 self.label_estado.setText("Resultados EW/LW descartados: cambió el radio.")
                 return
-
-            # ── Caso 3: aplicar resultados ──
-            # Actualizar el diálogo para indicar la fase de aplicación.
-            # El diálogo sigue VISIBLE durante esta fase para que el
-            # usuario sepa que el programa está trabajando, no crasheado.
-            try:
-                if hasattr(dlg, "_bar"):
-                    dlg._bar.setValue(100)
-                if hasattr(dlg, "_lbl"):
-                    dlg._lbl.setText(
-                        f"Aplicando {len(inserciones)} límites EW/LW…")
-                QApplication.processEvents()
-            except Exception:
-                pass
-
-            # processEvents puede haber atendido una cancelación o edición.
-            if (cancel_flag.get("stop") or self.ruta_imagen_actual != ruta
-                    or list(self.vista.coordenadas_anillos) != coords
-                    or list(self.vista.es_salto) != saltos):
-                dlg.close()
+            if not inserciones:
+                self.label_estado.setText("🍂 No se encontraron límites EW/LW.")
                 return
-            # Preparar todos los cambios fuera del modelo activo.
             puntos = list(self.vista.modelo_medicion.captura())
-            try:
-                for insert_at, px_ins, py_ins in reversed(inserciones):
-                    if not 0 <= insert_at <= len(puntos):
-                        raise ValueError("Índice de inserción inválido")
-                    puntos.insert(insert_at, PuntoMedicion((px_ins, py_ins), TipoMarca.EW_LW))
-            except (ValueError, TypeError, IndexError) as exc:
-                dlg.close()
-                QMessageBox.warning(self._parent, "EW/LW", str(exc))
-                return
+            for indice, x, y in sorted(inserciones, reverse=True):
+                if not 1 <= indice < len(coords):
+                    raise ValueError("Índice de inserción EW/LW inválido")
+                puntos.insert(indice, PuntoMedicion((x, y), TipoMarca.EW_LW))
             self.vista.guardar_en_historial()
             self.vista.modelo_medicion.restaurar(puntos)
             self.vista.recalcular_todas_las_distancias()
             self.vista.progreso_modificado.emit()
+            self.label_estado.setText(f"🍂 EW/LW automático: {len(inserciones)} límites insertados.")
 
-            # Cerrar el diálogo SOLO cuando todo terminó.
-            try:
-                dlg.close()
-            except Exception:
-                pass
-            self.label_estado.setText(
-                f"🍂 EW/LW automático: {len(inserciones)} límites insertados. "
-                "Usa 🖐 Mover para ajustar."
-            )
-
-        worker.signals.resultado.connect(_on_ewlw)
-
-        def _on_cancel():
-            """Cancelación segura: setea flag, el worker termina en próxima
-            iteración del loop. Mucho más seguro que worker.terminate()."""
-            cancel_flag["stop"] = True
-            dlg._lbl.setText("Cancelando... espera a que termine la iteración actual.")
-
-        dlg.cancelado.connect(_on_cancel)
-        worker.start()
-        return
-
+        self._tareas.iniciar("Detectando límites EW/LW", tarea, aplicar,
+            lambda error: QMessageBox.critical(self._parent, "Error EW/LW", error),
+            lambda: self.label_estado.setText("Detección EW/LW cancelada — sin cambios."))
 
     def _exportar_ewlw(self, codigo: str, ruta_base: str,
                         coords: list | None = None,
@@ -702,8 +573,7 @@ class ControlMedicionEspecial:
         # Protección contra doble lanzamiento (mismo problema que en EW/LW:
         # múltiples workers concurrentes con copias de la imagen llevan a OOM
         # y posible crash del sistema).
-        worker_previo = getattr(self, "_bi_worker", None)
-        if worker_previo is not None and worker_previo.isRunning():
+        if self.tareas_en_curso:
             QMessageBox.information(
                 self._parent, "Cálculo en curso",
                 "Ya se está ejecutando un cálculo de intensidad.\n"
@@ -736,41 +606,19 @@ class ControlMedicionEspecial:
         banda    = self._bi_banda
         canales  = list(self._bi_canales)
         anios_capturados = [d["anio"] for d in self.datos_medidos]
-        n_anillos = len(anios_capturados)
-
-        dlg = _DialogoProgreso("Calculando intensidad de color", parent=self._parent)
-        dlg.show()
 
         pct_calculo  = self._bi_porcentaje / 100.0
         alin_calculo = self._bi_alineacion
         med_a_cor = self.combo_dir.currentIndex() == 0
 
-        def _tarea(sig_prog, img, c, s, p, b, ch, pct, alin):
+        def _tarea(progreso, cancelado):
             return extraer_intensidad_por_anillo(
-                signal_progreso=sig_prog,
-                imagen_bgr=img,
-                coordenadas=c,
-                es_salto=s,
-                pixeles_por_mm=p,
-                banda_px=b,
-                canales=ch,
-                porcentaje=pct,
-                alineacion=alin, med_a_cor=med_a_cor,
-            )
-
-        worker = _Worker(_tarea, img_bgr, coords, saltos, ppm, banda, canales,
-                          pct_calculo, alin_calculo)
-        self._bi_worker = worker  # evitar que el GC lo destruya
-
-        worker.signals.progreso.connect(dlg.actualizar)
-
-        def _on_error(e):
-            dlg.close()
-            QMessageBox.critical(self._parent, "Error al calcular BI", e)
-        worker.signals.error.connect(_on_error)
+                signal_progreso=progreso, imagen_bgr=img_bgr,
+                coordenadas=coords, es_salto=saltos, pixeles_por_mm=ppm,
+                banda_px=banda, canales=canales, porcentaje=pct_calculo,
+                alineacion=alin_calculo, med_a_cor=med_a_cor, cancelado=cancelado)
 
         def _on_resultado(resultados):
-            dlg.close()
             if (self.ruta_imagen_actual != ruta
                     or list(self.vista.coordenadas_anillos) != coords
                     or list(self.vista.es_salto) != saltos
@@ -788,25 +636,9 @@ class ControlMedicionEspecial:
                 f"🎨 {len(resultados)} anillos · banda {banda}px · "
                 f"canales: {', '.join(canales)}")
 
-        worker.signals.resultado.connect(_on_resultado)
-
-        def _on_cancel():
-            """Cancelación segura: cierra el diálogo y desconecta callbacks,
-            pero deja al worker terminar en silencio. NO usa terminate()
-            porque interrumpir un thread con cv2/numpy en pleno cálculo
-            puede corromper memoria o reiniciar el sistema."""
-            try:
-                worker.signals.resultado.disconnect()
-                worker.signals.error.disconnect()
-                worker.signals.progreso.disconnect()
-            except (TypeError, RuntimeError):
-                pass
-            dlg.close()
-            self.label_estado.setText(
-                "Cálculo BI cancelado (terminará silenciosamente en background).")
-
-        dlg.cancelado.connect(_on_cancel)
-        worker.start()
+        self._tareas.iniciar("Calculando intensidad de color", _tarea, _on_resultado,
+            lambda error: QMessageBox.critical(self._parent, "Error al calcular BI", error),
+            lambda: self.label_estado.setText("Cálculo BI cancelado — sin cambios."))
 
 
     def _toggle_banda_bi(self, activo: bool):
