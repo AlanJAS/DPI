@@ -3,6 +3,7 @@ import math
 import os
 from numbers import Real
 
+from dpi.ciencia.indice_anual import validar_anios
 from dpi.infraestructura.json_seguro import guardar_json, cargar_json
 from dpi.medicion.datos import normalizar_radio, radio_desde_dict
 from dpi.medicion.modelo import RadioMedicion
@@ -34,7 +35,7 @@ def _validar_radio(radio, *, activo=False):
         for k, v in datos["anomalias"].items():
             if isinstance(k, bool) or not isinstance(k, (str, int)) or not isinstance(v, str):
                 raise ValueError("Anomalía inválida")
-            anio = int(k)
+            anio = int(validar_anios([int(k)])[0])
             if anio in anomalias:
                 raise ValueError("Año de anomalía duplicado")
             anomalias[anio] = v
