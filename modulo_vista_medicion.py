@@ -259,6 +259,19 @@ class VistaInteractiva(QGraphicsView):
 
         # Estado de interacción
         self.modo_actual: ModoMedicion = ModoMedicion.MEDIR
+        self._acciones_click = {
+            ModoMedicion.INSERTAR: self._insertar_en_segmento,
+            ModoMedicion.BORRAR: self._borrar_punto_cercano,
+            ModoMedicion.SELECCIONAR: self._iniciar_seleccion_mouse,
+            ModoMedicion.CALIBRAR: self._paso_calibracion,
+            ModoMedicion.MEDIR: self._paso_medir,
+            ModoMedicion.SALTO: self._paso_medir,
+            ModoMedicion.AUTODETECT: self._paso_autodetect,
+            ModoMedicion.ANOMALIA: self._paso_anomalia,
+            ModoMedicion.PITH: self._paso_pith,
+            ModoMedicion.ESPACIO: self._paso_espacio,
+            ModoMedicion.EWLW: self._paso_ewlw,
+        }
         # Anomalías: {anio: tipo_str}
         self._punto_arrastrado_idx: int | None = None
         self._is_panning: bool = False
@@ -981,20 +994,7 @@ class VistaInteractiva(QGraphicsView):
         if self.modo_actual == ModoMedicion.MOVER:
             self._iniciar_mover(x, y, event)
             return
-        acciones = {
-            ModoMedicion.INSERTAR: self._insertar_en_segmento,
-            ModoMedicion.BORRAR: self._borrar_punto_cercano,
-            ModoMedicion.SELECCIONAR: self._iniciar_seleccion_mouse,
-            ModoMedicion.CALIBRAR: self._paso_calibracion,
-            ModoMedicion.MEDIR: self._paso_medir,
-            ModoMedicion.SALTO: self._paso_medir,
-            ModoMedicion.AUTODETECT: self._paso_autodetect,
-            ModoMedicion.ANOMALIA: self._paso_anomalia,
-            ModoMedicion.PITH: self._paso_pith,
-            ModoMedicion.ESPACIO: self._paso_espacio,
-            ModoMedicion.EWLW: self._paso_ewlw,
-        }
-        accion = acciones.get(self.modo_actual)
+        accion = self._acciones_click.get(self.modo_actual)
         if accion is None:
             return super().mousePressEvent(event)
         accion(x, y)
