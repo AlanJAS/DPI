@@ -5,7 +5,7 @@ from numbers import Real
 
 from json_seguro import guardar_json, cargar_json
 from modulo_datos_medicion import normalizar_radio, radio_desde_dict
-from modulo_modelo_medicion import ModeloMedicion, RadioMedicion
+from modulo_modelo_medicion import RadioMedicion
 
 VERSION_FORMATO = 1
 
@@ -27,13 +27,6 @@ def _validar_radio(radio, *, activo=False):
                 or not _numero_finito(dato.get("ancho_mm"))):
             raise ValueError("Medición histórica inválida")
     datos = normalizar_radio(radio)
-    if type(datos["dir_idx"]) is not int or datos["dir_idx"] not in (0, 1):
-        raise ValueError("Dirección de medición inválida")
-    for campo in ("anio_medula", "anio_corteza"):
-        if type(datos[campo]) is not int:
-            raise ValueError(f"{campo} debe ser entero")
-    if "codigo" in datos and not isinstance(datos["codigo"], str):
-        raise ValueError("Código de radio inválido")
     if "anomalias" in datos:
         if not isinstance(datos["anomalias"], dict):
             raise ValueError("Anomalías inválidas")
@@ -46,10 +39,6 @@ def _validar_radio(radio, *, activo=False):
                 raise ValueError("Año de anomalía duplicado")
             anomalias[anio] = v
         datos["anomalias"] = anomalias
-    for campo in ("medula", "corteza"):
-        if campo in datos and type(datos[campo]) is not bool:
-            raise ValueError(f"{campo} debe ser booleano")
-
     clave = "coordenadas" if activo else "coords"
     alternativa = "coords" if activo else "coordenadas"
     coords = datos.get(clave, datos.get(alternativa, []))
@@ -58,13 +47,13 @@ def _validar_radio(radio, *, activo=False):
         raise ValueError("Geometría de radio inválida")
     if clave in datos and alternativa in datos and datos[clave] != datos[alternativa]:
         raise ValueError("Representaciones de geometría incompatibles")
-    modelo = ModeloMedicion()
-    modelo.cargar(coords, marcas)
     if activo and legacy and len(coords) < 2:
-        # La vista activa no puede representar una serie sin geometría.
         raise ValueError("Radio activo histórico sin geometría editable")
-    datos[clave] = list(modelo.coordenadas)
-    datos["es_salto"] = list(modelo.marcas)
+    if "codigo" in datos and not isinstance(datos["codigo"], str):
+        raise ValueError("Código de radio inválido")
+    radio_tipado = radio_desde_dict(datos)
+    datos[clave] = list(radio_tipado.coordenadas)
+    datos["es_salto"] = list(radio_tipado.marcas)
     datos.pop(alternativa, None)
     return datos
 

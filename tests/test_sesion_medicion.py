@@ -54,6 +54,12 @@ class TestSesionMedicion(unittest.TestCase):
             with self.subTest(datos=datos), self.assertRaises(ValueError):
                 normalizar_sesion(datos)
 
+    def test_rechaza_anios_historicos_duplicados(self):
+        radio = {"datos_medidos": [{"anio": 2000, "ancho_mm": 1.0},
+                                  {"anio": 2000, "ancho_mm": 2.0}]}
+        with self.assertRaises(ValueError):
+            normalizar_sesion({"caminos_guardados": {"R": radio}})
+
     def test_guardado_invalido_conserva_archivo(self):
         guardar_sesion(self.imagen, 10, {}, self.radio)
         ruta = Path(ruta_sesion(self.imagen))
