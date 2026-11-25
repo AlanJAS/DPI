@@ -15,10 +15,12 @@ from PyQt6.QtGui import QPen, QColor, QBrush
 from PyQt6.QtCore import Qt
 import estilos_graficos as _gr
 from modulo_intensidad import extraer_intensidad_por_anillo, escribir_rwl_intensidad, DialogoConfigBI, DialogoGuardarBI
+from modulo_intensidad_nucleo import valores_intensidad
 from modulo_pith import estimar_anillos_faltantes, DialogoMetodoPith, DialogoEstimacionPith
+from modulo_pith_nucleo import distancia_faltante_dap
 logger = logging.getLogger(__name__)
 from modulo_marcas_medicion import ModoMedicion, _es_salto_real, _es_normal, _es_espacio, _es_ewlw, _es_amarillo
-from modulo_ewlw import detectar_ewlw_imagen
+from modulo_ewlw import detectar_ewlw_imagen, calcular_anchos_ewlw
 from modulo_worker_medicion import _Worker, _DialogoProgreso
 def _ultima_carpeta(nueva_ruta: str | None = None) -> str:
     return ultima_carpeta("ultima_carpeta", nueva_ruta)
@@ -81,13 +83,7 @@ def _calcular_pith_por_dap(self):
         return
 
     coords = self.vista.coordenadas_anillos
-    longitud_medida_px = sum(
-        math.hypot(coords[i][0]-coords[i-1][0], coords[i][1]-coords[i-1][1])
-        for i in range(1, len(coords))
-        if not self.vista.es_salto[i]
-    )
-
-    distancia_faltante_px = max(0.0, radio_px - longitud_medida_px)
+    distancia_faltante_px = distancia_faltante_dap(coords, self.vista.es_salto, radio_px)
 
     if distancia_faltante_px <= 0:
         QMessageBox.information(self, "Sin anillos faltantes",
@@ -552,66 +548,8 @@ def _exportar_ewlw(self, codigo: str, ruta_base: str,
     if not datos_medidos:
         return
 
-    n = len(coords)
-    ppm = self.vista.pixeles_por_mm
-    med_a_cor = self.combo_dir.currentIndex() == 0
-
-    anios_ew, anchos_ew = [], []
-    anios_lw, anchos_lw = [], []
-
-    acum_ew = 0.0
-    acum_lw = 0.0
-    en_lw = False
-    anio_actual = datos_medidos[0]["anio"] if datos_medidos else 0
-    anillo_idx = 0
-
-    for i in range(1, n):
-        val = saltos[i]
-        d = math.hypot(coords[i][0]-coords[i-1][0],
-                       coords[i][1]-coords[i-1][1]) / ppm
-
-        if _es_salto_real(val):  # salto
-            acum_ew = acum_lw = 0.0
-            en_lw = False
-            continue
-        if _es_espacio(val):
-            continue
-        if _es_ewlw(val):
-            en_lw = True
-            if d > 0:
-                acum_lw = 0.0  # reiniciar LW desde aquí
-            continue
-        if _es_normal(val):
-            # Fin de anillo
-            if en_lw:
-                acum_lw += d
-            else:
-                acum_ew += d
-
-            # ¿El siguiente es un límite de anillo o fin?
-            val_next = saltos[i + 1] if i + 1 < n else False
-            if val_next is False or i == n - 1:
-                if anillo_idx < len(datos_medidos):
-                    anio = datos_medidos[anillo_idx]["anio"]
-                    anios_ew.append(anio)
-                    anchos_ew.append(acum_ew)
-                    anios_lw.append(anio)
-                    anchos_lw.append(acum_lw)
-                    anillo_idx += 1
-                acum_ew = acum_lw = 0.0
-                en_lw = False
-            else:
-                if en_lw:
-                    acum_lw += d
-                else:
-                    acum_ew += d
-            continue
-
-        # Tramo normal (también acumula según estado EW/LW)
-        if en_lw:
-            acum_lw += d
-        else:
-            acum_ew += d
+    anios_ew, anchos_ew, anios_lw, anchos_lw = calcular_anchos_ewlw(
+        coords, saltos, datos_medidos, self.vista.pixeles_por_mm)
 
     if not anios_ew:
         return
@@ -1169,18 +1107,12 @@ def _exportar_bi_tucson(self, ruta: str, anios: list, seleccion: list):
     errores = []
 
     for canal, met in seleccion:
+        vals = valores_intensidad(self._bi_datos, canal, met)
         if canal in ("B_R", "B_G"):
-            canal2 = "R" if canal == "B_R" else "G"
-            vals_b = [d.get("B_mean", 0.0) for d in self._bi_datos]
-            vals_x = [d.get(f"{canal2}_mean", 1.0) for d in self._bi_datos]
-            vals_ratio = [b / x if x > 0 else 0.0
-                          for b, x in zip(vals_b, vals_x)]
-            r_max = max(vals_ratio) if vals_ratio else 1.0
-            vals_norm = [v / r_max for v in vals_ratio]
+            r_max = max(vals) if vals else 1.0
+            vals_norm = [v / r_max for v in vals]
             suf = canal.lower().replace("_", "div")
         else:
-            key = f"{canal}_{met}"
-            vals = [d.get(key, 0.0) for d in self._bi_datos]
             vals_norm = [v / 255.0 for v in vals]
             suf = f"{canal.lower()}_{met}"
 
@@ -1211,20 +1143,8 @@ def _exportar_bi_multicolumna(self, ruta: str, ext: str, anios: list,
     # Construir DataFrame con una columna por cada (canal, métrica)
     data = {"Anio": anios}
     for canal, met in seleccion:
-        if canal in ("B_R", "B_G"):
-            canal2 = "R" if canal == "B_R" else "G"
-            vals_b = [d.get("B_mean", 0.0) for d in self._bi_datos]
-            vals_x = [d.get(f"{canal2}_mean", 1.0) for d in self._bi_datos]
-            col_name = f"{canal2}div"  # rdiv, gdiv
-            col_label = f"B_{canal2}_ratio"
-            vals = [b / x if x > 0 else 0.0
-                    for b, x in zip(vals_b, vals_x)]
-            data[col_label] = vals
-        else:
-            key = f"{canal}_{met}"
-            vals = [d.get(key, 0.0) for d in self._bi_datos]
-            col_label = f"{canal}_{met}"
-            data[col_label] = vals
+        col_label = f"{canal}_ratio" if canal in ("B_R", "B_G") else f"{canal}_{met}"
+        data[col_label] = valores_intensidad(self._bi_datos, canal, met)
 
     df = pd.DataFrame(data)
 

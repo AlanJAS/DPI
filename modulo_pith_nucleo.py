@@ -164,3 +164,15 @@ def estimar_anillos_faltantes(
         "incertidumbre_min":    round(inc_min, 1),
         "incertidumbre_max":    round(inc_max, 1),
     }
+
+
+def distancia_faltante_dap(coords, saltos, radio_px):
+    """Distancia restante según el criterio DAP histórico (en píxeles)."""
+    longitud_medida_px = sum(
+        math.hypot(coords[i][0]-coords[i-1][0], coords[i][1]-coords[i-1][1])
+        for i in range(1, len(coords))
+        if not saltos[i]
+    )
+
+    distancia_faltante_px = max(0.0, radio_px - longitud_medida_px)
+    return distancia_faltante_px

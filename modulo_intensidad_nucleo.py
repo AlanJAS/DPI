@@ -271,3 +271,12 @@ def escribir_rwl_intensidad(
     with open(ruta, "w", encoding="utf-8", newline="\r\n") as f:
         for ln in lineas:
             f.write(ln.rstrip() + "\n")
+
+
+def valores_intensidad(datos, canal, metrica):
+    """Extrae una métrica o razón de canales, común a todos los formatos."""
+    if canal in ("B_R", "B_G"):
+        otro = "R" if canal == "B_R" else "G"
+        return [d.get("B_mean", 0.0) / d.get(f"{otro}_mean", 1.0)
+                if d.get(f"{otro}_mean", 1.0) > 0 else 0.0 for d in datos]
+    return [d.get(f"{canal}_{metrica}", 0.0) for d in datos]

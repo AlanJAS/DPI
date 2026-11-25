@@ -3,7 +3,7 @@
 import math
 import numpy as np
 from modulo_marcas_medicion import (_es_normal, _es_salto_real, _es_ewlw,
-                                     _es_quiebre, _excluye_intensidad)
+                                     _es_quiebre, _excluye_intensidad, _es_espacio)
 
 
 def _calcular_ewlw_posiciones(sig_prog, gray, coords, saltos, banda,
@@ -260,3 +260,68 @@ def detectar_ewlw_imagen(sig_prog, img_bgr, c, s, b, ruta_disco, cancel_flag=Non
     gray = _cv2.cvtColor(img_bgr, _cv2.COLOR_BGR2GRAY).astype(np.float32)
     return _calcular_ewlw_posiciones(
         sig_prog, gray, c, s, b, cancel_flag)
+
+
+def calcular_anchos_ewlw(coords, saltos, datos_medidos, ppm):
+    """Proyección EW/LW histórica para exportación; sin acceso a Qt.
+
+    Conserva la distribución de anchos y el orden del exportador existente.
+    """
+    n = len(coords)
+
+    anios_ew, anchos_ew = [], []
+    anios_lw, anchos_lw = [], []
+
+    acum_ew = 0.0
+    acum_lw = 0.0
+    en_lw = False
+    anillo_idx = 0
+
+    for i in range(1, n):
+        val = saltos[i]
+        d = math.hypot(coords[i][0]-coords[i-1][0],
+                       coords[i][1]-coords[i-1][1]) / ppm
+
+        if _es_salto_real(val):  # salto
+            acum_ew = acum_lw = 0.0
+            en_lw = False
+            continue
+        if _es_espacio(val):
+            continue
+        if _es_ewlw(val):
+            en_lw = True
+            if d > 0:
+                acum_lw = 0.0  # reiniciar LW desde aquí
+            continue
+        if _es_normal(val):
+            # Fin de anillo
+            if en_lw:
+                acum_lw += d
+            else:
+                acum_ew += d
+
+            # ¿El siguiente es un límite de anillo o fin?
+            val_next = saltos[i + 1] if i + 1 < n else False
+            if val_next is False or i == n - 1:
+                if anillo_idx < len(datos_medidos):
+                    anio = datos_medidos[anillo_idx]["anio"]
+                    anios_ew.append(anio)
+                    anchos_ew.append(acum_ew)
+                    anios_lw.append(anio)
+                    anchos_lw.append(acum_lw)
+                    anillo_idx += 1
+                acum_ew = acum_lw = 0.0
+                en_lw = False
+            else:
+                if en_lw:
+                    acum_lw += d
+                else:
+                    acum_ew += d
+            continue
+
+        # Tramo normal (también acumula según estado EW/LW)
+        if en_lw:
+            acum_lw += d
+        else:
+            acum_ew += d
+    return anios_ew, anchos_ew, anios_lw, anchos_lw
