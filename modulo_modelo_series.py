@@ -13,21 +13,28 @@ class _PruebaCorreccion:
     respaldo: pd.DataFrame
 
 
-class _LecturaOriginales(Mapping):
-    def __init__(self, datos):
-        self._datos = datos
+@dataclass(slots=True)
+class _Serie:
+    original: pd.DataFrame
+    actual: pd.DataFrame
+
+
+class _LecturaSeries(Mapping):
+    def __init__(self, series, campo):
+        self._series = series
+        self._campo = campo
 
     def __getitem__(self, nombre):
-        return self._datos[nombre].copy(deep=True)
+        return getattr(self._series[nombre], self._campo).copy(deep=True)
 
     def __iter__(self):
-        return iter(self._datos)
+        return iter(self._series)
 
     def __len__(self):
-        return len(self._datos)
+        return len(self._series)
 
     def __contains__(self, nombre):
-        return nombre in self._datos
+        return nombre in self._series
 
 
 class ModeloSeries:
@@ -36,11 +43,10 @@ class ModeloSeries:
     Las vistas públicas entregan copias independientes de los datos.
     """
     def __init__(self):
-        self._datos: dict[str, pd.DataFrame] = {}
-        self._originales: dict[str, pd.DataFrame] = {}
+        self._series: dict[str, _Serie] = {}
         self._prueba: _PruebaCorreccion | None = None
-        self.originales = _LecturaOriginales(self._originales)
-        self.datos = _LecturaOriginales(self._datos)
+        self.originales = _LecturaSeries(self._series, "original")
+        self.datos = _LecturaSeries(self._series, "actual")
 
     @property
     def nombre_en_prueba(self):
@@ -54,9 +60,9 @@ class ModeloSeries:
         """Instala una vista temporal sin alterar la serie original."""
         if self._prueba is not None:
             raise ValueError('Ya existe una corrección temporal')
-        respaldo = self._datos[nombre].copy()
+        respaldo = self._series[nombre].actual.copy()
         corregido = self._validar(df)
-        self._datos[nombre] = corregido
+        self._series[nombre].actual = corregido
         self._prueba = _PruebaCorreccion(nombre, respaldo)
 
     def confirmar_correccion(self):
@@ -71,7 +77,7 @@ class ModeloSeries:
         if self._prueba is None:
             return False
         prueba = self._prueba
-        self._datos[prueba.nombre] = prueba.respaldo
+        self._series[prueba.nombre].actual = prueba.respaldo
         self._prueba = None
         return True
 
@@ -93,29 +99,28 @@ class ModeloSeries:
         self._exigir_sin_prueba(nombre)
         datos = self._validar(df)
         original = datos.copy()
-        self._datos[nombre] = datos
-        self._originales[nombre] = original
+        self._series[nombre] = _Serie(original, datos)
 
     def eliminar(self, nombre):
         self._exigir_sin_prueba(nombre)
-        self._datos.pop(nombre, None)
-        self._originales.pop(nombre, None)
+        self._series.pop(nombre, None)
 
     def restablecer(self, nombre):
         self._exigir_sin_prueba(nombre)
-        self._datos[nombre] = self._originales[nombre].copy()
+        self._series[nombre].actual = self._series[nombre].original.copy()
 
     def actualizar(self, nombre, df):
         """Valida una edición sin sustituir el respaldo original."""
         self._exigir_sin_prueba(nombre)
-        if nombre not in self._datos:
+        if nombre not in self._series:
             raise KeyError(nombre)
         datos = self._validar(df)
-        self._datos[nombre] = datos
+        self._series[nombre].actual = datos
 
     def desplazar(self, nombre, shift):
         self._exigir_sin_prueba(nombre)
-        df = self._datos.get(nombre)
+        serie = self._series.get(nombre)
+        df = serie.actual if serie is not None else None
         if not isinstance(shift, (int, np.integer)) or isinstance(shift, bool):
             raise ValueError('El desfase debe ser entero')
         if shift == 0 or df is None or df.empty:
