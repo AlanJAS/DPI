@@ -21,7 +21,7 @@ def ajustar_circulo_minimos_cuadrados(
 ) -> tuple[float, float, float] | None:
     """
     Ajusta el mejor círculo a N≥3 puntos por mínimos cuadrados algebraicos
-    (método Pratt / Taubin linearizado — robusto y sin iteración).
+    (ajuste lineal algebraico, centrado y escalado).
 
     Devuelve (cx, cy, radio) en las mismas unidades que los puntos,
     o None si los puntos son colineales o insuficientes.
@@ -29,25 +29,29 @@ def ajustar_circulo_minimos_cuadrados(
     if len(puntos) < 3:
         return None
 
-    pts = np.array(puntos, dtype=float)
-    x, y = pts[:, 0], pts[:, 1]
-
-    # Sistema lineal: x² + y² = 2·cx·x + 2·cy·y + (r²−cx²−cy²)
-    # → A·[cx, cy, c]ᵀ = b   donde c = cx²+cy²−r²
+    pts = np.asarray(puntos, dtype=float)
+    if pts.shape != (len(puntos), 2) or not np.isfinite(pts).all():
+        return None
+    origen = pts.mean(axis=0)
+    x, y = (pts - origen).T
+    escala = max(np.max(np.abs(x)), np.max(np.abs(y)))
+    if not np.isfinite(escala) or escala <= 0:
+        return None
+    x, y = x / escala, y / escala
     A = np.column_stack([2*x, 2*y, np.ones(len(x))])
     b = x**2 + y**2
-
     try:
-        result, _, _, _ = np.linalg.lstsq(A, b, rcond=None)
+        result, _, rango, _ = np.linalg.lstsq(A, b, rcond=None)
     except np.linalg.LinAlgError:
         return None
-
-    cx, cy, c = result
-    r2 = cx**2 + cy**2 - c   # puede ser negativo si los puntos son casi colineales
-    if r2 <= 0:
+    if rango != 3:
         return None
-
-    return float(cx), float(cy), float(math.sqrt(r2))
+    cx, cy, c = result
+    r2 = cx**2 + cy**2 + c
+    if not math.isfinite(r2) or r2 <= 0:
+        return None
+    centro = origen + escala * np.array([cx, cy])
+    return float(centro[0]), float(centro[1]), float(escala * math.sqrt(r2))
 
 
 def estimar_anillos_faltantes(
