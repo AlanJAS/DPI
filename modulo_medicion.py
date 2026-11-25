@@ -889,6 +889,9 @@ class PestanaImagen(QWidget):
             return self.spin_medula.value()
 
     def _refrescar_medicion(self):
+        intensidad = getattr(self, "_intensidad", None)
+        if intensidad is not None:
+            intensidad.invalidar_si_cambio()
         self.metadatos_cambiados.emit()
         self._actualizar_grafico()
         self.vista.redibujar_todo()
@@ -1132,6 +1135,7 @@ class PestanaImagen(QWidget):
         self.vista.cargar_caminos_inactivos(self.caminos_guardados)
         self._guardar_estado()
         self._actualizar_grafico()
+        self._intensidad.invalidar_si_cambio()
         self.label_estado.setText(f"Radio '{nombre}' guardado. Listo para medir nuevo radio.")
 
     def _editar_camino(self):

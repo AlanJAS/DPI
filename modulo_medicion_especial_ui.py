@@ -482,12 +482,26 @@ class ControlIntensidad:
         self.btn_guardar_bi = btn_guardar_bi
         self.input_codigo = input_codigo
         self._bi_datos = []
+        self._bi_firma = None
         self._bi_banda = 30
         self._bi_porcentaje = 100
         self._bi_alineacion = "centro"
         self._bi_canal_vis = "B"
         self._bi_canales = ["B", "G", "R", "Gray"]
         self._banda_intensidad = BandaIntensidad()
+
+    def _firma_radio(self):
+        return (self.imagen.ruta(), self.radio.vista.modelo_medicion.captura(),
+                self.radio.vista.pixeles_por_mm, self.radio.combo_dir.currentIndex(),
+                tuple(d["anio"] for d in self.radio.datos_medidos),
+                self._bi_banda, tuple(self._bi_canales), self._bi_porcentaje, self._bi_alineacion)
+
+    def invalidar_si_cambio(self):
+        if self._bi_firma is not None and self._bi_firma != self._firma_radio():
+            self._bi_datos = []
+            self._bi_firma = None
+            self.btn_guardar_bi.setEnabled(False)
+            self.btn_graficar_bi.setEnabled(False)
 
     @property
     def banda(self):
@@ -509,6 +523,7 @@ class ControlIntensidad:
             self._bi_porcentaje  = dlg.porcentaje
             self._bi_alineacion  = dlg.alineacion
             self._bi_canal_vis   = dlg.canal_vis
+            self.invalidar_si_cambio()
             # Redibujar banda si está activa
             if self.btn_mostrar_banda.isChecked():
                 self._dibujar_banda_bi()
@@ -561,6 +576,7 @@ class ControlIntensidad:
         pct_calculo  = self._bi_porcentaje / 100.0
         alin_calculo = self._bi_alineacion
         med_a_cor = self.radio.combo_dir.currentIndex() == 0
+        firma = self._firma_radio()
 
         def _tarea(progreso, cancelado):
             return extraer_intensidad_por_anillo(
@@ -570,7 +586,7 @@ class ControlIntensidad:
                 alineacion=alin_calculo, med_a_cor=med_a_cor, cancelado=cancelado)
 
         def _on_resultado(resultados):
-            if (self.imagen.ruta() != ruta
+            if (self._firma_radio() != firma or self.imagen.ruta() != ruta
                     or list(self.radio.vista.coordenadas_anillos) != coords
                     or list(self.radio.vista.es_salto) != saltos
                     or self.radio.vista.pixeles_por_mm != ppm
@@ -581,6 +597,7 @@ class ControlIntensidad:
             for resultado in resultados:
                 resultado["anio"] = anios_capturados[resultado["indice_anillo"]]
             self._bi_datos = resultados
+            self._bi_firma = firma
             self.btn_guardar_bi.setEnabled(bool(resultados))
             self.btn_graficar_bi.setEnabled(bool(resultados))
             self.radio.label_estado.setText(
@@ -618,6 +635,7 @@ class ControlIntensidad:
 
     def graficar_bi_ventana(self):
         """Abre una ventana independiente con el gráfico de BI/GI/RI con zoom."""
+        self.invalidar_si_cambio()
         if not self._bi_datos:
             return
 
@@ -704,6 +722,7 @@ class ControlIntensidad:
           • .xlsx      → un Excel multi-columna con todas las series
           • .csv/.txt  → un texto multi-columna con coma decimal
         """
+        self.invalidar_si_cambio()
         if not self._bi_datos:
             QMessageBox.information(self.radio.parent, "Sin datos",
                 "Primero calcula la intensidad con el botón 🎨 Calcular BI.")
