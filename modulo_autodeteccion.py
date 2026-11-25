@@ -13,7 +13,6 @@ Perfiles de especie se guardan en species_profiles.json junto al ejecutable.
 """
 
 import os
-import json
 import math
 import logging
 
@@ -86,11 +85,11 @@ PERFIL_DEFECTO = {
 def _leer(ruta: str) -> dict:
     try:
         with open(ruta, "r", encoding="utf-8") as f:
-            datos = json.load(f)
+            datos = _js.cargar_json(f)
         return datos if isinstance(datos, dict) else {}
     except FileNotFoundError:
         return {}
-    except (json.JSONDecodeError, OSError) as exc:
+    except (ValueError, OSError) as exc:
         logger.warning("No se pudo leer %s: %s", ruta, exc)
         return {}
 

@@ -84,20 +84,16 @@ class ModeloMedicion:
         self.coordenadas = _VistaCampo(self)
         self.marcas = _VistaCampo(self, marcas=True)
 
-    @staticmethod
-    def _crear(coordenada, marca):
-        return PuntoMedicion(coordenada, marca)
-
     def cargar(self, coordenadas, marcas):
         # Validar antes de sustituir el estado activo.
-        puntos = [self._crear(c, m) for c, m in zip(coordenadas, marcas, strict=True)]
+        puntos = [PuntoMedicion(c, m) for c, m in zip(coordenadas, marcas, strict=True)]
         self._puntos = puntos
 
     def insertar(self, indice, coordenada, marca=TipoMarca.NORMAL):
-        self._puntos.insert(indice, self._crear(coordenada, marca))
+        self._puntos.insert(indice, PuntoMedicion(coordenada, marca))
 
     def agregar(self, coordenada, marca=TipoMarca.NORMAL):
-        self._puntos.append(self._crear(coordenada, marca))
+        self._puntos.append(PuntoMedicion(coordenada, marca))
 
     def borrar(self, indice):
         del self._puntos[indice]

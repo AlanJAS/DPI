@@ -15,9 +15,7 @@ from modulo_worker_medicion import GestorTareasMedicion
 import modulo_medicion_ui
 
 import os
-import math
 from modulo_calculo_medicion import anchos_puntos
-import json
 import logging
 from modulo_datos_medicion import mediciones_desde_anchos, mediciones_radio
 from modulo_sesion_medicion import guardar_sesion, leer_sesion
@@ -25,57 +23,24 @@ from modulo_sesion_medicion import guardar_sesion, leer_sesion
 import cv2
 import numpy as np
 from modulo_dialogos_archivo import ultima_carpeta
-from modulo_widgets import crear_boton
 import modulo_transformacion as _tr
-from modulo_grafico_medicion import (correlacion_deslizante, correlacion_global,
-                                     transformar_medicion)
-from modulo_modelo_medicion import ModeloSesionMedicion, ModeloMedicion, PuntoMedicion, RadioMedicion, TipoMarca
+from modulo_modelo_medicion import ModeloSesionMedicion, RadioMedicion
 import pandas as pd
-import pyqtgraph as pg
-from PIL import Image
 from modulo_imagen import detectar_dpi, preparar_banda_rgb
-from modulo_formatos import (leer_archivo_tucson, leer_wid, leer_dendro_auto,
-                             leer_pos, escribir_pos,
-                             _escribir_excel, _asegurar_extension,
-                             _exportar_tabular, _exportar_tucson_ewlw, _escribir_tucson)
+from modulo_formatos import leer_wid, leer_dendro_auto, leer_pos, escribir_pos, _escribir_excel, _asegurar_extension, _exportar_tabular, _exportar_tucson_ewlw, _escribir_tucson
 
-from PyQt6.QtWidgets import (
-    QApplication, QGraphicsScene, QGraphicsPixmapItem, QFileDialog,
-    QPushButton, QVBoxLayout, QHBoxLayout, QWidget,
-    QLabel, QInputDialog, QMessageBox, QSpinBox,
-    QComboBox, QButtonGroup, QLineEdit, QListWidget,
-    QSplitter, QListWidgetItem, QDialog,
-)
+from PyQt6.QtWidgets import QApplication, QGraphicsPixmapItem, QFileDialog, QPushButton, QVBoxLayout, QHBoxLayout, QWidget, QLabel, QInputDialog, QMessageBox, QSpinBox, QListWidgetItem, QDialog
 from PyQt6.QtGui import QImage, QPixmap, QPen, QColor, QBrush, QShortcut, QKeySequence
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QSettings, QSignalBlocker
 
-from estilos import SECUNDARIO_QSS, color_secundario
+from estilos import SECUNDARIO_QSS
 import json_seguro as _js
-import estilos_graficos as _gr
 from modulo_autodeteccion import (
     cargar_perfiles, guardar_perfiles,
     extraer_perfil, detectar_limites, posiciones_a_coordenadas,
     DialogoEspecie, DialogoPreviewDeteccion,
 )
-from modulo_intensidad import (
-    extraer_intensidad_por_anillo,
-    escribir_rwl_intensidad,
-    DialogoConfigBI,
-    DialogoGuardarBI,
-)
-from modulo_pith import (
-    ajustar_circulo_minimos_cuadrados,
-    estimar_anillos_faltantes,
-    DialogoMetodoPith,
-    DialogoEstimacionPith,
-)
-from constantes import (
-    DPI_DEFECTO, MM_POR_PULGADA, PIXELES_POR_MM_DEFECTO, MAX_PASOS_HISTORIAL,
-    TOLERANCIA_CLICK_PUNTO, TOLERANCIA_CLICK_SEGMENTO, TUCSON_MAX_CHARS_ID, TUCSON_VALOR_FIN,
-    INTERVALO_MARCADOR_DECADA, INTERVALO_MARCADOR_CINCUENTENA, INTERVALO_MARCADOR_CENTENA, COLOR_PUNTO_ACTIVO,
-    COLOR_LINEA_ACTIVA, COLOR_SALTO, COLOR_GUIA, COLOR_CALIBRACION,
-    COLOR_PUNTO_INACTIVO, COLOR_EWLW, COLORES_SERIES_INACTIVAS, TIPOS_ANOMALIA,
-)
+from constantes import DPI_DEFECTO, MM_POR_PULGADA, PIXELES_POR_MM_DEFECTO, TUCSON_MAX_CHARS_ID, TIPOS_ANOMALIA
 
 logger = logging.getLogger(__name__)
 
@@ -97,28 +62,10 @@ logger = logging.getLogger(__name__)
 # EXPORTADOR
 # =============================================================================
 
-from modulo_marcas_medicion import (
-    ModoMedicion,
-    _es_salto_real,
-    _es_normal,
-    _es_espacio,
-    _es_quiebre_ini,
-    _es_ewlw,
-    _es_amarillo,
-)
+from modulo_marcas_medicion import ModoMedicion, _es_ewlw
 
-from modulo_ewlw import (
-    _calcular_ewlw_posiciones,
-    _calcular_ewlw_posiciones_cancelable,
-    _calcular_anchos_ewlw_por_anillo,
-)
+from modulo_ewlw import _calcular_anchos_ewlw_por_anillo
 
-from modulo_vista_medicion import (
-    VistaSplitView,
-    PanelSplit,
-    DialogoCalibracionRegla,
-    VistaInteractiva,
-)
 
 
 
@@ -1914,12 +1861,6 @@ class PestanaImagen(QWidget):
 
     def _detectar_ewlw_automatico(self):
         return self._ewlw.detectar_ewlw_automatico()
-
-    def _exportar_ewlw(self, codigo: str, ruta_base: str,
-                        coords: list | None = None,
-                        saltos: list | None = None,
-                        datos_medidos: list | None = None, med_a_cor=None):
-        return self._ewlw.exportar_ewlw(codigo, ruta_base, coords, saltos, datos_medidos, med_a_cor)
 
     # -------------------------------------------------------------------------
     # Blue / Red / Green Intensity

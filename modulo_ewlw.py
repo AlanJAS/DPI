@@ -4,8 +4,7 @@ import math
 import numpy as np
 from modulo_calculo_medicion import calcular_anillos, puntos_desde_geometria
 from modulo_modelo_medicion import TipoMarca
-from modulo_marcas_medicion import (_es_normal, _es_salto_real, _es_ewlw,
-                                     _es_quiebre, _excluye_intensidad, _es_espacio)
+from modulo_marcas_medicion import _es_ewlw, _excluye_intensidad
 
 
 def _calcular_ewlw_posiciones(sig_prog, gray, coords, saltos, banda,
@@ -169,14 +168,6 @@ def _calcular_ewlw_posiciones(sig_prog, gray, coords, saltos, banda,
             pass
 
     return inserciones
-
-
-
-def _calcular_ewlw_posiciones_cancelable(sig_prog, gray, coords, saltos, banda,
-                                          cancel_flag):
-    """Compatibilidad con la ruta cancelable anterior."""
-    return _calcular_ewlw_posiciones(
-        sig_prog, gray, coords, saltos, banda, cancel_flag=cancel_flag)
 
 
 

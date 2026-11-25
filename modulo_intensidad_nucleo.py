@@ -172,58 +172,12 @@ def _es_espacio_sal(val) -> bool:
 # EXPORTACIÓN EN FORMATO TUCSON (.rwl)
 # =============================================================================
 
-def escribir_rwl_intensidad(
-    codigo: str,
-    anio_inicio: int,
-    valores: list[float],
-    ruta: str,
-):
-    """
-    Escribe un archivo .rwl con valores de intensidad (0-255) escalados × 1000.
-    Compatible con COFECHA y otros programas dendro que leen Tucson.
-
-    Los valores se multiplican por 1000 y se redondean a entero,
-    igual que CooRecorder exporta BI.
-    """
-    from constantes import TUCSON_VALOR_FIN, TUCSON_MAX_CHARS_ID
-
-    codigo = codigo[:TUCSON_MAX_CHARS_ID]
-    mods = [int(round(v * 1000)) for v in valores]
-    n = len(mods)
-    lineas: list[str] = []
-    idx = 0
-
-    resto = anio_inicio % 10
-    primeros = (10 - resto) if resto != 0 else 10
-    if primeros < 10:
-        cantidad = min(primeros, n - idx)
-        if cantidad > 0:
-            fila = f"{codigo:8s}{anio_inicio + idx:4d}"
-            for v in mods[idx: idx + cantidad]:
-                fila += f"{v:6d}"
-            lineas.append(fila)
-            idx += cantidad
-
-    while idx < n:
-        cantidad = min(10, n - idx)
-        fila = f"{codigo:8s}{anio_inicio + idx:4d}"
-        for v in mods[idx: idx + cantidad]:
-            fila += f"{v:6d}"
-        lineas.append(fila)
-        idx += cantidad
-
-    if n == 0:
-        lineas = [f"{codigo:8s}{anio_inicio:4d}{TUCSON_VALOR_FIN:6d}"]
-    else:
-        ultima = lineas[-1].split()
-        if max(0, len(ultima) - 2) >= 10:
-            lineas.append(f"{codigo:8s}{int(ultima[1]) + 10:4d}{TUCSON_VALOR_FIN:6d}")
-        else:
-            lineas[-1] += f"{TUCSON_VALOR_FIN:6d}"
-
-    with open(ruta, "w", encoding="utf-8", newline="\r\n") as f:
-        for ln in lineas:
-            f.write(ln.rstrip() + "\n")
+def escribir_rwl_intensidad(codigo, anio_inicio, valores, ruta):
+    """Adaptador histórico para series de intensidad consecutivas."""
+    import pandas as pd
+    from modulo_formatos import escribir_tucson
+    escribir_tucson(pd.Series(valores, index=range(anio_inicio, anio_inicio + len(valores))),
+                     ruta, codigo=codigo)
 
 
 def valores_intensidad(datos, canal, metrica):

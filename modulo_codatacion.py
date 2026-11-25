@@ -465,10 +465,6 @@ class PanelCodatacion(QWidget):
         self._series_modificadas()
         return True
 
-    def _leer_como_columnas_o_tabular(self, ruta: str, base_nombre: str) -> dict:
-        from modulo_formatos import leer_como_columnas_o_tabular
-        return leer_como_columnas_o_tabular(ruta, base_nombre)
-
     def cargar_cronologias_externas(self):
         """Carga cronologías externas con prefijo 📚."""
         ruta, _ = QFileDialog.getOpenFileName(
@@ -2125,10 +2121,6 @@ class PanelCodatacion(QWidget):
             revision=modelo.revision if modelo is not None else None,
             series=self.series_datos, nombre_crono=self._nombre_cronologia_activa,
             cronologia=self.cronologia_activa, meta=self.meta_cronologia, cofecha=cof)
-
-    def _resultado_sin_overlap(self, nombre: str) -> dict:
-        from modulo_comparacion_nucleo import resultado_sin_overlap
-        return resultado_sin_overlap(nombre)
 
     def mostrar_tabla_offset(self):
         """Abre el diálogo con la tabla completa de offsets."""

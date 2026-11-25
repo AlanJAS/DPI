@@ -4,25 +4,22 @@ from collections.abc import Callable
 import os
 import logging
 from modulo_dialogos_archivo import ultima_carpeta
-from modulo_formatos import _escribir_tucson
 import math
 import cv2
-import numpy as np
 from modulo_modelo_medicion import PuntoMedicion, TipoMarca
 import pandas as pd
 import pyqtgraph as pg
-from modulo_formatos import _escribir_excel
-from PyQt6.QtWidgets import QApplication, QFileDialog, QVBoxLayout, QMessageBox, QDialog
-from PyQt6.QtGui import QPen, QColor, QBrush
+from PyQt6.QtWidgets import QFileDialog, QVBoxLayout, QMessageBox, QDialog
 from PyQt6.QtCore import Qt
 import estilos_graficos as _gr
-from modulo_intensidad import extraer_intensidad_por_anillo, escribir_rwl_intensidad, DialogoConfigBI, DialogoGuardarBI
+from modulo_intensidad import DialogoConfigBI, DialogoGuardarBI
+from modulo_intensidad_nucleo import extraer_intensidad_por_anillo
 from modulo_intensidad_nucleo import valores_intensidad
 from modulo_pith import estimar_anillos_faltantes, DialogoMetodoPith, DialogoEstimacionPith
 from modulo_pith_nucleo import distancia_faltante_dap
 logger = logging.getLogger(__name__)
-from modulo_marcas_medicion import ModoMedicion, _es_salto_real, _es_normal, _es_espacio, _es_ewlw, _es_amarillo
-from modulo_ewlw import detectar_ewlw_imagen, calcular_anchos_ewlw
+from modulo_marcas_medicion import ModoMedicion, _es_ewlw
+from modulo_ewlw import detectar_ewlw_imagen
 from modulo_worker_medicion import GestorTareasMedicion
 def _ultima_carpeta(nueva_ruta: str | None = None) -> str:
     return ultima_carpeta("ultima_carpeta", nueva_ruta)
@@ -472,61 +469,6 @@ class ControlEWLW:
         self.imagen.tareas.iniciar("Detectando límites EW/LW", tarea, aplicar,
             lambda error: QMessageBox.critical(self.radio.parent, "Error EW/LW", error),
             lambda: self.radio.label_estado.setText("Detección EW/LW cancelada — sin cambios."))
-
-
-    def exportar_ewlw(self, codigo: str, ruta_base: str,
-                        coords: list | None = None,
-                        saltos: list | None = None,
-                        datos_medidos: list | None = None, med_a_cor=None):
-        """
-        Genera codigo_ew.rwl y codigo_lw.rwl con los anchos de earlywood
-        y latewood.
-
-        Si coords/saltos/datos_medidos vienen explícitos, los usa (caso
-        común: exportar un radio guardado). Si no vienen, cae al estado
-        de la vista activa (caso: exportar el radio en progreso).
-
-        Bug histórico: antes siempre leía self.radio.vista.coordenadas_anillos
-        y self.radio.vista.es_salto, ignorando el radio que el usuario estaba
-        exportando. Si el usuario exportaba un radio guardado pero la
-        vista activa estaba vacía, tiene_ewlw era False y nunca se
-        generaban los archivos _ew/_lw.
-        """
-        # Usar parámetros explícitos si se pasaron, si no caer a la vista
-        if coords is None:
-            coords = self.radio.vista.coordenadas_anillos
-        if saltos is None:
-            saltos = self.radio.vista.es_salto
-        if datos_medidos is None:
-            datos_medidos = self.radio.datos_medidos
-
-        if not datos_medidos:
-            return
-
-        if med_a_cor is None:
-            med_a_cor = self.radio.combo_dir.currentIndex() == 0
-        anios_ew, anchos_ew, anios_lw, anchos_lw = calcular_anchos_ewlw(
-            coords, saltos, datos_medidos, self.radio.vista.pixeles_por_mm, med_a_cor)
-
-        if not anios_ew:
-            return
-
-        import os
-        dir_base = os.path.dirname(ruta_base)
-        nombre_base = os.path.splitext(os.path.basename(ruta_base))[0]
-
-        from constantes import TUCSON_MAX_CHARS_ID
-
-        for sufijo, anios, anchos in [("ew", anios_ew, anchos_ew),
-                                       ("lw", anios_lw, anchos_lw)]:
-            ruta_rwl = os.path.join(dir_base, f"{nombre_base}_{sufijo}.rwl")
-            try:
-                mediciones_int = [int(round(a * 1000)) for a in anchos]
-                _escribir_tucson(
-                    f"{codigo[:7]}{sufijo[0]}", anios[0], mediciones_int, ruta_rwl, anios=anios
-                )
-            except Exception as exc:
-                logger.warning("Error escribiendo %s: %s", ruta_rwl, exc)
 
 
 class ControlIntensidad:

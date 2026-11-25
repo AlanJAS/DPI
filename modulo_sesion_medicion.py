@@ -1,5 +1,4 @@
 """Persistencia y validación de sesiones de medición, sin Qt."""
-import json
 import math
 import os
 from numbers import Real

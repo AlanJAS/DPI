@@ -1,6 +1,5 @@
 """Lectura, escritura y metadatos dendrocronológicos, sin interfaz gráfica."""
 import os
-import json
 import logging
 import re
 import numpy as np

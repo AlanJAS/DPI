@@ -117,8 +117,9 @@ class ModeloSeries:
 
     def eliminar(self, nombre):
         self._exigir_sin_prueba(nombre)
-        self._series.pop(nombre, None)
-        self._revision += 1
+        if nombre in self._series:
+            del self._series[nombre]
+            self._revision += 1
 
     def restablecer(self, nombre):
         self._exigir_sin_prueba(nombre)
