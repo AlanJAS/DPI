@@ -33,12 +33,11 @@ Si algo falla, el archivo anterior queda intacto.
 
 from __future__ import annotations
 
-import os
 import json
 import math
 import datetime
 import logging
-import tempfile
+from dpi.infraestructura.escritura import ruta_atomica
 
 import numpy as np
 import pandas as pd
@@ -123,21 +122,10 @@ def guardar_json(ruta: str, datos, *, indent: int | None = 2,
     merece avisar al usuario o solo quedar en el registro. Pase lo que pase,
     el archivo que ya estaba en disco no queda a medio escribir.
     """
-    ruta = os.fspath(ruta)
-    directorio = os.path.dirname(os.path.abspath(ruta))
-    fd, tmp = tempfile.mkstemp(prefix=".dpi-", suffix=".tmp", dir=directorio)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            json.dump(a_json(datos), f, indent=indent, ensure_ascii=ensure_ascii)
-        os.replace(tmp, ruta)
-    except BaseException:
-        # Sin esto queda un .tmp huérfano al lado del archivo del usuario cada
-        # vez que falla un guardado.
-        try:
-            os.remove(tmp)
-        except OSError:
-            pass
-        raise
+    with ruta_atomica(ruta) as temporal:
+        with open(temporal, "w", encoding="utf-8") as f:
+            json.dump(a_json(datos), f, indent=indent,
+                      ensure_ascii=ensure_ascii, allow_nan=False)
 
 
 def restaurar_claves_int(d: dict) -> dict:
