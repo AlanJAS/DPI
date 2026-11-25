@@ -51,6 +51,14 @@ class TestModeloMedicion(unittest.TestCase):
         m.restaurar(despues)
         self.assertEqual(m.captura(), despues)
 
+    def test_escala_del_modelo(self):
+        m = ModeloMedicion()
+        m.pixeles_por_mm = 2
+        for valor in (0, -1, float('inf'), True, None):
+            with self.assertRaises(ValueError):
+                m.pixeles_por_mm = valor
+            self.assertEqual(m.pixeles_por_mm, 2.)
+
     def test_carga_invalida_no_modifica(self):
         m = ModeloMedicion(); m.agregar((1,2))
         estado = m.captura()

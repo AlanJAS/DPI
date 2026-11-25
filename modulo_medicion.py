@@ -1690,7 +1690,7 @@ class PestanaImagen(QWidget):
         try:
             guardar_sesion(
                 self.ruta_imagen_actual,
-                self.vista.pixeles_por_mm,
+                self.modelo_sesion.activo.pixeles_por_mm,
                 self.caminos_guardados,
                 self._capturar_radio(),
             )

@@ -253,7 +253,6 @@ class VistaInteractiva(QGraphicsView):
         # Items visuales de calibración (puntos, línea, texto) — se limpian
         # al cancelar/aceptar/reiniciar la calibración.
         self._items_calibracion: list = []
-        self._pixeles_por_mm: float = PIXELES_POR_MM_DEFECTO
 
         self._render = RenderMedicion(self.scene, self._escala_vista,
                                       self._grosor_tick_zoom, self._perp_tick)
@@ -261,7 +260,6 @@ class VistaInteractiva(QGraphicsView):
         # Estado de interacción
         self.modo_actual: ModoMedicion = ModoMedicion.MEDIR
         # Anomalías: {anio: tipo_str}
-        self.anomalias: dict[int, str] = {}
         self._punto_arrastrado_idx: int | None = None
         self._is_panning: bool = False
         self._last_pan_pos = None
@@ -501,12 +499,20 @@ class VistaInteractiva(QGraphicsView):
     # ── Propiedad pixeles_por_mm ──────────────────────────────────────────
 
     @property
+    def anomalias(self):
+        return self.modelo_medicion.anomalias
+
+    @anomalias.setter
+    def anomalias(self, valor):
+        self.modelo_medicion.anomalias = dict(valor)
+
+    @property
     def pixeles_por_mm(self) -> float:
-        return self._pixeles_por_mm
+        return self.modelo_medicion.pixeles_por_mm
 
     @pixeles_por_mm.setter
     def pixeles_por_mm(self, valor: float):
-        self._pixeles_por_mm = valor
+        self.modelo_medicion.pixeles_por_mm = valor
         self._actualizar_pens()
 
     def _actualizar_pens(self):
@@ -520,7 +526,7 @@ class VistaInteractiva(QGraphicsView):
           - A menor DPI (imagen más gruesa por px) escalamos proporcionalmente.
           - Mínimo 1.5 px, máximo 5 px para evitar extremos.
         """
-        dpi = self._pixeles_por_mm * MM_POR_PULGADA
+        dpi = self.pixeles_por_mm * MM_POR_PULGADA
         # Grosor base calibrado para 2400 DPI
         factor = dpi / 2400.0
         grosor_linea  = max(1.5, min(5.0, 2.0 * factor))

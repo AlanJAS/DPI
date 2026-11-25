@@ -5,6 +5,7 @@ from types import MappingProxyType
 from enum import Enum
 from math import isfinite
 from numbers import Real
+from constantes import PIXELES_POR_MM_DEFECTO
 
 
 class TipoMarca(Enum):
@@ -81,8 +82,20 @@ class _VistaCampo(Sequence):
 class ModeloMedicion:
     def __init__(self):
         self._puntos = []
+        self._pixeles_por_mm = PIXELES_POR_MM_DEFECTO
+        self.anomalias: dict[int, str] = {}
         self.coordenadas = _VistaCampo(self)
         self.marcas = _VistaCampo(self, marcas=True)
+
+    @property
+    def pixeles_por_mm(self):
+        return self._pixeles_por_mm
+
+    @pixeles_por_mm.setter
+    def pixeles_por_mm(self, valor):
+        if not isinstance(valor, Real) or isinstance(valor, bool) or not isfinite(valor) or valor <= 0:
+            raise ValueError("Escala de medición inválida")
+        self._pixeles_por_mm = float(valor)
 
     def cargar(self, coordenadas, marcas):
         # Validar antes de sustituir el estado activo.
