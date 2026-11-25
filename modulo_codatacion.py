@@ -21,6 +21,7 @@ from modulo_widgets import (
     SpinBoxFlechas, SeccionColapsable,
 )
 from modulo_modelo_series import ModeloSeries
+from modulo_comparacion_nucleo import SeriePreparada, comparar_serie
 import modulo_transformacion as _tr
 import modulo_estadistica as _est
 from modulo_estadistica import (
@@ -1693,6 +1694,15 @@ class PanelCodatacion(QWidget):
         """
         return _tr.serie_numerica(serie_mm)
 
+    def _preparar_serie_comparacion(self, datos, es_crono):
+        cruda = pd.to_numeric(datos, errors="coerce").dropna()
+        if cruda.empty:
+            return SeriePreparada(cruda, cruda, cruda)
+        return SeriePreparada(
+            cruda, self._transformar_para_correlacion(datos, es_crono),
+            self._serie_para_glk(datos, es_crono),
+        )
+
     def _preparar_diferencias_log(self, n1: str, n2: str):
         """Prepara las series transformadas de un par para cofechado."""
         df1 = self.series_datos[n1]
@@ -2055,25 +2065,13 @@ class PanelCodatacion(QWidget):
         col_val = meta.get("columna_valor")
         if not col_val or col_val not in self.cronologia_activa.columns:
             col_val = self.cronologia_activa.columns[0]
-        # CRUDA (para rangos de años, GLK/t-BP, y series guardadas)
-        s_b_raw = pd.to_numeric(
-            self.cronologia_activa[col_val], errors="coerce"
-        ).dropna()
-        if s_b_raw.empty:
+        referencia = self._preparar_serie_comparacion(self.cronologia_activa[col_val], True)
+        if referencia.cruda.empty:
             QMessageBox.warning(
                 self, "Cronología sin datos válidos",
                 "La cronología activa no contiene valores numéricos válidos."
             )
             return
-        # ALTA FRECUENCIA para r (misma transformación que el cofechado real,
-        # respetando el modo COFECHA si está activo). Evita las correlaciones
-        # espurias de los anchos crudos (tendencias de edad compartidas).
-        s_b_corr = self._transformar_para_correlacion(
-            self.cronologia_activa[col_val], es_crono=True)
-        # Serie para GLK/t-BP respetando COFECHA (transformada si COFECHA
-        # activo; cruda si no).
-        s_b_glk = self._serie_para_glk(
-            self.cronologia_activa[col_val], es_crono=True)
 
         # Cursor de espera durante el cálculo
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
@@ -2086,25 +2084,10 @@ class PanelCodatacion(QWidget):
                 if df_serie is None or df_serie.empty:
                     continue
 
-                # CRUDA (rangos de años, GLK/t-BP, gráficos, alineamiento)
-                s_a_raw = pd.to_numeric(
-                    df_serie["Ancho_mm"], errors="coerce").dropna()
-                if s_a_raw.empty:
+                serie = self._preparar_serie_comparacion(df_serie["Ancho_mm"], nombre.startswith("📚"))
+                if serie.cruda.empty or serie.correlacion.empty:
                     continue
-                # ALTA FRECUENCIA para r
-                es_crono_serie = nombre.startswith("📚")
-                s_a_corr = self._transformar_para_correlacion(
-                    df_serie["Ancho_mm"], es_crono_serie)
-                if s_a_corr.empty:
-                    continue
-                # Serie para GLK/t-BP respetando COFECHA
-                s_a_glk = self._serie_para_glk(
-                    df_serie["Ancho_mm"], es_crono_serie)
-
-                from modulo_comparacion_nucleo import comparar_serie, SeriePreparada
-                resultado = comparar_serie(
-                    nombre, SeriePreparada(s_a_raw, s_a_corr, s_a_glk),
-                    SeriePreparada(s_b_raw, s_b_corr, s_b_glk),
+                resultado = comparar_serie(nombre, serie, referencia,
                     MIN_OVERLAP, VENTANA_DESFASE_FECHADA)
                 resultados.append(resultado)
                 if resultado["shifts"]:
