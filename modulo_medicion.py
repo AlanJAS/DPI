@@ -16,11 +16,14 @@ import copy
 
 import cv2
 import numpy as np
+from modulo_dialogos_archivo import ultima_carpeta
 import modulo_transformacion as _tr
 import pandas as pd
 import pyqtgraph as pg
 from PIL import Image
-from modulo_codatacion import leer_archivo_tucson, leer_wid, leer_dendro_auto
+from modulo_formatos import (leer_archivo_tucson, leer_wid, leer_dendro_auto,
+                             _escribir_excel, _asegurar_extension,
+                             _exportar_tabular, _exportar_tucson_ewlw, _escribir_tucson)
 
 from PyQt6.QtCore import QThread, pyqtSignal as Signal, QObject
 from PyQt6.QtWidgets import (
@@ -42,7 +45,6 @@ from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QSettings, QEvent
 from estilos import SECUNDARIO_QSS, color_secundario
 import json_seguro as _js
 import estilos_graficos as _gr
-from modulo_codatacion import leer_archivo_tucson, leer_wid
 from modulo_autodeteccion import (
     cargar_perfiles, guardar_perfiles,
     extraer_perfil, detectar_limites, posiciones_a_coordenadas,
@@ -103,47 +105,6 @@ MODO_SELECCIONAR = 12  # Seleccionar múltiples anillos para borrar/convertir
 #   "espacio"    → tramo del quiebre intra-anillo (amarillo, NO suma, NO cierra)
 #   "quiebre_ini"→ inicio de quiebre (azul, SUMA distancia, NO cierra anillo)
 #   "ew_lw"      → límite earlywood/latewood (suma, NO cierra)
-
-def _escribir_excel(df, ruta: str):
-    """Escribe un DataFrame a .xlsx eligiendo un motor disponible.
-
-    pandas necesita un "engine" externo para Excel (openpyxl o xlsxwriter).
-    Si no especifica engine y ninguno está instalado, lanza el críptico
-    "No engine for filetype: 'xlsx'". Aquí elegimos el primero disponible y,
-    si falta, damos un mensaje accionable.
-    """
-    import importlib.util
-    for engine in ("openpyxl", "xlsxwriter"):
-        if importlib.util.find_spec(engine) is not None:
-            df.to_excel(ruta, index=False, engine=engine)
-            return
-    raise RuntimeError(
-        "Para exportar a Excel (.xlsx) falta el módulo 'openpyxl'.\n\n"
-        "Instálalo con:  pip install openpyxl\n\n"
-        "Como alternativa, exporta en CSV o TXT, que no requieren módulos "
-        "adicionales.")
-
-
-def _asegurar_extension(ruta: str, filtro: str) -> str:
-    """Garantiza que la ruta tenga una extensión coherente con el filtro
-    elegido en el diálogo de guardado.
-
-    El diálogo NO nativo de Qt (DontUseNativeDialog) no siempre agrega la
-    extensión automáticamente: si el usuario escribe solo el nombre, el
-    archivo se guarda SIN extensión y los programas no lo reconocen (aunque
-    el contenido sea correcto, p. ej. un .xlsx sin extensión se ve como un
-    .zip). Esta función extrae las extensiones del filtro y agrega la
-    primera si falta.
-    """
-    import re
-    exts = re.findall(r"\*(\.[A-Za-z0-9]+)", filtro or "")
-    if not exts:
-        return ruta
-    ruta_lower = ruta.lower()
-    if any(ruta_lower.endswith(e.lower()) for e in exts):
-        return ruta  # ya tiene una extensión válida del filtro
-    return ruta + exts[0]
-
 
 def _es_salto_real(val) -> bool:
     """True solo si el segmento es un salto que rompe la cuenta."""
@@ -260,105 +221,9 @@ class ExportadorDendro:
             logger.error("Error al exportar: %s", exc)
             QMessageBox.critical(self._parent, "Error", f"Fallo al exportar:\n{exc}")
 
-    @staticmethod
-    def _exportar_tabular(id_serie: str, anios: list, anchos: list, ruta: str,
-                           formato: str, anchos_ewlw: list | None = None):
-        """Exporta a CSV o Excel. Si anchos_ewlw está presente, agrega columnas EW_mm y LW_mm."""
-        data = {"ID_Serie": id_serie, "Anio": anios, "Ancho_mm": anchos}
-        if anchos_ewlw and len(anchos_ewlw) == len(anios):
-            # Columnas separadas: NaN para anillos sin EW/LW detectado
-            ew_col = [(t[1] if t[1] is not None else float("nan"))
-                      for t in anchos_ewlw]
-            lw_col = [(t[2] if t[2] is not None else float("nan"))
-                      for t in anchos_ewlw]
-            data["EW_mm"] = ew_col
-            data["LW_mm"] = lw_col
-        df = pd.DataFrame(data)
-        if formato == "csv":
-            df.to_csv(ruta, index=False)
-        else:
-            _escribir_excel(df, ruta)
-
-    def _exportar_tucson_ewlw(self, id_serie: str, anios: list,
-                                anchos_ewlw: list, ruta_base: str):
-        """Exporta archivos Tucson separados para EW y LW (convención Velmex).
-
-        Crea {ruta_base}_EW.rwl y {ruta_base}_LW.rwl junto al archivo principal.
-        Solo escribe los anillos que tienen límite EW/LW detectado; los demás
-        se exportan con el valor especial Tucson para missing (999).
-        """
-        if not anchos_ewlw or len(anchos_ewlw) != len(anios):
-            return
-
-        # Separar nombre base y extensión
-        base, ext = os.path.splitext(ruta_base)
-        if not ext:
-            ext = ".rwl"
-
-        ew_vals = []
-        lw_vals = []
-        for (_, ew, lw) in anchos_ewlw:
-            if ew is None or lw is None:
-                # Anillo sin EW/LW detectado → marcar como missing (999)
-                ew_vals.append(999)
-                lw_vals.append(999)
-            else:
-                ew_vals.append(int(round(ew * 1000)))
-                lw_vals.append(int(round(lw * 1000)))
-
-        ruta_ew = base + "_EW" + ext
-        ruta_lw = base + "_LW" + ext
-
-        self._escribir_tucson(id_serie + "_EW", anios[0], ew_vals, ruta_ew)
-        self._escribir_tucson(id_serie + "_LW", anios[0], lw_vals, ruta_lw)
-
-    @staticmethod
-    def _escribir_tucson(codigo: str, anio_inicio: int, mediciones: list[int], ruta: str):
-        """Escribe el archivo en formato Tucson (.rwl / .txt)."""
-        if not ruta.lower().endswith((".txt", ".rwl")):
-            ruta += ".txt"
-
-        codigo = codigo[:TUCSON_MAX_CHARS_ID]
-        # Reemplaza el valor 999 colisionante con el código reservado 998
-        mods = [TUCSON_VALOR_999 if v == 999 else v for v in mediciones]
-        n = len(mods)
-        lineas: list[str] = []
-        idx = 0
-
-        # Primera fila parcial (si el año de inicio no es múltiplo de 10)
-        resto = anio_inicio % 10
-        primeros = (10 - resto) if resto != 0 else 10
-        if primeros < 10:
-            cantidad = min(primeros, n - idx)
-            if cantidad > 0:
-                fila = f"{codigo:8s}{anio_inicio + idx:4d}"
-                for v in mods[idx: idx + cantidad]:
-                    fila += f"{v:6d}"
-                lineas.append(fila)
-                idx += cantidad
-
-        # Filas completas de 10 valores
-        while idx < n:
-            cantidad = min(10, n - idx)
-            fila = f"{codigo:8s}{anio_inicio + idx:4d}"
-            for v in mods[idx: idx + cantidad]:
-                fila += f"{v:6d}"
-            lineas.append(fila)
-            idx += cantidad
-
-        # Marcador de fin de serie
-        if n == 0:
-            lineas = [f"{codigo:8s}{anio_inicio:4d}{TUCSON_VALOR_FIN:6d}"]
-        else:
-            ultima = lineas[-1].split()
-            if max(0, len(ultima) - 2) >= 10:
-                lineas.append(f"{codigo:8s}{int(ultima[1]) + 10:4d}{TUCSON_VALOR_FIN:6d}")
-            else:
-                lineas[-1] += f"{TUCSON_VALOR_FIN:6d}"
-
-        with open(ruta, "w", encoding="utf-8", newline="\r\n") as f:
-            for ln in lineas:
-                f.write(ln.rstrip() + "\n")
+    _exportar_tabular = staticmethod(_exportar_tabular)
+    _exportar_tucson_ewlw = staticmethod(_exportar_tucson_ewlw)
+    _escribir_tucson = staticmethod(_escribir_tucson)
 
 
 # =============================================================================
@@ -721,13 +586,8 @@ def _calcular_anchos_ewlw_por_anillo(coords, saltos, ppm):
 
 
 def _ultima_carpeta(nueva_ruta: str | None = None) -> str:
-    """Lee o guarda la última carpeta usada via QSettings."""
-    cfg = QSettings("MoiCedrus", "DPI")
-    if nueva_ruta is not None:
-        import os
-        cfg.setValue("ultima_carpeta", os.path.dirname(nueva_ruta))
-        return os.path.dirname(nueva_ruta)
-    return cfg.value("ultima_carpeta", "")
+    return ultima_carpeta("ultima_carpeta", nueva_ruta)
+
 
 class _WorkerSignals(QObject):
     progreso  = Signal(int, str)   # (porcentaje 0-100, mensaje)

@@ -30,10 +30,10 @@ from PyQt6.QtWidgets import (
 import modulo_cofecha as _cof
 import modulo_cofecha_salida as _sal
 from estilos import SECUNDARIO_QSS, color_secundario
-from modulo_codatacion import (
-    leer_tucson_multi, leer_tabular, leer_columna_multi_hojas,
-    RIGIDEZ_SPLINE_DEFECTO, _es_planilla,
+from modulo_formatos import (
+    leer_tucson_multi, leer_tabular, leer_columna_multi_hojas, _es_planilla,
 )
+from modulo_cronologia import RIGIDEZ_SPLINE_DEFECTO
 
 
 class _HiloAnalisis(QThread):

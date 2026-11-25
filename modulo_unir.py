@@ -16,9 +16,8 @@ Funcionalidades:
     índice (formato preferido del usuario para análisis posterior)
 
 Reutiliza:
-  - leer_tucson_multi() de modulo_codatacion.py
-  - Helpers de escritura Tucson en este mismo módulo (basados en
-    ExportadorDendro._escribir_tucson de modulo_medicion.py)
+  - leer_tucson_multi() de modulo_formatos.py
+  - Helpers de escritura de modulo_formatos.py
 """
 
 from __future__ import annotations
@@ -36,7 +35,7 @@ from PyQt6.QtWidgets import (
     QButtonGroup, QApplication,
 )
 
-from modulo_codatacion import leer_tucson_multi
+from modulo_formatos import leer_tucson_multi
 from estilos import SECUNDARIO_QSS, color_secundario
 from constantes import (
     TUCSON_MAX_CHARS_ID, TUCSON_VALOR_FIN, TUCSON_VALOR_999,
@@ -64,135 +63,11 @@ def ordenar_series(series_dict: dict) -> dict:
 # Helpers de escritura
 # =============================================================================
 
-def _escribir_tucson_serie(codigo: str, anio_inicio: int,
-                            mediciones_mm: list[float], buffer: list[str]) -> None:
-    """Agrega las líneas Tucson de UNA serie a una lista de líneas.
-
-    Sigue el formato fijo de columnas (8 chars id + 4 chars año + 10 valores
-    de 6 chars), con primera línea PARCIAL si el año de inicio no es múltiplo
-    de 10, y marcador `TUCSON_VALOR_FIN` al final.
-
-    Réplica de la lógica probada de ExportadorDendro._escribir_tucson
-    (modulo_medicion.py), generalizada para escribir varias series al mismo
-    buffer compartido.
-    """
-    codigo = codigo[:TUCSON_MAX_CHARS_ID]
-
-    # Convertir mediciones mm → centésimas de mm (entero), reemplazar 999
-    mods: list[int] = []
-    for v in mediciones_mm:
-        try:
-            ent = int(round(float(v) * TUCSON_DIVISOR))
-        except (TypeError, ValueError):
-            ent = 0
-        if ent == 999:
-            ent = TUCSON_VALOR_999
-        mods.append(ent)
-
-    n = len(mods)
-    lineas_serie: list[str] = []
-    idx = 0
-
-    # Primera fila parcial si el año no es múltiplo de 10
-    resto = anio_inicio % 10
-    primeros = (10 - resto) if resto != 0 else 10
-    if primeros < 10:
-        cantidad = min(primeros, n - idx)
-        if cantidad > 0:
-            fila = f"{codigo:8s}{anio_inicio + idx:4d}"
-            for v in mods[idx: idx + cantidad]:
-                fila += f"{v:6d}"
-            lineas_serie.append(fila)
-            idx += cantidad
-
-    # Filas completas de 10 valores
-    while idx < n:
-        cantidad = min(10, n - idx)
-        fila = f"{codigo:8s}{anio_inicio + idx:4d}"
-        for v in mods[idx: idx + cantidad]:
-            fila += f"{v:6d}"
-        lineas_serie.append(fila)
-        idx += cantidad
-
-    # Marcador de fin de serie
-    if n == 0:
-        lineas_serie = [f"{codigo:8s}{anio_inicio:4d}{TUCSON_VALOR_FIN:6d}"]
-    else:
-        # Si la última fila tenía 10 valores, agregamos una nueva fila con
-        # solo el marcador de fin para no exceder la columna
-        ultima = lineas_serie[-1]
-        # Contar valores en la última fila (cada uno ocupa 6 chars desde col 12)
-        n_valores_ultima = (len(ultima) - 12) // 6
-        if n_valores_ultima >= 10:
-            lineas_serie.append(
-                f"{codigo:8s}{anio_inicio + idx:4d}{TUCSON_VALOR_FIN:6d}")
-        else:
-            lineas_serie[-1] += f"{TUCSON_VALOR_FIN:6d}"
-
-    buffer.extend(lineas_serie)
-
-
-def escribir_tucson_merge(series_dict: dict[str, pd.DataFrame], ruta: str) -> None:
-    """Escribe un archivo Tucson .rwl con TODAS las series en `series_dict`.
-
-    `series_dict[id] = DataFrame` con index Anio y columna Ancho_mm.
-    Cada serie va una tras otra, con un encabezado de comentario para
-    documentar el origen.
-    """
-    if not ruta.lower().endswith((".rwl", ".txt")):
-        ruta += ".rwl"
-
-    buffer: list[str] = []
-    for sid, df in series_dict.items():
-        # df puede tener index Anio o columna; uniformamos
-        if "Anio" in df.columns:
-            df_local = df.set_index("Anio")
-        else:
-            df_local = df
-
-        df_local = df_local.sort_index()
-        anio_inicio = int(df_local.index.min())
-        mediciones = df_local["Ancho_mm"].tolist()
-        _escribir_tucson_serie(sid, anio_inicio, mediciones, buffer)
-
-    with open(ruta, "w", encoding="utf-8", newline="\r\n") as f:
-        for ln in buffer:
-            f.write(ln.rstrip() + "\n")
-
-
-def escribir_excel_merge(series_dict: dict[str, pd.DataFrame], ruta: str) -> None:
-    """Escribe TODAS las series en UNA hoja Excel.
-
-    Estructura:
-      - Columna A: Año
-      - Columnas B, C, D, ...: una por serie (header = ID de la serie)
-      - Celdas: ancho en mm; vacías donde la serie no tiene dato para
-        ese año
-
-    Este formato es el preferido del usuario porque facilita análisis
-    posterior (importar a R, hacer cofechado, etc.) sin tener que
-    deshacer la separación por hojas.
-    """
-    if not ruta.lower().endswith((".xlsx", ".xls")):
-        ruta += ".xlsx"
-
-    # Construir DataFrame combinado con Año como index, una columna por serie
-    series_alineadas: dict[str, pd.Series] = {}
-    for sid, df in series_dict.items():
-        if "Anio" in df.columns:
-            df_local = df.set_index("Anio")
-        else:
-            df_local = df
-        s = df_local["Ancho_mm"].copy()
-        s.name = sid
-        series_alineadas[sid] = s
-
-    combinado = pd.DataFrame(series_alineadas)
-    combinado.sort_index(inplace=True)
-    combinado.index.name = "Anio"
-
-    # Exportar: incluir el index (Año) como primera columna
-    combinado.to_excel(ruta, sheet_name="Series", index=True)
+from modulo_formatos import (
+    _escribir_tucson_serie,
+    escribir_tucson_merge,
+    escribir_excel_merge,
+)
 
 
 # =============================================================================
