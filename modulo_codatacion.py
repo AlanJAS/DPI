@@ -988,12 +988,8 @@ class PanelCodatacion(QWidget):
         if delta == 0:
             return
 
-        nuevo_idx = df.index + delta
-        df_nuevo = df.copy()
-        df_nuevo.index = nuevo_idx
-        df_nuevo.sort_index(inplace=True)
-
-        self.modelo_series.actualizar(nombre, df_nuevo)
+        self.modelo_series.desplazar(nombre, delta)
+        df_nuevo = self.modelo_series.datos[nombre]
         self._series_modificadas()
         QMessageBox.information(
             self, "Año actualizado",
