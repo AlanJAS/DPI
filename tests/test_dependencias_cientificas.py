@@ -9,7 +9,7 @@ NUCLEOS = (
     'dpi.ciencia.estadistica', 'dpi.ciencia.cronologia', 'dpi.ciencia.datacion', 'dpi.ciencia.quiebres',
     'dpi.ciencia.cofecha', 'dpi.ciencia.cofecha_nucleo', 'dpi.ciencia.comparacion_nucleo',
     'dpi.medicion.pith', 'dpi.medicion.intensidad', 'dpi.ciencia.indice_anual',
-    'modulo_autodeteccion', 'dpi.ciencia.transformacion', 'modulo_grafico_medicion', 'dpi.medicion.datos',
+    'modulo_autodeteccion', 'dpi.ciencia.transformacion', 'dpi.medicion.grafico', 'dpi.medicion.datos',
 )
 
 class DependenciasCientificas(unittest.TestCase):

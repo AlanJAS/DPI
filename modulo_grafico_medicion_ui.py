@@ -4,7 +4,7 @@ import pandas as pd
 import pyqtgraph as pg
 from PyQt6.QtCore import Qt, QSignalBlocker
 from estilos import color_secundario
-from modulo_grafico_medicion import (
+from dpi.medicion.grafico import (
     normalizar_grafico, transformar_medicion, correlacion_global, correlacion_deslizante,
 )
 
