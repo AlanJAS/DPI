@@ -1,5 +1,6 @@
 """Operaciones extraídas sin modificar sus algoritmos."""
 import os
+from dpi.infraestructura.escritura import ruta_atomica
 import pandas as pd
 from dpi.formatos.planillas import _es_planilla, _leer_planilla, _escribir_excel
 
@@ -223,7 +224,8 @@ def exportar_tabular(id_serie: str, anios: list, anchos: list, ruta: str,
         data["LW_mm"] = lw_col
     df = pd.DataFrame(data)
     if formato == "csv":
-        df.to_csv(ruta, index=False)
+        with ruta_atomica(ruta) as temporal:
+            df.to_csv(temporal, index=False)
     else:
         _escribir_excel(df, ruta)
 
@@ -268,7 +270,8 @@ def escribir_tabla(df, ruta, *, separador_csv=";", decimal=",", precision="%.6f"
     if _es_planilla(ext):
         _escribir_excel(df, ruta)
     elif ext in (".csv", ".txt", ".tsv"):
-        df.to_csv(ruta, index=False, sep=separador_csv if ext == ".csv" else "\t",
-                  decimal=decimal, float_format=precision)
+        with ruta_atomica(ruta) as temporal:
+            df.to_csv(temporal, index=False, sep=separador_csv if ext == ".csv" else "\t",
+                      decimal=decimal, float_format=precision)
     else:
         raise ValueError(f"Formato tabular no compatible: {ext}")

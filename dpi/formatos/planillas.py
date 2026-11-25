@@ -1,5 +1,6 @@
 """Operaciones extraídas sin modificar sus algoritmos."""
 import os
+from dpi.infraestructura.escritura import ruta_atomica
 import pandas as pd
 EXTS_PLANILLA = (".xlsx", ".xls", ".ods")
 
@@ -46,7 +47,8 @@ def _escribir_excel(df, ruta: str, index: bool = False):
 
     if ext == ".ods":
         if importlib.util.find_spec("odf") is not None:
-            df.to_excel(ruta, index=index, engine="odf")
+            with ruta_atomica(ruta) as temporal:
+                df.to_excel(temporal, index=index, engine="odf")
             return
         raise RuntimeError(
             "Para exportar a LibreOffice (.ods) falta el módulo 'odfpy'.\n\n"
@@ -56,7 +58,8 @@ def _escribir_excel(df, ruta: str, index: bool = False):
 
     for engine in ("openpyxl", "xlsxwriter"):
         if importlib.util.find_spec(engine) is not None:
-            df.to_excel(ruta, index=index, engine=engine)
+            with ruta_atomica(ruta) as temporal:
+                df.to_excel(temporal, index=index, engine=engine)
             return
     raise RuntimeError(
         "Para exportar a Excel (.xlsx) falta el módulo 'openpyxl'.\n\n"
@@ -97,4 +100,5 @@ def escribir_excel_merge(series_dict: dict[str, pd.DataFrame], ruta: str) -> Non
     combinado.index.name = "Anio"
 
     # Exportar: incluir el index (Año) como primera columna
-    combinado.to_excel(ruta, sheet_name="Series", index=True)
+    with ruta_atomica(ruta) as temporal:
+        combinado.to_excel(temporal, sheet_name="Series", index=True)

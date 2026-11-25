@@ -1,5 +1,6 @@
 """Operaciones extraídas sin modificar sus algoritmos."""
 import os
+from dpi.infraestructura.escritura import ruta_atomica
 import pandas as pd
 import dpi.infraestructura.json_seguro as _js
 import logging
@@ -55,9 +56,11 @@ def _exportar_cronologia_df(df: pd.DataFrame, ruta: str, codigo: str = "CRONO"):
     if _es_planilla(ext):
         _escribir_excel(df_out, ruta, index=True)
     elif ext == ".csv":
-        df_out.to_csv(ruta, index=True)
+        with ruta_atomica(ruta) as temporal:
+            df_out.to_csv(temporal, index=True)
     else:
-        df_out.to_csv(ruta, index=True, sep="\t")
+        with ruta_atomica(ruta) as temporal:
+            df_out.to_csv(temporal, index=True, sep="\t")
 
 
 def _leer_cronologia_guardada(ruta: str) -> tuple[pd.DataFrame, dict]:
