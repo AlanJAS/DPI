@@ -21,8 +21,7 @@ def _paso_ewlw(self, x: float, y: float):
             pass
         return
 
-    seg_idx, t, _ = hit
-    indice, punto, error = planificar_ewlw(coords, self.es_salto, seg_idx, t)
+    indice, punto, error = planificar_ewlw(coords, self.es_salto, hit[0], hit[1])
     if error:
         try:
             self.estado_cambiado.emit(error)
