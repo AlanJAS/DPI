@@ -9,8 +9,8 @@ class NucleosIndependientes(unittest.TestCase):
         self.assertEqual(distancia_faltante_dap([(0,0),(3,4),(6,8)], [False,False,True], 10), 5)
         self.assertEqual(distancia_faltante_dap([(0,0),(3,4)], [False,False], 2), 0)
 
-    def test_ewlw_exportacion_historica(self):
-        self.assertEqual(calcular_anchos_ewlw([(0,0),(2,0),(4,0)], [False,'ew_lw',False], [{'anio':2000}], 2), ([2000],[0.0],[2000],[1.0]))
+    def test_ewlw_exportacion(self):
+        self.assertEqual(calcular_anchos_ewlw([(0,0),(2,0),(4,0)], [False,'ew_lw',False], [{'anio':2000}], 2), ([2000],[1.0],[2000],[1.0]))
 
     def test_metricas_intensidad(self):
         datos = [{'B_mean':12, 'R_mean':3, 'G_mean':0}]

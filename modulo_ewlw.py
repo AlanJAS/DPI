@@ -2,6 +2,8 @@
 
 import math
 import numpy as np
+from modulo_calculo_medicion import calcular_anillos, puntos_desde_geometria
+from modulo_modelo_medicion import TipoMarca
 from modulo_marcas_medicion import (_es_normal, _es_salto_real, _es_ewlw,
                                      _es_quiebre, _excluye_intensidad, _es_espacio)
 
@@ -29,15 +31,9 @@ def _calcular_ewlw_posiciones(sig_prog, gray, coords, saltos, banda,
     n = len(coords)
     inserciones = []
 
-    # Identificar anillos (tramos entre dos False consecutivos)
-    anillos = []
-    ini = 0
-    for i in range(1, n):
-        if _es_normal(saltos[i]):
-            anillos.append(list(range(ini, i + 1)))
-            ini = i
-    if ini < n - 1:
-        anillos.append(list(range(ini, n)))
+    puntos = puntos_desde_geometria(coords, saltos)
+    anillos = [list(range(a.indice_inicio, a.indice_fin + 1))
+               for a in calcular_anillos(puntos, 1) if a.completo]
 
     n_anillos = len(anillos)
 
@@ -176,76 +172,21 @@ def _calcular_ewlw_posiciones_cancelable(sig_prog, gray, coords, saltos, banda,
 
 
 
-def _calcular_anchos_ewlw_por_anillo(coords, saltos, ppm):
-    """Calcula los anchos de earlywood (EW) y latewood (LW) para cada anillo.
-
-    Parameters
-    ----------
-    coords : list[tuple[float, float]]
-        Coordenadas de los puntos del camino en píxeles.
-    saltos : list
-        Lista paralela a coords con los flags: False/True/"espacio"/"ew_lw"/etc.
-    ppm : float
-        Píxeles por mm para convertir a milímetros.
-
-    Returns
-    -------
-    list[tuple[float, float | None, float | None]]
-        Lista de tuplas (ancho_total_mm, ew_mm, lw_mm) por anillo.
-        Si el anillo no tiene límite EW/LW, ew_mm y lw_mm son None.
-        El orden coincide con el de los anillos en `recalcular_todas_las_distancias`.
-    """
-    n = len(coords)
-    anchos_anillo = []   # lista de (total_mm, ew_mm_or_None, lw_mm_or_None)
-    acum = 0.0           # distancia acumulada desde el inicio del anillo actual
-    acum_pre_ewlw = None # si encontramos un EW/LW, congelamos el acum acá
-
-    for i in range(1, n):
-        val = saltos[i]
-        if i >= len(coords) or i - 1 >= len(coords):
-            break
-        d = math.hypot(
-            coords[i][0] - coords[i-1][0],
-            coords[i][1] - coords[i-1][1],
-        ) / ppm
-
-        if _es_salto_real(val):
-            # Salto real: cierra anillo previo si quedó algo
-            if acum > 0:
-                if acum_pre_ewlw is not None:
-                    # Había un EW/LW, pero después saltó sin completar
-                    anchos_anillo.append((acum, acum_pre_ewlw, acum - acum_pre_ewlw))
-                else:
-                    anchos_anillo.append((acum, None, None))
-            acum = 0.0
-            acum_pre_ewlw = None
-        elif _es_quiebre(val):
-            # No suma, no cierra
-            pass
-        elif _es_ewlw(val):
-            # Suma y marca el split: el acum hasta acá es el EW
-            acum += d
-            acum_pre_ewlw = acum
-        else:
-            # val is False: límite normal — suma y cierra el anillo
-            acum += d
-            if acum_pre_ewlw is not None:
-                ew = acum_pre_ewlw
-                lw = acum - acum_pre_ewlw
-                anchos_anillo.append((acum, ew, lw))
-            else:
-                anchos_anillo.append((acum, None, None))
-            acum = 0.0
-            acum_pre_ewlw = None
-
-    # Último anillo sin cerrar
-    if acum > 0:
-        if acum_pre_ewlw is not None:
-            anchos_anillo.append((acum, acum_pre_ewlw, acum - acum_pre_ewlw))
-        else:
-            anchos_anillo.append((acum, None, None))
-
-    return anchos_anillo
+def _calcular_anchos_ewlw_por_anillo(coords, saltos, ppm, med_a_cor=True):
+    """Anchos en orden de captura; ausentes si no existe un límite único."""
+    puntos = puntos_desde_geometria(coords, saltos)
+    resultado = []
+    for anillo in calcular_anillos(puntos, ppm):
+        limites = [i for i in anillo.segmentos if puntos[i].tipo is TipoMarca.EW_LW]
+        if len(limites) != 1 or not anillo.completo:
+            resultado.append((anillo.ancho_mm, None, None))
+            continue
+        previo = sum(math.dist(puntos[i-1].coordenada, puntos[i].coordenada) / ppm
+                     for i in anillo.segmentos if i <= limites[0])
+        posterior = max(0., anillo.ancho_mm - previo)
+        ew, lw = (previo, posterior) if med_a_cor else (posterior, previo)
+        resultado.append((anillo.ancho_mm, ew, lw))
+    return resultado
 
 
 def detectar_ewlw_imagen(sig_prog, img_bgr, c, s, b, ruta_disco, cancel_flag=None):
@@ -262,66 +203,14 @@ def detectar_ewlw_imagen(sig_prog, img_bgr, c, s, b, ruta_disco, cancel_flag=Non
         sig_prog, gray, c, s, b, cancel_flag)
 
 
-def calcular_anchos_ewlw(coords, saltos, datos_medidos, ppm):
-    """Proyección EW/LW histórica para exportación; sin acceso a Qt.
-
-    Conserva la distribución de anchos y el orden del exportador existente.
-    """
-    n = len(coords)
-
-    anios_ew, anchos_ew = [], []
-    anios_lw, anchos_lw = [], []
-
-    acum_ew = 0.0
-    acum_lw = 0.0
-    en_lw = False
-    anillo_idx = 0
-
-    for i in range(1, n):
-        val = saltos[i]
-        d = math.hypot(coords[i][0]-coords[i-1][0],
-                       coords[i][1]-coords[i-1][1]) / ppm
-
-        if _es_salto_real(val):  # salto
-            acum_ew = acum_lw = 0.0
-            en_lw = False
-            continue
-        if _es_espacio(val):
-            continue
-        if _es_ewlw(val):
-            en_lw = True
-            if d > 0:
-                acum_lw = 0.0  # reiniciar LW desde aquí
-            continue
-        if _es_normal(val):
-            # Fin de anillo
-            if en_lw:
-                acum_lw += d
-            else:
-                acum_ew += d
-
-            # ¿El siguiente es un límite de anillo o fin?
-            val_next = saltos[i + 1] if i + 1 < n else False
-            if val_next is False or i == n - 1:
-                if anillo_idx < len(datos_medidos):
-                    anio = datos_medidos[anillo_idx]["anio"]
-                    anios_ew.append(anio)
-                    anchos_ew.append(acum_ew)
-                    anios_lw.append(anio)
-                    anchos_lw.append(acum_lw)
-                    anillo_idx += 1
-                acum_ew = acum_lw = 0.0
-                en_lw = False
-            else:
-                if en_lw:
-                    acum_lw += d
-                else:
-                    acum_ew += d
-            continue
-
-        # Tramo normal (también acumula según estado EW/LW)
-        if en_lw:
-            acum_lw += d
-        else:
-            acum_ew += d
-    return anios_ew, anchos_ew, anios_lw, anchos_lw
+def calcular_anchos_ewlw(coords, saltos, datos_medidos, ppm, med_a_cor=None):
+    """Proyección de anillos completos con EW/LW, conservando años reales."""
+    if med_a_cor is None:
+        med_a_cor = len(datos_medidos) < 2 or datos_medidos[0]['anio'] <= datos_medidos[-1]['anio']
+    anchos = _calcular_anchos_ewlw_por_anillo(coords, saltos, ppm, med_a_cor)
+    if len(anchos) != len(datos_medidos):
+        raise ValueError('EW/LW: geometría y datación incompatibles')
+    filas = sorted((d['anio'], ew, lw) for d, (_, ew, lw) in zip(datos_medidos, anchos)
+                   if ew is not None and lw is not None)
+    anios = [a for a, _, _ in filas]
+    return anios, [ew for _, ew, _ in filas], anios.copy(), [lw for _, _, lw in filas]

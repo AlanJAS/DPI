@@ -1695,6 +1695,7 @@ class PestanaImagen(QWidget):
             # Para EW/LW: usar el estado en vivo de la vista
             coords_export = self.vista.coordenadas_anillos
             saltos_export = self.vista.es_salto
+            med_a_cor_export = self.combo_dir.currentIndex() == 0
         else:
             radio = self.caminos_guardados[seleccion]
             datos = mediciones_radio(radio, self.vista.pixeles_por_mm)
@@ -1703,6 +1704,7 @@ class PestanaImagen(QWidget):
             # Proyecciones del radio elegido, no del radio activo.
             coords_export = radio.coordenadas
             saltos_export = radio.marcas
+            med_a_cor_export = radio.dir_idx == 0
 
         if not codigo:
             return QMessageBox.warning(self, "Aviso", "El radio no tiene nombre/código.")
@@ -1761,11 +1763,13 @@ class PestanaImagen(QWidget):
             if tiene_ewlw_en_radio and coords_export:
                 try:
                     anchos_ewlw = _calcular_anchos_ewlw_por_anillo(
-                        coords_export, saltos_export, ppm
+                        coords_export, saltos_export, ppm, med_a_cor_export
                     )
                     # Alinear largo con datos por seguridad
                     if len(anchos_ewlw) != len(datos):
                         anchos_ewlw = None
+                    else:
+                        anchos_ewlw = [t for _, t in sorted(zip([d["anio"] for d in datos], anchos_ewlw))]
                 except Exception as exc:
                     logger.warning("No se pudo calcular EW/LW para tabla: %s", exc)
                     anchos_ewlw = None
@@ -1790,7 +1794,7 @@ class PestanaImagen(QWidget):
                     codigo, ruta,
                     coords=coords_export,
                     saltos=saltos_export,
-                    datos_medidos=datos,
+                    datos_medidos=datos, med_a_cor=med_a_cor_export,
                 )
 
             QMessageBox.information(self, "Éxito", f"Exportado a:\n{ruta}")
@@ -1842,8 +1846,8 @@ class PestanaImagen(QWidget):
     def _exportar_ewlw(self, codigo: str, ruta_base: str,
                         coords: list | None = None,
                         saltos: list | None = None,
-                        datos_medidos: list | None = None):
-        return self._especial._exportar_ewlw(codigo, ruta_base, coords, saltos, datos_medidos)
+                        datos_medidos: list | None = None, med_a_cor=None):
+        return self._especial._exportar_ewlw(codigo, ruta_base, coords, saltos, datos_medidos, med_a_cor)
 
     # -------------------------------------------------------------------------
     # Blue / Red / Green Intensity

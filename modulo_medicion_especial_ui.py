@@ -619,7 +619,7 @@ class ControlMedicionEspecial:
     def _exportar_ewlw(self, codigo: str, ruta_base: str,
                         coords: list | None = None,
                         saltos: list | None = None,
-                        datos_medidos: list | None = None):
+                        datos_medidos: list | None = None, med_a_cor=None):
         """
         Genera codigo_ew.rwl y codigo_lw.rwl con los anchos de earlywood
         y latewood.
@@ -645,8 +645,10 @@ class ControlMedicionEspecial:
         if not datos_medidos:
             return
 
+        if med_a_cor is None:
+            med_a_cor = self.combo_dir.currentIndex() == 0
         anios_ew, anchos_ew, anios_lw, anchos_lw = calcular_anchos_ewlw(
-            coords, saltos, datos_medidos, self.vista.pixeles_por_mm)
+            coords, saltos, datos_medidos, self.vista.pixeles_por_mm, med_a_cor)
 
         if not anios_ew:
             return
