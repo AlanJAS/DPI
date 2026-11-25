@@ -2709,16 +2709,8 @@ class PanelCodatacion(QWidget):
 
         Devuelve True si aplicó algún cambio.
         """
-        if shift == 0:
+        if not self.modelo_series.desplazar(nombre, shift):
             return False
-        df = self.series_datos.get(nombre)
-        if df is None or df.empty:
-            return False
-        df_new = df.copy()
-        df_new.index = df_new.index + int(shift)
-        self.series_datos[nombre] = df_new
-        if hasattr(self, "series_originales"):
-            self.series_originales[nombre] = df_new.copy()
         self._cache_comparacion = None
         if regraficar:
             self.graficar_series()
@@ -2729,9 +2721,7 @@ class PanelCodatacion(QWidget):
         """Reemplaza por completo los datos de una serie (usado por el
         editor de anillos, que cambia anchos y/o cantidad de anillos).
         Invalida la caché de comparación y regrafica."""
-        self.series_datos[nombre] = df_nuevo.copy()
-        if hasattr(self, "series_originales"):
-            self.series_originales[nombre] = df_nuevo.copy()
+        self.modelo_series.registrar(nombre, df_nuevo)
         self._cache_comparacion = None
         if regraficar:
             self.graficar_series()
