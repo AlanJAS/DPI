@@ -10,7 +10,7 @@ from modulo_configuracion_ui import ajustes_ui
 
 from modulo_medicion_especial_ui import (ContextoRadio, ContextoImagen,
     ControlPith, ControlEWLW, ControlIntensidad)
-from modulo_worker_medicion import GestorTareasMedicion
+from dpi.ui.medicion.tareas import GestorTareasMedicion
 from modulo_exportacion_medicion_ui import ExportadorDendro
 
 

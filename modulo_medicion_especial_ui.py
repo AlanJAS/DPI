@@ -20,7 +20,7 @@ from dpi.medicion.pith import distancia_faltante_dap
 logger = logging.getLogger(__name__)
 from dpi.medicion.marcas import ModoMedicion, _es_ewlw
 from dpi.medicion.ewlw import detectar_ewlw_imagen
-from modulo_worker_medicion import GestorTareasMedicion
+from dpi.ui.medicion.tareas import GestorTareasMedicion
 def _ultima_carpeta(nueva_ruta: str | None = None) -> str:
     return ultima_carpeta("ultima_carpeta", nueva_ruta)
 
