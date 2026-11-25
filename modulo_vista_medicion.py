@@ -1,7 +1,7 @@
 """Componentes de medición de DPI."""
 
 import math
-from modulo_calculo_medicion import anchos_anillos
+from modulo_calculo_medicion import anchos_puntos
 import numpy as np
 from modulo_modelo_medicion import ModeloMedicion, PuntoMedicion, HistorialMedicion
 from PyQt6.QtWidgets import QWidget, QDialog, QGraphicsView, QGraphicsScene, QPushButton, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QDoubleSpinBox, QComboBox, QToolTip, QGraphicsEllipseItem, QDialogButtonBox
@@ -1120,7 +1120,7 @@ class VistaInteractiva(QGraphicsView):
         (el límite del anillo) o al final del camino.
         Los segmentos ew_lw se acumulan junto con los False del mismo anillo.
         """
-        distancias = anchos_anillos(self.coordenadas_anillos, self.es_salto, self.pixeles_por_mm)
+        distancias = anchos_puntos(self.modelo_medicion.captura(), self.pixeles_por_mm)
         self.mediciones_actualizadas.emit(distancias)
 
     @staticmethod
