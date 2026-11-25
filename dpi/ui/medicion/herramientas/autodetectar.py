@@ -119,6 +119,10 @@ def colocar_puntos_autodetectados(
     """
     if not coordenadas:
         return
+    from dpi.medicion.modelo import PuntoMedicion
+    coordenadas = [PuntoMedicion(c, TipoMarca.NORMAL).coordenada for c in coordenadas]
+    if idx_ancla is not None and not 0 <= idx_ancla < len(self.coordenadas_anillos):
+        raise ValueError('Ancla de autodetección inválida')
     self.guardar_en_historial()
 
     if idx_ancla is None:
