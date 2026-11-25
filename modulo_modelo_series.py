@@ -99,6 +99,8 @@ class ModeloSeries:
         valores = pd.to_numeric(datos['Ancho_mm'], errors='raise')
         if np.isinf(valores).any():
             raise ValueError('Valores infinitos')
+        if not valores.notna().any():
+            raise ValueError('Serie sin valores válidos')
         datos['Ancho_mm'] = valores
         return datos.sort_index()
 
