@@ -23,7 +23,7 @@ abrir DPI no paga ese costo.
 """
 
 from __future__ import annotations
-from modulo_configuracion_ui import ajustes_ui
+from dpi.ui.configuracion import ajustes_ui
 
 # Nombre de paleta ↔ colores. `mapa` es el colormap para gráficos coloreados
 # por valor; `series` es el ciclo de colores cuando se dibuja más de una curva.

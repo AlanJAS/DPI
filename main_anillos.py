@@ -7,7 +7,7 @@ Pestañas:
   🧭 Cronología           — generación de cronologías a partir de series .rwl
   📊 Co-Datación          — cofechado estadístico de series contra cronología
 """
-from modulo_configuracion_ui import ajustes_ui
+from dpi.ui.configuracion import ajustes_ui
 
 import sys
 import os

@@ -3,7 +3,7 @@ import pyqtgraph as pg
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QSpinBox
 import estilos_graficos as _gr
-from modulo_configuracion_ui import ultima_carpeta
+from dpi.ui.configuracion import ultima_carpeta
 
 
 def crear_boton(texto, accion, *, tooltip=None, checkable=False):

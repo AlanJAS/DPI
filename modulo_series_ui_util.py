@@ -4,7 +4,7 @@ import os
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
-from modulo_configuracion_ui import ultima_carpeta
+from dpi.ui.configuracion import ultima_carpeta
 from modulo_widgets import _agregar_hover_anio
 from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFileDialog, QMessageBox, QDialog
 from PyQt6.QtCore import Qt

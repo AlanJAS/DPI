@@ -6,7 +6,7 @@ Contiene:
   - VistaInteractiva: lienzo con herramientas de marcado, calibración y edición.
   - PestanaImagen: pestaña completa por imagen con panel de co-datación en vivo.
 """
-from modulo_configuracion_ui import ajustes_ui
+from dpi.ui.configuracion import ajustes_ui
 
 from modulo_medicion_especial_ui import (ContextoRadio, ContextoImagen,
     ControlPith, ControlEWLW, ControlIntensidad)
@@ -24,7 +24,7 @@ from dpi.medicion.sesion import guardar_sesion, leer_sesion
 
 import cv2
 import numpy as np
-from modulo_configuracion_ui import ultima_carpeta
+from dpi.ui.configuracion import ultima_carpeta
 import dpi.ciencia.transformacion as _tr
 from dpi.medicion.modelo import ModeloSesionMedicion, RadioMedicion, TipoMarca
 import pandas as pd

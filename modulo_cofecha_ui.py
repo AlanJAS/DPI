@@ -12,7 +12,7 @@ lo que da correlaciones comparables con las suyas.
 """
 
 from __future__ import annotations
-from modulo_configuracion_ui import ajustes_ui
+from dpi.ui.configuracion import ajustes_ui
 
 import os
 
