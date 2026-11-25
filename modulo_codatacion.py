@@ -1734,7 +1734,8 @@ class PanelCodatacion(QWidget):
         df_nuevo.index = nuevo_idx
         df_nuevo.sort_index(inplace=True)
 
-        self.modelo_series.registrar(nombre, df_nuevo)
+        self.modelo_series.actualizar(nombre, df_nuevo)
+        self._cache_comparacion = None
 
         self.graficar_series()
         QMessageBox.information(
@@ -2704,7 +2705,7 @@ class PanelCodatacion(QWidget):
         """Re-data UNA serie sumando `shift` a su índice de años.
 
         Reutilizable desde la tabla de comparación múltiple y desde la
-        ventana de detalle. Actualiza series_datos y series_originales,
+        ventana de detalle. Conserva los datos originales,
         invalida la caché de comparación y (opcionalmente) regrafica.
 
         Devuelve True si aplicó algún cambio.
@@ -2721,7 +2722,7 @@ class PanelCodatacion(QWidget):
         """Reemplaza por completo los datos de una serie (usado por el
         editor de anillos, que cambia anchos y/o cantidad de anillos).
         Invalida la caché de comparación y regrafica."""
-        self.modelo_series.registrar(nombre, df_nuevo)
+        self.modelo_series.actualizar(nombre, df_nuevo)
         self._cache_comparacion = None
         if regraficar:
             self.graficar_series()
