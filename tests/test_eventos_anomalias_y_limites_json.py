@@ -5,7 +5,7 @@ from dpi.infraestructura.json_seguro import cargar_json
 from dpi.medicion.anomalias import tabla_eventos
 
 
-class Regresiones(unittest.TestCase):
+class TestEventosAnomaliasYLimitesJson(unittest.TestCase):
     def test_eventos_binarios(self):
         tabla = tabla_eventos([1999, 2000, 2001], {2000: "fuego", 2001: "helada"},
                               [("fuego", "Fuego"), ("helada", "Helada")])

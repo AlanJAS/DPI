@@ -6,7 +6,7 @@ from dpi.infraestructura.json_seguro import guardar_json
 from dpi.formatos.planillas import es_planilla
 
 
-class Regresiones(unittest.TestCase):
+class TestGuardadoJsonYPlanillas(unittest.TestCase):
     def test_json_fallido_conserva_destino(self):
         with tempfile.TemporaryDirectory() as carpeta:
             ruta = Path(carpeta) / "datos.json"

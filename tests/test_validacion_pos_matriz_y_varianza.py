@@ -6,7 +6,7 @@ import pandas as pd
 from dpi.formatos.pos import leer_pos, escribir_pos
 from dpi.ciencia.cofecha_nucleo import Matriz, z_leave_one_out
 
-class TestValidacionCientifica(unittest.TestCase):
+class TestValidacionPosMatrizYVarianza(unittest.TestCase):
     def test_dpi_invalido(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / 'a.pos'

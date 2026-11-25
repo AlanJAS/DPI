@@ -3,7 +3,7 @@ from io import StringIO
 import pandas as pd
 from dpi.series.modelo import ModeloSeries
 from dpi.infraestructura.json_seguro import cargar_json, a_json
-class Integridad(unittest.TestCase):
+class TestSeriesDuplicadasYJson(unittest.TestCase):
     def test_duplicado(self):
         m=ModeloSeries();df=pd.DataFrame({'Ancho_mm':[1]},index=[2000]);m.registrar('A',df)
         with self.assertRaises(ValueError): m.registrar('A',df*2)

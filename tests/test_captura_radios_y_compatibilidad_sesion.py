@@ -7,7 +7,7 @@ from dpi.medicion.datos import mediciones_radio
 from dpi.medicion.sesion import guardar_sesion, leer_sesion
 
 
-class TestRepresentacionUnica(unittest.TestCase):
+class TestCapturaRadiosYCompatibilidadSesion(unittest.TestCase):
     def test_captura_y_recalibracion(self):
         m = ModeloMedicion()
         m.cargar([(0, 0), (2, 0), (6, 0)], [False] * 3)

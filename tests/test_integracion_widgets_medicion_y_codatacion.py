@@ -8,7 +8,7 @@ os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 @unittest.skipUnless(importlib.util.find_spec('PyQt6') and importlib.util.find_spec('pyqtgraph'),
                      'Requiere PyQt6 y pyqtgraph')
-class ArquitecturaUI(unittest.TestCase):
+class TestIntegracionWidgets(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         from PyQt6.QtWidgets import QApplication

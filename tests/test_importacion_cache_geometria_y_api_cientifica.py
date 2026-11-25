@@ -21,7 +21,7 @@ class CacheGeometria(unittest.TestCase):
         self.assertEqual(anchos_anillos([(0,0),(4,0)], [False,True], 2), [])
 
 
-class RegresionesFinales(unittest.TestCase):
+class TestGeometriaAnchosYApiCientifica(unittest.TestCase):
     def test_geometria(self):
         from dpi.medicion.calculo import posicion_insercion, ordenar_extremos_espacio, escala_desde_dpi
         coords = [(0,0),(2,0),(4,0)]

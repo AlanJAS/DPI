@@ -4,7 +4,7 @@ from dpi.medicion.ewlw import calcular_anchos_ewlw
 from dpi.medicion.intensidad import valores_intensidad, segmentos_banda_intensidad
 
 
-class NucleosIndependientes(unittest.TestCase):
+class TestCalculosDapEwlwEIntensidad(unittest.TestCase):
     def test_dap(self):
         self.assertEqual(distancia_faltante_dap([(0,0),(3,4),(6,8)], [False,False,True], 10), 5)
         self.assertEqual(distancia_faltante_dap([(0,0),(3,4)], [False,False], 2), 0)

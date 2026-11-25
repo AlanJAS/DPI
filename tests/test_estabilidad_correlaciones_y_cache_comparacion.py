@@ -4,7 +4,7 @@ import pandas as pd
 from dpi.ciencia.estadistica import correlaciones_pares
 
 
-class Estabilidad(unittest.TestCase):
+class TestEstabilidadCorrelacionesYCache(unittest.TestCase):
     def test_desplazamiento(self):
         x = np.arange(30, dtype=float)
         np.testing.assert_allclose(correlaciones_pares(np.c_[1e12+x, 1e12-x]), [-1])

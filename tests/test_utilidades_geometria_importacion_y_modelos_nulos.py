@@ -11,7 +11,7 @@ from dpi.ciencia import modelos_nulos, quiebres
 from dpi.ciencia.prioridad import clave_prioridad_correccion
 
 
-class ServiciosRefactor(unittest.TestCase):
+class TestUtilidadesGeometriaSeriesYCiencia(unittest.TestCase):
     def test_punto_cercano(self):
         self.assertEqual(indice_punto_mas_cercano([(0, 0), (2, 0)], 1, 0, 2), 0)
         self.assertIsNone(indice_punto_mas_cercano([(0, 0)], 1, 0, 1))

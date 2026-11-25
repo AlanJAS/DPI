@@ -5,7 +5,7 @@ from dpi.medicion.pith import ajuste_degenerado, estimar_anillos_faltantes
 from dpi.medicion.intensidad import extraer_intensidad_por_anillo
 
 
-class NucleosSinQt(unittest.TestCase):
+class TestEstimacionMedulaEIntensidad(unittest.TestCase):
     def test_medula(self):
         resultado = estimar_anillos_faltantes(10., [2., 2., 2.])
         self.assertEqual(resultado['n_media'], 5.)
