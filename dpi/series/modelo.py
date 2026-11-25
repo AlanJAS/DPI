@@ -92,6 +92,8 @@ class ModeloSeries:
     def _validar(df):
         if not isinstance(df, pd.DataFrame) or 'Ancho_mm' not in df.columns:
             raise ValueError('La serie debe contener Ancho_mm')
+        if not df.columns.is_unique:
+            raise ValueError('Columnas duplicadas en la serie')
         datos = df.copy()
         datos.index = pd.Index(validar_anios(datos.index), name=df.index.name)
         if not datos.index.is_unique or datos.empty:
