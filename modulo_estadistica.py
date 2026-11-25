@@ -575,31 +575,51 @@ def rbar_entre_arboles(series_dict, nombres, min_overlap: int = 10) -> dict:
 def correlaciones_pares(mat, min_overlap=10):
     """Correlaciones válidas de la mitad superior, con solape por par."""
     mat = np.asarray(mat, dtype=float)
-    valido = ~np.isnan(mat)
-    Z = np.where(valido, mat, 0.0)
+    if mat.ndim != 2:
+        raise ValueError("Se esperaba una matriz de años por series.")
+    if mat.shape[0] < 2 or mat.shape[1] < 2:
+        return np.empty(0, dtype=float)
+    valido = np.isfinite(mat)
     V = valido.astype(float)
+    # Restar una referencia por columna antes de acumular productos.
+    # La correlación por pares es invariante ante esta traslación.
+    referencia = mat[np.argmax(valido, axis=0), np.arange(mat.shape[1])]
+    referencia = np.where(np.isfinite(referencia), referencia, 0.0)
+    with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+        Z = np.where(valido, mat - referencia, 0.0)
+        escala = np.max(np.abs(Z), axis=0)
+        Z = Z / np.where(escala > 0, escala, 1.0)
+        n_ab = V.T @ V
+        s_a = Z.T @ V
+        s_b = s_a.T
+        s_ab = Z.T @ Z
+        s_aa = (Z * Z).T @ V
+        s_bb = s_aa.T
+        cov = s_ab - s_a * s_b / n_ab
+        var_a = s_aa - s_a * s_a / n_ab
+        var_b = s_bb - s_b * s_b / n_ab
+        R = cov / (np.sqrt(var_a) * np.sqrt(var_b))
 
-    n_ab = V.T @ V                      # años en común por par
-    s_a = Z.T @ V                       # Σ a   (sobre años comunes)
-    s_b = V.T @ Z                       # Σ b
-    s_ab = Z.T @ Z                      # Σ a·b
-    s_aa = (Z * Z).T @ V                # Σ a²
-    s_bb = V.T @ (Z * Z)                # Σ b²
-
-    with np.errstate(divide="ignore", invalid="ignore"):
-        cov = s_ab - (s_a * s_b) / n_ab
-        var_a = s_aa - (s_a * s_a) / n_ab
-        var_b = s_bb - (s_b * s_b) / n_ab
-        den = np.sqrt(var_a * var_b)
-        R = cov / den
-
-    # Solo pares por encima del solape mínimo, mitad superior (a<b)
     iu = np.triu_indices(mat.shape[1], k=1)
-    r_pares = R[iu]
-    ok = (n_ab[iu] >= min_overlap) & np.isfinite(r_pares)
-    rs = r_pares[ok]
-
-    return rs
+    suficientes = n_ab[iu] >= max(2, min_overlap)
+    rs = R[iu].copy()
+    # Si el subconjunto común tiene varianza muy pequeña respecto de la
+    # columna completa, recalcular solo ese par con centrado local.
+    tol = 64 * np.finfo(float).eps
+    dudosos = suficientes & (
+        (var_a[iu] <= tol * s_aa[iu]) | (var_b[iu] <= tol * s_bb[iu])
+        | ~np.isfinite(rs) | (np.abs(rs) > 1 + tol))
+    for k in np.flatnonzero(dudosos):
+        i, j = iu[0][k], iu[1][k]
+        m = valido[:, i] & valido[:, j]
+        x, y = mat[m, i], mat[m, j]
+        with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+            x = x / max(np.max(np.abs(x)), np.finfo(float).tiny) if not np.isfinite(np.ptp(x)) else x - x[0]
+            y = y / max(np.max(np.abs(y)), np.finfo(float).tiny) if not np.isfinite(np.ptp(y)) else y - y[0]
+            x = x / max(np.max(np.abs(x)), np.finfo(float).tiny)
+            y = y / max(np.max(np.abs(y)), np.finfo(float).tiny)
+            rs[k] = pearson(x, y)
+    return np.clip(rs[suficientes & np.isfinite(rs)], -1.0, 1.0)
 
 
 def _ventanas_sin_centro(overlap, mitad):

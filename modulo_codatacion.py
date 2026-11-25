@@ -11,6 +11,7 @@ import csv
 import json
 import datetime
 import logging
+import hashlib
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
@@ -7971,41 +7972,20 @@ class PanelCodatacion(QWidget):
         dlg.exec()
 
     def _clave_cache_comparacion(self, nombres: list[str]) -> tuple:
-        """Construye una clave que identifica el estado de una comparación.
+        """Identifica datos, años, columnas y metadatos de la comparación."""
+        def _firma(df):
+            if df is None:
+                return None
+            h = hashlib.blake2b(digest_size=32)
+            h.update(repr((tuple(df.columns), tuple(map(str, df.dtypes)),
+                           str(df.index.dtype))).encode("utf-8"))
+            h.update(pd.util.hash_pandas_object(df, index=True).to_numpy().tobytes())
+            return h.digest()
 
-        Incluye, por cada serie marcada y por la cronología activa: nombre,
-        número de puntos, primer y último año, y suma redondeada de los
-        valores. Si el usuario edita una medición, agrega o quita series, o
-        cambia de cronología, la clave cambia y se fuerza el recálculo. Si
-        todo sigue igual, la clave coincide y se reusan los resultados.
-        """
-        def _firma(df: pd.DataFrame) -> tuple:
-            if df is None or df.empty:
-                return (0, 0, 0, 0.0)
-            try:
-                vals = pd.to_numeric(df["Ancho_mm"], errors="coerce").dropna()
-                return (
-                    len(vals),
-                    int(df.index.min()),
-                    int(df.index.max()),
-                    round(float(vals.sum()), 4),
-                )
-            except (ValueError, TypeError, KeyError):
-                return (len(df), 0, 0, 0.0)
-
-        partes = []
-        for n in sorted(nombres):
-            partes.append((n,) + _firma(self.series_datos.get(n)))
-        # Incluir la cronología activa
-        crono_firma = (self._nombre_cronologia_activa,)
-        if self.cronologia_activa is not None:
-            meta = self.meta_cronologia or {}
-            col_val = meta.get("columna_valor")
-            df_c = self.cronologia_activa
-            if col_val and col_val in df_c.columns:
-                vals_c = pd.to_numeric(df_c[col_val], errors="coerce").dropna()
-                crono_firma += (len(vals_c), round(float(vals_c.sum()), 4))
-        partes.append(crono_firma)
+        partes = [(n, _firma(self.series_datos.get(n))) for n in sorted(nombres)]
+        partes.append((self._nombre_cronologia_activa,
+                       _firma(self.cronologia_activa),
+                       repr(self.meta_cronologia or {})))
 
         # Incluir el estado del modo COFECHA: afecta directamente las
         # correlaciones (transformación de las series). Sin esto, al
