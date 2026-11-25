@@ -172,8 +172,13 @@ def _calcular_ewlw_posiciones(sig_prog, gray, coords, saltos, banda,
 
 
 def _calcular_anchos_ewlw_por_anillo(coords, saltos, ppm, med_a_cor=True):
+    """Adaptador de coordenadas y marcas históricas."""
+    return anchos_ewlw_puntos(puntos_desde_geometria(coords, saltos), ppm, med_a_cor)
+
+
+def anchos_ewlw_puntos(puntos, ppm, med_a_cor=True):
     """Anchos en orden de captura; ausentes si no existe un límite único."""
-    puntos = puntos_desde_geometria(coords, saltos)
+    puntos = tuple(puntos)
     resultado = []
     for anillo in calcular_anillos(puntos, ppm):
         limites = [i for i in anillo.segmentos if puntos[i].tipo is TipoMarca.EW_LW]

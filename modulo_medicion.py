@@ -25,7 +25,7 @@ import cv2
 import numpy as np
 from modulo_configuracion_ui import ultima_carpeta
 import modulo_transformacion as _tr
-from modulo_modelo_medicion import ModeloSesionMedicion, RadioMedicion
+from modulo_modelo_medicion import ModeloSesionMedicion, RadioMedicion, TipoMarca
 import pandas as pd
 from modulo_imagen import detectar_dpi, preparar_banda_rgb
 from modulo_formatos import leer_wid, leer_dendro_auto, leer_pos, escribir_pos, _escribir_excel, _asegurar_extension, _exportar_tabular, _exportar_tucson_ewlw, _escribir_tucson
@@ -65,7 +65,7 @@ logger = logging.getLogger(__name__)
 
 from modulo_marcas_medicion import ModoMedicion, _es_ewlw
 
-from modulo_ewlw import _calcular_anchos_ewlw_por_anillo
+from modulo_ewlw import anchos_ewlw_puntos
 
 
 
@@ -1778,8 +1778,9 @@ class PestanaImagen(QWidget):
             codigo = self.input_codigo.text().strip()
             anomalias_export = self.vista.anomalias
             # Para EW/LW: usar el estado en vivo de la vista
-            coords_export = self.vista.coordenadas_anillos
-            saltos_export = self.vista.es_salto
+            puntos_export = self.modelo_sesion.activo.captura()
+            coords_export = tuple(p.coordenada for p in puntos_export)
+            saltos_export = tuple(p.tipo.value for p in puntos_export)
             med_a_cor_export = self.combo_dir.currentIndex() == 0
         else:
             radio = self.caminos_guardados[seleccion]
@@ -1787,6 +1788,7 @@ class PestanaImagen(QWidget):
             codigo = seleccion
             anomalias_export = dict(radio.anomalias)
             # Proyecciones del radio elegido, no del radio activo.
+            puntos_export = radio.puntos
             coords_export = radio.coordenadas
             saltos_export = radio.marcas
             med_a_cor_export = radio.dir_idx == 0
@@ -1844,11 +1846,11 @@ class PestanaImagen(QWidget):
             # columnas extras en CSV/Excel.
             ppm = self.vista.pixeles_por_mm
             anchos_ewlw = None
-            tiene_ewlw_en_radio = any(_es_ewlw(v) for v in saltos_export)
+            tiene_ewlw_en_radio = any(p.tipo is TipoMarca.EW_LW for p in puntos_export)
             if tiene_ewlw_en_radio and coords_export:
                 try:
-                    anchos_ewlw = _calcular_anchos_ewlw_por_anillo(
-                        coords_export, saltos_export, ppm, med_a_cor_export
+                    anchos_ewlw = anchos_ewlw_puntos(
+                        puntos_export, ppm, med_a_cor_export
                     )
                     # Alinear largo con datos por seguridad
                     if len(anchos_ewlw) != len(datos):
