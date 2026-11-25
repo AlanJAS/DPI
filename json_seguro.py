@@ -38,6 +38,7 @@ import json
 import math
 import datetime
 import logging
+import tempfile
 
 import numpy as np
 import pandas as pd
@@ -69,7 +70,7 @@ def a_json(obj):
     if isinstance(obj, pd.DataFrame):
         return {str(c): a_json(obj[c]) for c in obj.columns}
     if isinstance(obj, np.ndarray):
-        return [a_json(v) for v in obj.tolist()]
+        return a_json(obj.tolist())
     if isinstance(obj, np.generic):        # np.float32, np.int64, np.bool_…
         obj = obj.item()
     # Ojo con el orden: `bool` es subclase de `int`, y `pd.Timestamp` lo es de
@@ -94,9 +95,11 @@ def guardar_json(ruta: str, datos, *, indent: int | None = 2,
     merece avisar al usuario o solo quedar en el registro. Pase lo que pase,
     el archivo que ya estaba en disco no queda a medio escribir.
     """
-    tmp = ruta + ".tmp"
+    ruta = os.fspath(ruta)
+    directorio = os.path.dirname(os.path.abspath(ruta))
+    fd, tmp = tempfile.mkstemp(prefix=".dpi-", suffix=".tmp", dir=directorio)
     try:
-        with open(tmp, "w", encoding="utf-8") as f:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(a_json(datos), f, indent=indent, ensure_ascii=ensure_ascii)
         os.replace(tmp, ruta)
     except BaseException:
