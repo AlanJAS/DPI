@@ -83,3 +83,30 @@ def dist_punto_segmento(
         return math.hypot(px - x1, py - y1)
     t = max(0.0, min(1.0, ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2))
     return math.hypot(px - (x1 + t * (x2 - x1)), py - (y1 + t * (y2 - y1)))
+
+
+def segmento_mas_cercano(coords, x: float, y: float, tol: float) -> tuple[int, float, float] | None:
+    """
+    Devuelve (idx_segmento, t, d_px) del segmento del camino más cercano al punto
+    (x, y), donde idx_segmento es el índice del punto inicial del segmento,
+    t es la proyección paramétrica [0,1] sobre ese segmento, y d_px es la
+    distancia en px de escena.
+    Devuelve None si no hay segmentos o el más cercano supera la tolerancia.
+    """
+    if len(coords) < 2:
+        return None
+    mejor_d, mejor_idx, mejor_t = float("inf"), -1, 0.0
+    for i in range(len(coords) - 1):
+        x1, y1 = coords[i]
+        x2, y2 = coords[i + 1]
+        l2 = (x2-x1)**2 + (y2-y1)**2
+        if l2 < 1e-9:
+            continue
+        t = max(0.0, min(1.0, ((x-x1)*(x2-x1) + (y-y1)*(y2-y1)) / l2))
+        px, py = x1 + t*(x2-x1), y1 + t*(y2-y1)
+        d = math.hypot(x-px, y-py)
+        if d < mejor_d:
+            mejor_d, mejor_idx, mejor_t = d, i, t
+    if mejor_idx == -1 or mejor_d > tol:
+        return None
+    return mejor_idx, mejor_t, mejor_d
