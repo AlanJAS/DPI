@@ -728,7 +728,7 @@ class PestanaImagen(QWidget):
                                 f'Ya existe un perfil para "{nombre}".')
             return
         self._perfiles_especie[nombre] = PERFIL_DEFECTO.copy()
-        guardar_perfiles(self._perfiles_especie)
+        self._guardar_perfiles_especie()
         self._especie_activa = nombre
         self._refrescar_combo_especie()
         # Abrir configuración inmediatamente
