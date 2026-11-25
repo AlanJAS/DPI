@@ -10,13 +10,13 @@ from dpi.ui.medicion.calibracion import DialogoCalibracionRegla
 
 def _limpiar_items_calibracion(self):
     """Elimina puntos / línea / texto de una calibración previa."""
-    for item in self._items_calibracion:
+    for item in self._calibracion.items:
         try:
             self.scene().removeItem(item)
         except Exception:
             pass
-    self._items_calibracion.clear()
-    self.puntos_calibracion = []
+    self._calibracion.items.clear()
+    self._calibracion.puntos = []
 
 
 def iniciar_calibracion(self, objetivo_mm: float | None = None):
@@ -39,7 +39,7 @@ def iniciar_calibracion(self, objetivo_mm: float | None = None):
     self._limpiar_items_calibracion()
 
     self.cambiar_modo(ModoMedicion.CALIBRAR)
-    self._objetivo_calibracion_mm = objetivo_mm
+    self._calibracion.objetivo_mm = objetivo_mm
     # Forzar foco en la vista para que el primer click se registre
     # directamente como mousePressEvent en la vista.
     self.setFocus()
@@ -55,17 +55,17 @@ def _paso_calibracion(self, x, y):
       - Click 2: marca el punto final + dibuja línea + pregunta los mm
                  → aplica calibración y limpia las marcas
     """
-    self.puntos_calibracion.append((x, y))
+    self._calibracion.puntos.append((x, y))
 
     # Dibujar el círculo del punto y agregar a la lista limpiable
     marker = self.scene().addEllipse(
         x - 5, y - 5, 10, 10,
         self._pen_calibracion, QBrush(QColor(COLOR_CALIBRACION)))
     marker.setZValue(500)
-    self._items_calibracion.append(marker)
+    self._calibracion.items.append(marker)
 
     # Solo hay un punto: pedir el segundo
-    if len(self.puntos_calibracion) == 1:
+    if len(self._calibracion.puntos) == 1:
         try:
             self.estado_cambiado.emit(
                 "📏 Calibración: Haz clic en el segundo punto (final de la distancia conocida).")
@@ -74,7 +74,7 @@ def _paso_calibracion(self, x, y):
         return
 
     # Ya tenemos los 2 puntos
-    p1, p2 = self.puntos_calibracion
+    p1, p2 = self._calibracion.puntos
     dist_px = math.hypot(p2[0] - p1[0], p2[1] - p1[1])
 
     # Dibujar la línea entre los 2 puntos
@@ -84,7 +84,7 @@ def _paso_calibracion(self, x, y):
     pen_linea.setStyle(Qt.PenStyle.SolidLine)
     linea = self.scene().addLine(p1[0], p1[1], p2[0], p2[1], pen_linea)
     linea.setZValue(499)
-    self._items_calibracion.append(linea)
+    self._calibracion.items.append(linea)
 
     # Etiqueta con la distancia, posicionada PEGADA AL BORDE INTERNO
     # de la imagen (el borde más cercano a la línea de calibración).
@@ -167,7 +167,7 @@ def _paso_calibracion(self, x, y):
 
     texto.setPos(label_x, label_y)
     texto.setZValue(501)
-    self._items_calibracion.append(texto)
+    self._calibracion.items.append(texto)
 
     # Forzar repintado para que el usuario VEA la línea y la distancia
     # antes de que aparezca el diálogo
@@ -176,7 +176,7 @@ def _paso_calibracion(self, x, y):
 
     # Si ya teníamos un objetivo_mm pre-cargado (flujo viejo) lo usamos.
     # En el flujo nuevo es None, así que preguntamos al usuario.
-    objetivo = getattr(self, "_objetivo_calibracion_mm", None)
+    objetivo = self._calibracion.objetivo_mm
     if objetivo and objetivo > 0:
         dist_mm = objetivo
         ok = True
@@ -215,7 +215,7 @@ def _paso_calibracion(self, x, y):
         # Si canceló el diálogo, limpiar las marcas (no hubo calibración)
         self._limpiar_items_calibracion()
 
-    self._objetivo_calibracion_mm = None
+    self._calibracion.objetivo_mm = None
     self._cambiar_modo_usuario(ModoMedicion.MEDIR)
     self.progreso_modificado.emit()
 
@@ -229,7 +229,7 @@ def _actualizar_etiqueta_calibracion(self, dist_px: float, dist_mm: float):
     pantalla independiente del zoom.
     """
     from PyQt6.QtWidgets import QGraphicsTextItem, QGraphicsItem
-    for i, item in enumerate(self._items_calibracion):
+    for i, item in enumerate(self._calibracion.items):
         if isinstance(item, QGraphicsTextItem):
             item.setHtml(
                 f"<div style='background:rgba(0,0,0,200); "

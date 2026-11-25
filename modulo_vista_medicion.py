@@ -51,6 +51,9 @@ import dpi.ui.medicion.herramientas.autodetectar as autodetectar
 from dpi.ui.medicion.herramientas.despacho import acciones_click
 
 
+from dpi.ui.medicion.herramientas.estado import EstadoCalibracion
+
+
 class VistaInteractiva(QGraphicsView):
     """
     Vista de imagen con herramientas de marcado de anillos.
@@ -105,10 +108,9 @@ class VistaInteractiva(QGraphicsView):
 
         # Estado de medición
         self.modelo_medicion = modelo if modelo is not None else ModeloMedicion()
-        self.puntos_calibracion: list[tuple[float, float]] = []
+        self._calibracion = EstadoCalibracion()
         # Items visuales de calibración (puntos, línea, texto) — se limpian
         # al cancelar/aceptar/reiniciar la calibración.
-        self._items_calibracion: list = []
 
         self._render = RenderMedicion(self.scene, self._escala_vista)
 
