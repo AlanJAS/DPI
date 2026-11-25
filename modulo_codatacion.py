@@ -298,7 +298,43 @@ class PanelCodatacion(QWidget):
     # -------------------------------------------------------------------------
 
     def _construir_ui(self):
-        return modulo_codatacion_ui._construir_ui(self)
+        from modulo_contratos_ui import instalar_controles
+        acciones = modulo_codatacion_ui.AccionesCodatacion(
+            _abrir_editor_anillos_marcada=self._abrir_editor_anillos_marcada,
+            _aplicar_fuente_informe=self._aplicar_fuente_informe,
+            _configurar_modo_cofecha=self._configurar_modo_cofecha,
+            _descartar_prueba=self._descartar_prueba,
+            _guardar_pref_fuente=self._guardar_pref_fuente,
+            _mostrar_eps_cronologia_activa=self._mostrar_eps_cronologia_activa,
+            _on_cofecha_aplicar_cambiado=self._on_cofecha_aplicar_cambiado,
+            _on_modo_cofecha_toggled=self._on_modo_cofecha_toggled,
+            _on_mouse_movido=self._on_mouse_movido,
+            _on_seleccion_sugerencia=self._on_seleccion_sugerencia,
+            _redibujar_offset=self._redibujar_offset,
+            abrir_skeleton_plot=self.abrir_skeleton_plot,
+            analizar_offset=self.analizar_offset,
+            aplicar_correccion_seleccionada=self.aplicar_correccion_seleccionada,
+            buscar_errores=self.buscar_errores,
+            cargar_archivos_rwl=self.cargar_archivos_rwl,
+            cargar_cronologias_externas=self.cargar_cronologias_externas,
+            cargar_series_referencia=self.cargar_series_referencia,
+            comparar_series_marcadas_vs_crono=self.comparar_series_marcadas_vs_crono,
+            editar_anio_serie=self.editar_anio_serie,
+            eliminar_series=self.eliminar_series,
+            exportar_serie_codatada=self.exportar_serie_codatada,
+            graficar_series=self.graficar_series,
+            mostrar_tabla_offset=self.mostrar_tabla_offset,
+            probar_correccion_seleccionada=self.probar_correccion_seleccionada,
+            restaurar_original_sugerencias=self.restaurar_original_sugerencias,
+            restaurar_serie=self.restaurar_serie,
+            simular_borrar=self.simular_borrar,
+            simular_insertar=self.simular_insertar,
+            toggle_seleccion=self.toggle_seleccion,
+            verificar_datacion=self.verificar_datacion,
+        )
+        controles = modulo_codatacion_ui.construir_ui(self, acciones)
+        instalar_controles(self, controles)
+        self._restaurar_pref_fuente()
 
     # -------------------------------------------------------------------------
     # SINCRONIZACIÓN DE FONDO CON EL TEMA DE LA APP

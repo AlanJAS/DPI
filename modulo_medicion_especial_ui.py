@@ -1,4 +1,6 @@
 """Control de herramientas de medición con dependencias explícitas."""
+from dataclasses import dataclass
+from collections.abc import Callable
 import os
 import logging
 from modulo_dialogos_archivo import ultima_carpeta
@@ -29,81 +31,57 @@ def _ultima_carpeta(nueva_ruta: str | None = None) -> str:
 from modulo_banda_intensidad_ui import BandaIntensidad
 
 
-class ControlMedicionEspecial:
-    """Coordina Pith, EW/LW e intensidad sin conocer la pestaña de medición.
+@dataclass(frozen=True)
+class ContextoRadio:
+    parent: object
+    vista: object
+    obtener_mediciones: Callable
+    label_estado: object
+    combo_dir: object
 
-    La vista, los controles, las consultas y las acciones son dependencias
-    explícitas. El padre Qt se utiliza únicamente para los diálogos.
-    """
+    @property
+    def datos_medidos(self):
+        return self.obtener_mediciones()
 
-    def __init__(self, *, parent, vista, datos_medidos, serie_maestra, imagen,
-                 ruta, set_modo, guardar_estado, guardar_sidecar, label_estado,
-                 spin_medula, spin_corteza, combo_dir, check_tiene_medula,
-                 btn_pith, btn_deshacer_pith, btn_mostrar_banda, btn_graficar_bi,
-                 btn_guardar_bi, input_codigo):
-        self._parent = parent
-        self.vista = vista
-        self._obtener_mediciones = datos_medidos
+
+@dataclass(frozen=True)
+class ContextoImagen:
+    imagen: Callable
+    ruta: Callable
+    tareas: GestorTareasMedicion
+
+
+class ControlPith:
+    """Estimación y persistencia de la médula."""
+    def __init__(self, radio, *, serie_maestra, set_modo, guardar_estado, guardar_sidecar,
+                 spin_medula, spin_corteza, check_tiene_medula, btn_pith, btn_deshacer_pith):
+        self.radio = radio
         self._obtener_maestra = serie_maestra
-        self._obtener_imagen = imagen
-        self._obtener_ruta = ruta
         self.set_modo = set_modo
         self._guardar_estado = guardar_estado
         self._guardar_sidecar_anom = guardar_sidecar
-        self.label_estado = label_estado
         self.spin_medula = spin_medula
         self.spin_corteza = spin_corteza
-        self.combo_dir = combo_dir
         self.check_tiene_medula = check_tiene_medula
         self.btn_pith = btn_pith
         self.btn_deshacer_pith = btn_deshacer_pith
-        self.btn_mostrar_banda = btn_mostrar_banda
-        self.btn_graficar_bi = btn_graficar_bi
-        self.btn_guardar_bi = btn_guardar_bi
-        self.input_codigo = input_codigo
         self._pith_estimacion = None
         self._pith_undo = None
-        self._bi_datos = []
-        self._bi_banda = 30
-        self._bi_porcentaje = 100
-        self._bi_alineacion = "centro"
-        self._bi_canal_vis = "B"
-        self._bi_canales = ["B", "G", "R", "Gray"]
-        self._banda_intensidad = BandaIntensidad()
         self._pith_metodo = "arco"
         self._pith_n_int = 5
         self._pith_usar_ref = False
         self._pith_dap_mm = 200.0
         self._pith_metodo_calculo = "rg"
-        self._tareas = GestorTareasMedicion(parent)
-
-    @property
-    def datos_medidos(self):
-        return self._obtener_mediciones()
-
-    @property
-    def serie_maestra(self):
-        return self._obtener_maestra()
-
-    @property
-    def _img_bgr_original(self):
-        return self._obtener_imagen()
-
-    @property
-    def ruta_imagen_actual(self):
-        return self._obtener_ruta()
 
     @property
     def configuracion_pith(self):
         return self._pith_n_int, self._pith_metodo_calculo
 
+
     @property
     def estimacion(self):
         return dict(self._pith_estimacion) if self._pith_estimacion else None
 
-    @property
-    def tareas_en_curso(self):
-        return self._tareas.en_curso
 
     def restaurar_estimacion(self, datos):
         if not datos.get("pith_estimated"):
@@ -111,7 +89,7 @@ class ControlMedicionEspecial:
         self._pith_estimacion = {k: v for k, v in datos.items() if k.startswith("pith_")}
         offset = datos.get("pith_offset", 0)
         if offset > 0:
-            med_a_cor = self.combo_dir.currentIndex() == 0
+            med_a_cor = self.radio.combo_dir.currentIndex() == 0
             self._pith_undo = {
                 "med_a_cor": med_a_cor,
                 "anio_medula_old": self.spin_medula.value() + (offset if med_a_cor else 0),
@@ -121,29 +99,30 @@ class ControlMedicionEspecial:
             }
             self.btn_deshacer_pith.show()
 
-    def _iniciar_estimacion_pith(self):
+
+    def iniciar_estimacion_pith(self):
         """Abre el diálogo de configuración y activa el modo PITH."""
         # Limpieza defensiva: si por algún motivo quedaron items del modo
         # pith de una sesión anterior (incompleta, mal cancelada, etc.),
         # los borramos antes de empezar. Sin esto, los círculos/líneas/
         # texto naranjas anteriores se solapaban con los nuevos.
-        if hasattr(self.vista, "limpiar_pith"):
-            self.vista.limpiar_pith()
+        if hasattr(self.radio.vista, "limpiar_pith"):
+            self.radio.vista.limpiar_pith()
 
-        n_disponibles = len(self.datos_medidos)
+        n_disponibles = len(self.radio.datos_medidos)
         if n_disponibles < 3:
-            QMessageBox.warning(self._parent, "Pocos anillos",
+            QMessageBox.warning(self.radio.parent, "Pocos anillos",
                 "Necesitas al menos 3 anillos medidos para usar esta función.")
             self.btn_pith.setChecked(False)
             return
 
-        tiene_ref = (self.serie_maestra is not None
-                     and not self.serie_maestra.empty)
+        tiene_ref = (self._obtener_maestra() is not None
+                     and not self._obtener_maestra().empty)
 
         dlg = DialogoMetodoPith(
             tiene_referencia=tiene_ref,
             n_anillos_disponibles=n_disponibles,
-            parent=self._parent,
+            parent=self.radio.parent,
         )
         if dlg.exec() != DialogoMetodoPith.DialogCode.Accepted:
             self.btn_pith.setChecked(False)
@@ -157,7 +136,7 @@ class ControlMedicionEspecial:
 
         if self._pith_metodo == "arco":
             self.set_modo(ModoMedicion.PITH)
-            self.label_estado.setText(
+            self.radio.label_estado.setText(
                 "🎯 Paso 1/3: Haz clic en un EXTREMO del arco del anillo más interno."
             )
         else:
@@ -169,19 +148,19 @@ class ControlMedicionEspecial:
     def _calcular_pith_por_dap(self):
         """Calcula la distancia faltante usando el DAP ingresado."""
         radio_mm    = self._pith_dap_mm / 2.0
-        radio_px    = radio_mm * self.vista.pixeles_por_mm
+        radio_px    = radio_mm * self.radio.vista.pixeles_por_mm
 
         # Longitud del radio medido: distancia desde el primer punto hasta el último
-        if len(self.vista.coordenadas_anillos) < 2:
-            QMessageBox.warning(self._parent, "Sin camino",
+        if len(self.radio.vista.coordenadas_anillos) < 2:
+            QMessageBox.warning(self.radio.parent, "Sin camino",
                 "Necesitas tener puntos medidos en el camino activo.")
             return
 
-        coords = self.vista.coordenadas_anillos
-        distancia_faltante_px = distancia_faltante_dap(coords, self.vista.es_salto, radio_px)
+        coords = self.radio.vista.coordenadas_anillos
+        distancia_faltante_px = distancia_faltante_dap(coords, self.radio.vista.es_salto, radio_px)
 
         if distancia_faltante_px <= 0:
-            QMessageBox.information(self._parent, "Sin anillos faltantes",
+            QMessageBox.information(self.radio.parent, "Sin anillos faltantes",
                 "La longitud medida ya cubre o supera el radio estimado por DAP.")
             return
 
@@ -194,7 +173,7 @@ class ControlMedicionEspecial:
         )
 
 
-    def _confirmar_estimacion_pith(self):
+    def confirmar_estimacion_pith(self):
         """Confirma la estimación de pith por método arco.
 
         Llamado desde VistaInteractiva al presionar Enter en MODO_PITH.
@@ -213,7 +192,7 @@ class ControlMedicionEspecial:
              donde el promedio viene de N anillos junto al arco marcado
              contando hacia la corteza.
         """
-        resultado = self.vista.confirmar_pith()
+        resultado = self.radio.vista.confirmar_pith()
         self.set_modo(ModoMedicion.MEDIR)
         self.btn_pith.setChecked(False)
 
@@ -221,16 +200,16 @@ class ControlMedicionEspecial:
             return
 
         cx, cy, radio_px = resultado
-        coords = self.vista.coordenadas_anillos
+        coords = self.radio.vista.coordenadas_anillos
 
         if radio_px <= 0 or not coords:
-            QMessageBox.warning(self._parent, "Estimación inválida",
+            QMessageBox.warning(self.radio.parent, "Estimación inválida",
                 "El círculo ajustado tiene radio 0. Verifica los puntos marcados.")
             return
 
         # p_inner según dirección de medición
         try:
-            med_a_cor = self.combo_dir.currentIndex() == 0
+            med_a_cor = self.radio.combo_dir.currentIndex() == 0
         except Exception:
             med_a_cor = True
 
@@ -243,7 +222,7 @@ class ControlMedicionEspecial:
         distancia_faltante_px = math.hypot(cx - p_inner[0], cy - p_inner[1])
 
         if distancia_faltante_px <= 0:
-            QMessageBox.warning(self._parent, "Estimación inválida",
+            QMessageBox.warning(self.radio.parent, "Estimación inválida",
                 "El primer anillo medido coincide con la médula estimada.\n"
                 "No hay anillos faltantes para estimar.")
             return
@@ -268,8 +247,8 @@ class ControlMedicionEspecial:
 
         # Obtener los N anillos más internos (los primeros en la lista)
         # datos_medidos está ordenado médula→corteza
-        med_a_cor = self.combo_dir.currentIndex() == 0
-        dm = self.datos_medidos
+        med_a_cor = self.radio.combo_dir.currentIndex() == 0
+        dm = self.radio.datos_medidos
         if med_a_cor:
             # Los más internos son los del inicio
             anchos_internos = [d["ancho_mm"] for d in dm[:n_int]]
@@ -283,20 +262,20 @@ class ControlMedicionEspecial:
 
         # Serie de referencia si está disponible y seleccionada
         serie_ref = None
-        if usar_ref and self.serie_maestra is not None and not self.serie_maestra.empty:
-            col = ("Ancho_mm" if "Ancho_mm" in self.serie_maestra.columns
-                   else self.serie_maestra.columns[0])
-            serie_ref = self.serie_maestra[col].dropna()
+        if usar_ref and self._obtener_maestra() is not None and not self._obtener_maestra().empty:
+            col = ("Ancho_mm" if "Ancho_mm" in self._obtener_maestra().columns
+                   else self._obtener_maestra().columns[0])
+            serie_ref = self._obtener_maestra()[col].dropna()
 
         resultados = estimar_anillos_faltantes(
-            distancia_faltante_mm=distancia_faltante_px / self.vista.pixeles_por_mm,
+            distancia_faltante_mm=distancia_faltante_px / self.radio.vista.pixeles_por_mm,
             anchos_internos_mm=anchos_internos,
             serie_ref=serie_ref,
             anio_inicio_serie=anio_inicio,
         )
 
         if not resultados:
-            QMessageBox.warning(self._parent, "Sin resultados",
+            QMessageBox.warning(self.radio.parent, "Sin resultados",
                 "No se pudo calcular la estimación. Verifica los datos.")
             return
 
@@ -305,16 +284,16 @@ class ControlMedicionEspecial:
             resultados=resultados,
             radio_px=radio_px,
             distancia_faltante_px=distancia_faltante_px,
-            pixeles_por_mm=self.vista.pixeles_por_mm,
+            pixeles_por_mm=self.radio.vista.pixeles_por_mm,
             n_anillos_internos=len(anchos_internos),
             tiene_referencia=tiene_ref,
-            parent=self._parent,
+            parent=self.radio.parent,
         )
         dlg.poblar_grafico(anchos_internos)
         dlg.aplicar_offset.connect(
             lambda n: self._aplicar_pith_offset(n, dlg.marcar_estimada, resultados, metodo,
-                                                 radio_px / self.vista.pixeles_por_mm,
-                                                 distancia_faltante_px / self.vista.pixeles_por_mm)
+                                                 radio_px / self.radio.vista.pixeles_por_mm,
+                                                 distancia_faltante_px / self.radio.vista.pixeles_por_mm)
         )
         dlg.exec()
 
@@ -336,7 +315,7 @@ class ControlMedicionEspecial:
             return
 
         # Guardar estado previo para poder deshacer
-        med_a_cor = self.combo_dir.currentIndex() == 0
+        med_a_cor = self.radio.combo_dir.currentIndex() == 0
         self._pith_undo = {
             "med_a_cor":        med_a_cor,
             "anio_medula_old":  self.spin_medula.value(),
@@ -373,23 +352,23 @@ class ControlMedicionEspecial:
         self._guardar_estado()
 
         dist = distancia_faltante_mm
-        self.label_estado.setText(
+        self.radio.label_estado.setText(
             f"✅ Estimación aplicada: {n_anillos} anillos faltantes al centro · "
             f"distancia {dist:.1f} mm · año médula → {self.spin_medula.value()}"
         )
         self.btn_deshacer_pith.show()
 
 
-    def _deshacer_pith_offset(self):
+    def deshacer_pith_offset(self):
         """Revierte la última estimación de médula aplicada."""
         undo = getattr(self, "_pith_undo", None)
         if not undo:
-            QMessageBox.information(self._parent, "Nada que deshacer",
+            QMessageBox.information(self.radio.parent, "Nada que deshacer",
                 "No hay estimación para revertir.")
             return
 
         resp = QMessageBox.question(
-            self._parent, "Deshacer estimación",
+            self.radio.parent, "Deshacer estimación",
             f"¿Revertir la estimación de {undo['n_anillos']} anillos faltantes?\n"
             f"El año de médula volverá a su valor anterior.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
@@ -410,23 +389,30 @@ class ControlMedicionEspecial:
 
         self._guardar_sidecar_anom()
         self._guardar_estado()
-        self.vista.recalcular_todas_las_distancias()
+        self.radio.vista.recalcular_todas_las_distancias()
 
-        self.label_estado.setText(
+        self.radio.label_estado.setText(
             f"↩ Estimación revertida · "
             f"año médula → {self.spin_medula.value()}"
         )
 
 
-    def _eliminar_ewlw(self):
+class ControlEWLW:
+    """Detección, edición y exportación EW/LW."""
+    def __init__(self, radio, imagen, obtener_banda):
+        self.radio = radio
+        self.imagen = imagen
+        self._obtener_banda = obtener_banda
+
+    def eliminar_ewlw(self):
         """Elimina todos los límites EW/LW del radio activo tras confirmación."""
-        n_ewlw = sum(1 for v in self.vista.es_salto if _es_ewlw(v))
+        n_ewlw = sum(1 for v in self.radio.vista.es_salto if _es_ewlw(v))
         if n_ewlw == 0:
-            QMessageBox.information(self._parent, "Sin límites EW/LW",
+            QMessageBox.information(self.radio.parent, "Sin límites EW/LW",
                 "No hay límites EW/LW en el radio activo.")
             return
         resp = QMessageBox.question(
-            self._parent, "Eliminar límites EW/LW",
+            self.radio.parent, "Eliminar límites EW/LW",
             f"¿Eliminar los {n_ewlw} límite(s) EW/LW del radio activo?\n"
             "Esta acción se puede deshacer con Ctrl+Z.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
@@ -434,60 +420,61 @@ class ControlMedicionEspecial:
         )
         if resp != QMessageBox.StandardButton.Yes:
             return
-        self.vista.guardar_en_historial()
+        self.radio.vista.guardar_en_historial()
         # Eliminar de atrás hacia adelante para no invalidar índices
-        indices = [i for i, v in enumerate(self.vista.es_salto) if _es_ewlw(v)]
+        indices = [i for i, v in enumerate(self.radio.vista.es_salto) if _es_ewlw(v)]
         for i in reversed(indices):
-            self.vista.modelo_medicion.borrar(i)
-        self.vista.recalcular_todas_las_distancias()
-        self.vista.progreso_modificado.emit()
-        self.label_estado.setText(
+            self.radio.vista.modelo_medicion.borrar(i)
+        self.radio.vista.recalcular_todas_las_distancias()
+        self.radio.vista.progreso_modificado.emit()
+        self.radio.label_estado.setText(
             f"🗑 {n_ewlw} límite(s) EW/LW eliminados. Ctrl+Z para deshacer.")
 
 
-    def _detectar_ewlw_automatico(self):
+    def detectar_ewlw_automatico(self):
         """Detecta límites en segundo plano y aplica una sola edición validada."""
-        if self.tareas_en_curso:
-            QMessageBox.information(self._parent, "Tarea en curso", "Hay una tarea de medición activa.")
+        if self.imagen.tareas.en_curso:
+            QMessageBox.information(self.radio.parent, "Tarea en curso", "Hay una tarea de medición activa.")
             return
-        coords = list(self.vista.coordenadas_anillos)
-        saltos = list(self.vista.es_salto)
+        coords = list(self.radio.vista.coordenadas_anillos)
+        saltos = list(self.radio.vista.es_salto)
         if len(coords) < 2:
-            QMessageBox.information(self._parent, "Sin anillos", "Marca al menos un anillo.")
+            QMessageBox.information(self.radio.parent, "Sin anillos", "Marca al menos un anillo.")
             return
-        banda, ruta = self._bi_banda, self.ruta_imagen_actual
-        imagen = self._img_bgr_original
-        direccion = self.combo_dir.currentIndex()
+        banda, ruta = self._obtener_banda(), self.imagen.ruta()
+        imagen = self.imagen.imagen()
+        direccion = self.radio.combo_dir.currentIndex()
 
         def tarea(progreso, cancelado):
             return detectar_ewlw_imagen(progreso, imagen, coords, saltos, banda,
                                          ruta, cancelado, direccion == 0)
 
         def aplicar(inserciones):
-            if (self.ruta_imagen_actual != ruta or self.combo_dir.currentIndex() != direccion
-                    or list(self.vista.coordenadas_anillos) != coords
-                    or list(self.vista.es_salto) != saltos):
-                self.label_estado.setText("Resultados EW/LW descartados: cambió el radio.")
+            if (self.imagen.ruta() != ruta or self.radio.combo_dir.currentIndex() != direccion
+                    or list(self.radio.vista.coordenadas_anillos) != coords
+                    or list(self.radio.vista.es_salto) != saltos):
+                self.radio.label_estado.setText("Resultados EW/LW descartados: cambió el radio.")
                 return
             if not inserciones:
-                self.label_estado.setText("🍂 No se encontraron límites EW/LW.")
+                self.radio.label_estado.setText("🍂 No se encontraron límites EW/LW.")
                 return
-            puntos = list(self.vista.modelo_medicion.captura())
+            puntos = list(self.radio.vista.modelo_medicion.captura())
             for indice, x, y in sorted(inserciones, reverse=True):
                 if not 1 <= indice < len(coords):
                     raise ValueError("Índice de inserción EW/LW inválido")
                 puntos.insert(indice, PuntoMedicion((x, y), TipoMarca.EW_LW))
-            self.vista.guardar_en_historial()
-            self.vista.modelo_medicion.restaurar(puntos)
-            self.vista.recalcular_todas_las_distancias()
-            self.vista.progreso_modificado.emit()
-            self.label_estado.setText(f"🍂 EW/LW automático: {len(inserciones)} límites insertados.")
+            self.radio.vista.guardar_en_historial()
+            self.radio.vista.modelo_medicion.restaurar(puntos)
+            self.radio.vista.recalcular_todas_las_distancias()
+            self.radio.vista.progreso_modificado.emit()
+            self.radio.label_estado.setText(f"🍂 EW/LW automático: {len(inserciones)} límites insertados.")
 
-        self._tareas.iniciar("Detectando límites EW/LW", tarea, aplicar,
-            lambda error: QMessageBox.critical(self._parent, "Error EW/LW", error),
-            lambda: self.label_estado.setText("Detección EW/LW cancelada — sin cambios."))
+        self.imagen.tareas.iniciar("Detectando límites EW/LW", tarea, aplicar,
+            lambda error: QMessageBox.critical(self.radio.parent, "Error EW/LW", error),
+            lambda: self.radio.label_estado.setText("Detección EW/LW cancelada — sin cambios."))
 
-    def _exportar_ewlw(self, codigo: str, ruta_base: str,
+
+    def exportar_ewlw(self, codigo: str, ruta_base: str,
                         coords: list | None = None,
                         saltos: list | None = None,
                         datos_medidos: list | None = None, med_a_cor=None):
@@ -499,27 +486,27 @@ class ControlMedicionEspecial:
         común: exportar un radio guardado). Si no vienen, cae al estado
         de la vista activa (caso: exportar el radio en progreso).
 
-        Bug histórico: antes siempre leía self.vista.coordenadas_anillos
-        y self.vista.es_salto, ignorando el radio que el usuario estaba
+        Bug histórico: antes siempre leía self.radio.vista.coordenadas_anillos
+        y self.radio.vista.es_salto, ignorando el radio que el usuario estaba
         exportando. Si el usuario exportaba un radio guardado pero la
         vista activa estaba vacía, tiene_ewlw era False y nunca se
         generaban los archivos _ew/_lw.
         """
         # Usar parámetros explícitos si se pasaron, si no caer a la vista
         if coords is None:
-            coords = self.vista.coordenadas_anillos
+            coords = self.radio.vista.coordenadas_anillos
         if saltos is None:
-            saltos = self.vista.es_salto
+            saltos = self.radio.vista.es_salto
         if datos_medidos is None:
-            datos_medidos = self.datos_medidos
+            datos_medidos = self.radio.datos_medidos
 
         if not datos_medidos:
             return
 
         if med_a_cor is None:
-            med_a_cor = self.combo_dir.currentIndex() == 0
+            med_a_cor = self.radio.combo_dir.currentIndex() == 0
         anios_ew, anchos_ew, anios_lw, anchos_lw = calcular_anchos_ewlw(
-            coords, saltos, datos_medidos, self.vista.pixeles_por_mm, med_a_cor)
+            coords, saltos, datos_medidos, self.radio.vista.pixeles_por_mm, med_a_cor)
 
         if not anios_ew:
             return
@@ -542,7 +529,29 @@ class ControlMedicionEspecial:
                 logger.warning("Error escribiendo %s: %s", ruta_rwl, exc)
 
 
-    def _configurar_bi(self):
+class ControlIntensidad:
+    """Configuración, muestreo y resultados de intensidad."""
+    def __init__(self, radio, imagen, *, btn_mostrar_banda, btn_graficar_bi,
+                 btn_guardar_bi, input_codigo):
+        self.radio = radio
+        self.imagen = imagen
+        self.btn_mostrar_banda = btn_mostrar_banda
+        self.btn_graficar_bi = btn_graficar_bi
+        self.btn_guardar_bi = btn_guardar_bi
+        self.input_codigo = input_codigo
+        self._bi_datos = []
+        self._bi_banda = 30
+        self._bi_porcentaje = 100
+        self._bi_alineacion = "centro"
+        self._bi_canal_vis = "B"
+        self._bi_canales = ["B", "G", "R", "Gray"]
+        self._banda_intensidad = BandaIntensidad()
+
+    @property
+    def banda(self):
+        return self._bi_banda
+
+    def configurar_bi(self):
         """Abre el diálogo de configuración de la extracción de intensidad."""
         dlg = DialogoConfigBI(
             banda_actual=self._bi_banda,
@@ -550,7 +559,7 @@ class ControlMedicionEspecial:
             porcentaje=self._bi_porcentaje,
             alineacion=self._bi_alineacion,
             canal_vis=self._bi_canal_vis,
-            parent=self._parent,
+            parent=self.radio.parent,
         )
         if dlg.exec():
             self._bi_banda       = dlg.banda
@@ -563,19 +572,19 @@ class ControlMedicionEspecial:
                 self._dibujar_banda_bi()
 
 
-    def _calcular_bi(self):
+    def calcular_bi(self):
         """Calcula BI/GI/RI en hilo separado con barra de progreso."""
-        if not self.datos_medidos:
-            QMessageBox.information(self._parent, "Sin mediciones",
+        if not self.radio.datos_medidos:
+            QMessageBox.information(self.radio.parent, "Sin mediciones",
                 "Mide al menos un anillo antes de calcular la intensidad.")
             return
 
         # Protección contra doble lanzamiento (mismo problema que en EW/LW:
         # múltiples workers concurrentes con copias de la imagen llevan a OOM
         # y posible crash del sistema).
-        if self.tareas_en_curso:
+        if self.imagen.tareas.en_curso:
             QMessageBox.information(
-                self._parent, "Cálculo en curso",
+                self.radio.parent, "Cálculo en curso",
                 "Ya se está ejecutando un cálculo de intensidad.\n"
                 "Espera a que termine.")
             return
@@ -584,32 +593,32 @@ class ControlMedicionEspecial:
         if not self._bi_canales:
             self._bi_canales = ["B", "G", "R", "Gray"]
 
-        ruta = getattr(self, "ruta_imagen_actual", None)
+        ruta = self.imagen.ruta()
         if not ruta:
-            QMessageBox.warning(self._parent, "Sin imagen",
+            QMessageBox.warning(self.radio.parent, "Sin imagen",
                 "No hay imagen cargada para extraer la intensidad.")
             return
 
         # Usar imagen cacheada si está disponible — evita re-leer del disco
-        img_bgr = self._img_bgr_original
+        img_bgr = self.imagen.imagen()
         if img_bgr is None:
             img_bgr = cv2.imread(ruta, cv2.IMREAD_COLOR)
             if img_bgr is None:
-                QMessageBox.critical(self._parent, "Error",
+                QMessageBox.critical(self.radio.parent, "Error",
                     "No se pudo leer la imagen para extraer la intensidad.")
                 return
 
         # Capturar estado en este momento (el worker corre en otro hilo)
-        coords   = list(self.vista.coordenadas_anillos)
-        saltos   = list(self.vista.es_salto)
-        ppm      = self.vista.pixeles_por_mm
+        coords   = list(self.radio.vista.coordenadas_anillos)
+        saltos   = list(self.radio.vista.es_salto)
+        ppm      = self.radio.vista.pixeles_por_mm
         banda    = self._bi_banda
         canales  = list(self._bi_canales)
-        anios_capturados = [d["anio"] for d in self.datos_medidos]
+        anios_capturados = [d["anio"] for d in self.radio.datos_medidos]
 
         pct_calculo  = self._bi_porcentaje / 100.0
         alin_calculo = self._bi_alineacion
-        med_a_cor = self.combo_dir.currentIndex() == 0
+        med_a_cor = self.radio.combo_dir.currentIndex() == 0
 
         def _tarea(progreso, cancelado):
             return extraer_intensidad_por_anillo(
@@ -619,29 +628,29 @@ class ControlMedicionEspecial:
                 alineacion=alin_calculo, med_a_cor=med_a_cor, cancelado=cancelado)
 
         def _on_resultado(resultados):
-            if (self.ruta_imagen_actual != ruta
-                    or list(self.vista.coordenadas_anillos) != coords
-                    or list(self.vista.es_salto) != saltos
-                    or self.vista.pixeles_por_mm != ppm
-                    or (self.combo_dir.currentIndex() == 0) != med_a_cor
-                    or [d["anio"] for d in self.datos_medidos] != anios_capturados):
-                self.label_estado.setText("Resultados BI descartados: cambió el radio.")
+            if (self.imagen.ruta() != ruta
+                    or list(self.radio.vista.coordenadas_anillos) != coords
+                    or list(self.radio.vista.es_salto) != saltos
+                    or self.radio.vista.pixeles_por_mm != ppm
+                    or (self.radio.combo_dir.currentIndex() == 0) != med_a_cor
+                    or [d["anio"] for d in self.radio.datos_medidos] != anios_capturados):
+                self.radio.label_estado.setText("Resultados BI descartados: cambió el radio.")
                 return
             for resultado in resultados:
                 resultado["anio"] = anios_capturados[resultado["indice_anillo"]]
             self._bi_datos = resultados
             self.btn_guardar_bi.setEnabled(bool(resultados))
             self.btn_graficar_bi.setEnabled(bool(resultados))
-            self.label_estado.setText(
+            self.radio.label_estado.setText(
                 f"🎨 {len(resultados)} anillos · banda {banda}px · "
                 f"canales: {', '.join(canales)}")
 
-        self._tareas.iniciar("Calculando intensidad de color", _tarea, _on_resultado,
-            lambda error: QMessageBox.critical(self._parent, "Error al calcular BI", error),
-            lambda: self.label_estado.setText("Cálculo BI cancelado — sin cambios."))
+        self.imagen.tareas.iniciar("Calculando intensidad de color", _tarea, _on_resultado,
+            lambda error: QMessageBox.critical(self.radio.parent, "Error al calcular BI", error),
+            lambda: self.radio.label_estado.setText("Cálculo BI cancelado — sin cambios."))
 
 
-    def _toggle_banda_bi(self, activo: bool):
+    def toggle_banda_bi(self, activo: bool):
         """Muestra u oculta la banda de muestreo BI sobre la imagen."""
         if activo:
             self._dibujar_banda_bi()
@@ -651,21 +660,21 @@ class ControlMedicionEspecial:
 
     def _dibujar_banda_bi(self):
         self._banda_intensidad.limpiar()
-        ruta = getattr(self, "ruta_imagen_actual", None)
+        ruta = self.imagen.ruta()
         if not ruta:
             return
         img = cv2.imread(ruta, cv2.IMREAD_COLOR)
-        self._banda_intensidad.dibujar(self.vista.scene(), img,
-            self.vista.coordenadas_anillos, self.vista.es_salto,
+        self._banda_intensidad.dibujar(self.radio.vista.scene(), img,
+            self.radio.vista.coordenadas_anillos, self.radio.vista.es_salto,
             self._bi_canal_vis, self._bi_banda, self._bi_porcentaje / 100.0,
-            self._bi_alineacion, med_a_cor=self.combo_dir.currentIndex() == 0)
+            self._bi_alineacion, med_a_cor=self.radio.combo_dir.currentIndex() == 0)
 
 
     def _limpiar_banda_bi(self):
         self._banda_intensidad.limpiar()
 
 
-    def _graficar_bi_ventana(self):
+    def graficar_bi_ventana(self):
         """Abre una ventana independiente con el gráfico de BI/GI/RI con zoom."""
         if not self._bi_datos:
             return
@@ -678,7 +687,7 @@ class ControlMedicionEspecial:
             "max":  (Qt.PenStyle.DotLine,    "Máximo"),
         }
 
-        win = QDialog(self._parent)
+        win = QDialog(self.radio.parent)
         win.setWindowTitle("Intensidad de color — BI/GI/RI/GrayI")
         win.resize(900, 450)
         lay = QVBoxLayout(win)
@@ -745,7 +754,7 @@ class ControlMedicionEspecial:
         self._bi_ventana = win   # evitar GC
 
 
-    def _guardar_bi(self):
+    def guardar_bi(self):
         """
         Abre el diálogo de selección de métricas y guarda en el formato
         elegido por la extensión del archivo:
@@ -754,21 +763,21 @@ class ControlMedicionEspecial:
           • .csv/.txt  → un texto multi-columna con coma decimal
         """
         if not self._bi_datos:
-            QMessageBox.information(self._parent, "Sin datos",
+            QMessageBox.information(self.radio.parent, "Sin datos",
                 "Primero calcula la intensidad con el botón 🎨 Calcular BI.")
             return
 
         # 1. Diálogo de selección de canales y métricas
         dlg = DialogoGuardarBI(
             canales_calculados=self._bi_canales,
-            parent=self._parent,
+            parent=self.radio.parent,
         )
         if dlg.exec() != DialogoGuardarBI.DialogCode.Accepted:
             return
 
         seleccion = dlg.seleccion
         if not seleccion:
-            QMessageBox.information(self._parent, "Sin selección",
+            QMessageBox.information(self.radio.parent, "Sin selección",
                 "No se seleccionó ningún canal/métrica para exportar.")
             return
 
@@ -777,7 +786,7 @@ class ControlMedicionEspecial:
         ruta_default = os.path.join(_ultima_carpeta(), f"{codigo}_bi.txt")
 
         ruta, filtro = QFileDialog.getSaveFileName(
-            self._parent, "Guardar intensidad de color",
+            self.radio.parent, "Guardar intensidad de color",
             ruta_default,
             "Texto multi-columna (*.txt);;"
             "CSV multi-columna (*.csv);;"
@@ -816,7 +825,7 @@ class ControlMedicionEspecial:
                 self._exportar_bi_multicolumna(ruta, ext, anios, seleccion, codigo)
         except Exception as exc:
             logger.error("Error al exportar BI: %s", exc)
-            QMessageBox.critical(self._parent, "Error",
+            QMessageBox.critical(self.radio.parent, "Error",
                                  f"Fallo al exportar:\n{exc}")
 
 
@@ -857,7 +866,7 @@ class ControlMedicionEspecial:
             msg += "\n\n" + "\n".join(f"  • {f}" for f in escritos)
         if errores:
             msg += "\n\n⚠ Errores:\n" + "\n".join(errores)
-        QMessageBox.information(self._parent, "Guardado completado", msg)
+        QMessageBox.information(self.radio.parent, "Guardado completado", msg)
 
 
     def _exportar_bi_multicolumna(self, ruta: str, ext: str, anios: list,
@@ -883,7 +892,7 @@ class ControlMedicionEspecial:
 
         n_cols = len(df.columns) - 1  # restar la columna Anio
         QMessageBox.information(
-            self._parent, "✅ Exportación completada",
+            self.radio.parent, "✅ Exportación completada",
             f"Archivo guardado:\n{ruta}\n\n"
             f"Formato: multi-columna ({n_cols} series)\n"
             f"Filas: {len(df)} años\n"

@@ -7,7 +7,9 @@ Contiene:
   - PestanaImagen: pestaña completa por imagen con panel de co-datación en vivo.
 """
 
-from modulo_medicion_especial_ui import ControlMedicionEspecial
+from modulo_medicion_especial_ui import (ContextoRadio, ContextoImagen,
+    ControlPith, ControlEWLW, ControlIntensidad)
+from modulo_worker_medicion import GestorTareasMedicion
 
 
 import modulo_medicion_ui
@@ -265,17 +267,20 @@ class PestanaImagen(QWidget):
         self._dpi_modo: str = "default"
 
         self._construir_ui()
-        self._especial = ControlMedicionEspecial(
-            parent=self, vista=self.vista, datos_medidos=lambda: self.datos_medidos,
-            serie_maestra=lambda: self.serie_maestra, imagen=lambda: self._img_bgr_original,
-            ruta=lambda: self.ruta_imagen_actual, set_modo=self.set_modo,
-            guardar_estado=self._guardar_estado, guardar_sidecar=self._guardar_sidecar_anom,
-            label_estado=self.label_estado, spin_medula=self.spin_medula,
-            spin_corteza=self.spin_corteza, combo_dir=self.combo_dir,
-            check_tiene_medula=self.check_tiene_medula, btn_pith=self.btn_pith,
-            btn_deshacer_pith=self.btn_deshacer_pith, btn_mostrar_banda=self.btn_mostrar_banda,
-            btn_graficar_bi=self.btn_graficar_bi, btn_guardar_bi=self.btn_guardar_bi,
-            input_codigo=self.input_codigo)
+        self._tareas = GestorTareasMedicion(self)
+        radio = ContextoRadio(self, self.vista, lambda: self.datos_medidos,
+                              self.label_estado, self.combo_dir)
+        imagen = ContextoImagen(lambda: self._img_bgr_original,
+                                lambda: self.ruta_imagen_actual, self._tareas)
+        self._pith = ControlPith(radio, serie_maestra=lambda: self.serie_maestra,
+            set_modo=self.set_modo, guardar_estado=self._guardar_estado,
+            guardar_sidecar=self._guardar_sidecar_anom, spin_medula=self.spin_medula,
+            spin_corteza=self.spin_corteza, check_tiene_medula=self.check_tiene_medula,
+            btn_pith=self.btn_pith, btn_deshacer_pith=self.btn_deshacer_pith)
+        self._intensidad = ControlIntensidad(radio, imagen,
+            btn_mostrar_banda=self.btn_mostrar_banda, btn_graficar_bi=self.btn_graficar_bi,
+            btn_guardar_bi=self.btn_guardar_bi, input_codigo=self.input_codigo)
+        self._ewlw = ControlEWLW(radio, imagen, lambda: self._intensidad.banda)
         self._cargar_imagen(ruta_imagen)
 
     # -------------------------------------------------------------------------
@@ -411,16 +416,92 @@ class PestanaImagen(QWidget):
         popup.show()
 
     def _construir_barra_herramientas(self) -> QHBoxLayout:
-        return modulo_medicion_ui._construir_barra_herramientas(self)
+        from modulo_contratos_ui import instalar_controles
+        acciones = modulo_medicion_ui.AccionesBarraMedicion(
+            _activar_calibracion=self._activar_calibracion,
+            _al_cambiar_direccion=self._al_cambiar_direccion,
+            _al_cambiar_especie=self._al_cambiar_especie,
+            _aplicar_anio_corteza=self._aplicar_anio_corteza,
+            _aplicar_anio_medula=self._aplicar_anio_medula,
+            _aplicar_banda_actual=self._aplicar_banda_actual,
+            _calibrar_por_dpi=self._calibrar_por_dpi,
+            _cambiar_banda=self._cambiar_banda,
+            _configurar_especie=self._configurar_especie,
+            _crear_popup=self._crear_popup,
+            _crear_separador=self._crear_separador,
+            _deshacer=self._deshacer,
+            _deshacer_pith_offset=self._deshacer_pith_offset,
+            _detectar_ewlw_automatico=self._detectar_ewlw_automatico,
+            _ejecutar_exportacion=self._ejecutar_exportacion,
+            _eliminar_ewlw=self._eliminar_ewlw,
+            _exportar_anomalias=self._exportar_anomalias,
+            _guardar_ajustes_banda=self._guardar_ajustes_banda,
+            _importar_pos=self._importar_pos,
+            _iniciar_estimacion_pith=self._iniciar_estimacion_pith,
+            _nueva_especie=self._nueva_especie,
+            _rehacer=self._rehacer,
+            _toggle_autodetect=self._toggle_autodetect,
+            _toggle_popup=self._toggle_popup,
+            _toggle_split_view=self._toggle_split_view,
+            set_modo=self.set_modo,
+        )
+        widget, controles = modulo_medicion_ui.construir_barra_herramientas(self, acciones, self._perfiles_especie, self._especie_activa)
+        instalar_controles(self, controles)
+        return widget
 
     def _construir_splitter_principal(self) -> QWidget:
-        return modulo_medicion_ui._construir_splitter_principal(self)
+        from modulo_contratos_ui import instalar_controles
+        acciones = modulo_medicion_ui.AccionesSplitterMedicion(
+            _anomalias_modificadas=self._anomalias_modificadas,
+            _configuracion_pith=self._configuracion_pith,
+            _confirmar_estimacion_pith=self._confirmar_estimacion_pith,
+            _datacion_activa=self._datacion_activa,
+            _ejecutar_autodeteccion=self._ejecutar_autodeteccion,
+            _fuentes_split=self._fuentes_split,
+            _guardar_estado=self._guardar_estado,
+            _origen_calibracion=self._origen_calibracion,
+            _programar_guardado=self._programar_guardado,
+            _reflejar_modo_vista=self._reflejar_modo_vista,
+            _sincronizar_mediciones=self._sincronizar_mediciones,
+            _tipo_anomalia_activo=self._tipo_anomalia_activo,
+            _toggle_grafico=self._toggle_grafico,
+        )
+        widget, controles = modulo_medicion_ui.construir_splitter_principal(self, acciones, self.modelo_sesion.activo, self.label_estado.setText,
+            lambda: self.datos_medidos, self._construir_panel_radios(),
+            self._construir_panel_codatacion())
+        instalar_controles(self, controles)
+        return widget
 
     def _construir_panel_radios(self) -> QWidget:
-        return modulo_medicion_ui._construir_panel_radios(self)
+        from modulo_contratos_ui import instalar_controles
+        acciones = modulo_medicion_ui.AccionesRadiosMedicion(
+            _editar_camino=self._editar_camino,
+            _eliminar_camino=self._eliminar_camino,
+            _finalizar_camino=self._finalizar_camino,
+            _toggle_visual_camino=self._toggle_visual_camino,
+        )
+        widget, controles = modulo_medicion_ui.construir_panel_radios(self, acciones)
+        instalar_controles(self, controles)
+        return widget
 
     def _construir_panel_codatacion(self) -> QWidget:
-        return modulo_medicion_ui._construir_panel_codatacion(self)
+        from modulo_contratos_ui import instalar_controles
+        acciones = modulo_medicion_ui.AccionesGraficoMedicion(
+            _actualizar_grafico=self._actualizar_grafico,
+            _calcular_bi=self._calcular_bi,
+            _cargar_serie_maestra=self._cargar_serie_maestra,
+            _cargar_serie_wid=self._cargar_serie_wid,
+            _configurar_bi=self._configurar_bi,
+            _eliminar_serie_maestra=self._eliminar_serie_maestra,
+            _graficar_bi_ventana=self._graficar_bi_ventana,
+            _guardar_bi=self._guardar_bi,
+            _navegar_anio_grafico=self._navegar_anio_grafico,
+            _toggle_banda_bi=self._toggle_banda_bi,
+            metodo_correlacion=self.metodo_correlacion,
+        )
+        widget, controles = modulo_medicion_ui.construir_panel_codatacion(self, acciones)
+        instalar_controles(self, controles)
+        return widget
 
     # -------------------------------------------------------------------------
     # Carga de imagen
@@ -657,7 +738,7 @@ class PestanaImagen(QWidget):
         return combo.currentData() if combo is not None else None
 
     def _configuracion_pith(self):
-        especial = getattr(self, "_especial", None)
+        especial = getattr(self, "_pith", None)
         return especial.configuracion_pith if especial is not None else (5, "rg")
 
     def _origen_calibracion(self, origen):
@@ -1817,60 +1898,60 @@ class PestanaImagen(QWidget):
     # -------------------------------------------------------------------------
 
     def _iniciar_estimacion_pith(self):
-        return self._especial._iniciar_estimacion_pith()
+        return self._pith.iniciar_estimacion_pith()
 
 
     def _confirmar_estimacion_pith(self):
-        return self._especial._confirmar_estimacion_pith()
+        return self._pith.confirmar_estimacion_pith()
 
 
 
     def _deshacer_pith_offset(self):
-        return self._especial._deshacer_pith_offset()
+        return self._pith.deshacer_pith_offset()
 
     # -------------------------------------------------------------------------
     # Earlywood / Latewood
     # -------------------------------------------------------------------------
 
     def _eliminar_ewlw(self):
-        return self._especial._eliminar_ewlw()
+        return self._ewlw.eliminar_ewlw()
 
     def _detectar_ewlw_automatico(self):
-        return self._especial._detectar_ewlw_automatico()
+        return self._ewlw.detectar_ewlw_automatico()
 
     def _exportar_ewlw(self, codigo: str, ruta_base: str,
                         coords: list | None = None,
                         saltos: list | None = None,
                         datos_medidos: list | None = None, med_a_cor=None):
-        return self._especial._exportar_ewlw(codigo, ruta_base, coords, saltos, datos_medidos, med_a_cor)
+        return self._ewlw.exportar_ewlw(codigo, ruta_base, coords, saltos, datos_medidos, med_a_cor)
 
     # -------------------------------------------------------------------------
     # Blue / Red / Green Intensity
     # -------------------------------------------------------------------------
 
     def _configurar_bi(self):
-        return self._especial._configurar_bi()
+        return self._intensidad.configurar_bi()
 
     def _calcular_bi(self):
-        return self._especial._calcular_bi()
+        return self._intensidad.calcular_bi()
 
     # ── Banda de muestreo BI sobre la imagen ─────────────────────────────
     def _toggle_banda_bi(self, activo: bool):
-        return self._especial._toggle_banda_bi(activo)
+        return self._intensidad.toggle_banda_bi(activo)
 
 
 
     def _graficar_bi_ventana(self):
-        return self._especial._graficar_bi_ventana()
+        return self._intensidad.graficar_bi_ventana()
 
     def _guardar_bi(self):
-        return self._especial._guardar_bi()
+        return self._intensidad.guardar_bi()
  
  
  
 
     def tareas_medicion_en_curso(self):
-        return self._especial.tareas_en_curso
+        return self._tareas.en_curso
 
     def _ruta_sidecar(self, ruta_rwl: str | None = None) -> str | None:
         """Devuelve la ruta del archivo sidecar (oculto) para el radio exportado más reciente."""
@@ -1897,7 +1978,7 @@ class PestanaImagen(QWidget):
                 },
             }
             # Agregar datos de estimación de médula si existen
-            pith_est = self._especial.estimacion
+            pith_est = self._pith.estimacion
             if pith_est:
                 datos.update(pith_est)
             _js.guardar_json(ruta_s, datos)
@@ -1925,7 +2006,7 @@ class PestanaImagen(QWidget):
                 int(k): v for k, v in datos.get("anomalias", {}).items()
             }
             self.vista._dibujar_anomalias()
-            self._especial.restaurar_estimacion(datos)
+            self._pith.restaurar_estimacion(datos)
         except Exception as e:
             logger.warning("No se pudo cargar sidecar: %s", e)
 
