@@ -925,7 +925,7 @@ class PestanaImagen(QWidget):
             "Serie propia usada como referencia cuando no hay archivo externo cargado."
         )
         self.combo_maestra.setMinimumWidth(110)
-        self.combo_maestra.currentIndexChanged.connect(self._actualizar_grafico_rt)
+        self.combo_maestra.currentIndexChanged.connect(self._actualizar_grafico)
         fila_maestra.addWidget(self.combo_maestra)
 
         # Selector de ventana de correlación
@@ -945,7 +945,7 @@ class PestanaImagen(QWidget):
             "Mientras la serie tenga menos años, la ventana crece desde 10.\n"
             "El solapamiento entre ventanas es siempre la mitad (estilo COFECHA)."
         )
-        self.spin_ventana_r.valueChanged.connect(self._actualizar_grafico_rt)
+        self.spin_ventana_r.valueChanged.connect(self._actualizar_grafico)
         fila_maestra.addWidget(self.spin_ventana_r)
 
         fila_maestra.addSpacing(12)
@@ -955,7 +955,7 @@ class PestanaImagen(QWidget):
         # par de series daba r distintas en cada pestaña sin aviso alguno.
         self.combo_metodo_corr = _tr.crear_selector(self, _tr.DIFFLOG)
         self.combo_metodo_corr.currentIndexChanged.connect(
-            self._actualizar_grafico_rt)
+            self._actualizar_grafico)
         fila_maestra.addWidget(self.combo_metodo_corr)
 
         fila_maestra.addStretch()
@@ -1554,7 +1554,7 @@ class PestanaImagen(QWidget):
             self.spin_corteza.blockSignals(False)
         self._guardar_estado()
         self.metadatos_cambiados.emit()
-        self._actualizar_grafico_rt()
+        self._actualizar_grafico()
         self.vista.redibujar_todo()
 
     def _aplicar_anio_medula(self):
@@ -1591,7 +1591,7 @@ class PestanaImagen(QWidget):
             self.spin_medula.blockSignals(False)
             self.spin_corteza.blockSignals(False)
         self.metadatos_cambiados.emit()
-        self._actualizar_grafico_rt()
+        self._actualizar_grafico()
         self.vista.redibujar_todo()
 
     # -------------------------------------------------------------------------
@@ -1615,7 +1615,7 @@ class PestanaImagen(QWidget):
             self.lbl_nombre_maestra.setText(self.nombre_maestra)
             self.lbl_nombre_maestra.setStyleSheet("color:#5cb85c;")
             self.btn_eliminar_maestra.setEnabled(True)
-            self._actualizar_grafico_rt()
+            self._actualizar_grafico()
 
             # Seleccionar la referencia recién cargada como maestra. Sin esto
             # el combo conservaba la selección anterior (normalmente una serie
@@ -1641,7 +1641,7 @@ class PestanaImagen(QWidget):
             self.lbl_nombre_maestra.setText(f"🌲 {self.nombre_maestra}")
             self.lbl_nombre_maestra.setStyleSheet("color:#5bc0de; font-weight:bold;")
             self.btn_eliminar_maestra.setEnabled(True)
-            self._actualizar_grafico_rt()
+            self._actualizar_grafico()
         except (ValueError, OSError) as exc:
             QMessageBox.warning(self, "Error", f"No se pudo leer el archivo .wid:\n{exc}")
 
@@ -1661,7 +1661,7 @@ class PestanaImagen(QWidget):
         # Limpiar items del gráfico que referenciaban la externa
         self._plot_items = {k: v for k, v in getattr(self, "_plot_items", {}).items()
                             if not k.startswith("📂") and not k.startswith("★")}
-        self._actualizar_grafico_rt()
+        self._actualizar_grafico()
 
     # -------------------------------------------------------------------------
     # Interacción con el gráfico: crosshair + navegación por clic
@@ -1853,7 +1853,7 @@ class PestanaImagen(QWidget):
             return
         idx = self.combo_maestra.findText(f"↑ Ext: {self.nombre_maestra}")
         if idx >= 0 and self.combo_maestra.currentIndex() != idx:
-            # currentIndexChanged ya está conectado a _actualizar_grafico_rt,
+            # currentIndexChanged ya está conectado a _actualizar_grafico,
             # así que basta con cambiar el índice.
             self.combo_maestra.setCurrentIndex(idx)
 
@@ -2059,7 +2059,7 @@ class PestanaImagen(QWidget):
 
         self.lbl_ventanas_r.setText("&nbsp;&nbsp;|&nbsp;&nbsp;".join(lineas_ventana))
 
-    def _actualizar_grafico_unificado(self):
+    def _actualizar_grafico(self):
         """
         Gráfico de series (arriba) + correlación deslizante estilo COFECHA (abajo).
         La maestra puede ser externa (.rwl/.wid) o una serie propia elegida en el combo.
@@ -2310,12 +2310,6 @@ class PestanaImagen(QWidget):
                 vb.setYRange(y0 - m, y1 + m, padding=0)
         self._posicionar_textos_correlacion(pw)
 
-    def _actualizar_grafico_serie(self):
-        self._actualizar_grafico_unificado()
-
-    def _actualizar_grafico_rt(self):
-        self._actualizar_grafico_unificado()
-
     def _posicionar_textos_correlacion(self, pw):
         """Coloca los textos de correlación en la parte alta del rango Y visible."""
         pendientes = getattr(self, "_textos_corr_pendientes", [])
@@ -2373,7 +2367,7 @@ class PestanaImagen(QWidget):
 
         self.vista.cargar_caminos_inactivos(self.caminos_guardados)
         self._guardar_estado()
-        self._actualizar_grafico_rt()
+        self._actualizar_grafico()
         self.label_estado.setText(f"Radio '{nombre}' guardado. Listo para medir nuevo radio.")
 
     def _editar_camino(self):
@@ -2478,11 +2472,11 @@ class PestanaImagen(QWidget):
             self.vista.toggle_camino_inactivo(it.text(), visible)
 
         self._guardar_estado()
-        self._actualizar_grafico_rt()
+        self._actualizar_grafico()
 
     def _toggle_visual_camino(self, item: QListWidgetItem):
         self.vista.toggle_camino_inactivo(item.text(), item.checkState() == Qt.CheckState.Checked)
-        self._actualizar_grafico_rt()
+        self._actualizar_grafico()
 
     # -------------------------------------------------------------------------
     # Calibración
@@ -2949,7 +2943,7 @@ class PestanaImagen(QWidget):
             self._restaurar_metadatos_radio(activo)
             self.vista.recalcular_todas_las_distancias()
         else:
-            self._actualizar_grafico_rt()
+            self._actualizar_grafico()
         return True
 
     # -------------------------------------------------------------------------
