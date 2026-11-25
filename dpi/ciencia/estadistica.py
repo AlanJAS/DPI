@@ -1,7 +1,7 @@
 """Estadística dendrocronológica común, sin dependencias de Qt."""
 import numpy as np
 import pandas as pd
-from constantes import OVERLAP_MINIMO_GRAFICO
+from dpi.ciencia.constantes import OVERLAP_MINIMO_GRAFICO
 from dpi.ciencia.codigos import clave_codigo_dendro
 
 

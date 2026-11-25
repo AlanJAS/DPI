@@ -6,7 +6,7 @@ import dpi.ciencia.estadistica as _est
 import dpi.ciencia.quiebres as _qb
 from dpi.ciencia.estadistica import _r_movil
 from dpi.ciencia.cronologia import normalizar_serie_para_tipo
-from constantes import OVERLAP_MINIMO_ANALISIS, OVERLAP_MINIMO_GRAFICO
+from dpi.ciencia.constantes import OVERLAP_MINIMO_ANALISIS, OVERLAP_MINIMO_GRAFICO
 
 logger = logging.getLogger(__name__)
 MAX_CORRECCION = 3
