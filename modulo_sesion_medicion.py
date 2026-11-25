@@ -6,7 +6,7 @@ from numbers import Real
 
 from json_seguro import guardar_json
 from modulo_datos_medicion import normalizar_radio
-from modulo_modelo_medicion import ModeloMedicion
+from modulo_modelo_medicion import ModeloMedicion, PuntoMedicion, RadioMedicion
 
 VERSION_FORMATO = 1
 
@@ -106,21 +106,44 @@ def normalizar_sesion(datos):
     return resultado
 
 
-def leer_sesion(ruta_imagen):
+def _radio_tipado(datos, *, activo=False):
+    """Convierte un radio ya validado al modelo interno."""
+    clave = "coordenadas" if activo else "coords"
+    puntos = tuple(PuntoMedicion(c, m) for c, m in
+                   zip(datos[clave], datos["es_salto"], strict=True))
+    return RadioMedicion(
+        datos.get("codigo"), puntos, datos["anio_medula"],
+        datos["anio_corteza"], datos["dir_idx"],
+        datos.get("anomalias", {}), datos.get("medula", False),
+        datos.get("corteza", False),
+        tuple((d["anio"], d["ancho_mm"]) for d in datos.get("datos_medidos", [])))
+
+
+def leer_sesion(ruta_imagen, *, tipada=False):
     """Devuelve None solo cuando no existe el archivo de sesión."""
     try:
         with open(ruta_sesion(ruta_imagen), encoding="utf-8-sig") as archivo:
             datos = json.load(archivo)
     except FileNotFoundError:
         return None
-    return normalizar_sesion(datos)
+    datos = normalizar_sesion(datos)
+    if tipada:
+        datos["caminos_guardados"] = {
+            nombre: _radio_tipado(radio)
+            for nombre, radio in datos["caminos_guardados"].items()}
+        activo = datos["camino_activo"]
+        datos["camino_activo"] = _radio_tipado(activo, activo=True) if activo else None
+    return datos
 
 
 def guardar_sesion(ruta_imagen, ppm, radios, activo):
     """Valida antes de reemplazar atómicamente la sesión anterior."""
     datos = normalizar_sesion({
         "pixeles_por_mm": ppm,
-        "caminos_guardados": radios,
-        "camino_activo": activo,
+        "caminos_guardados": {
+            nombre: radio.a_dict() if isinstance(radio, RadioMedicion) else radio
+            for nombre, radio in radios.items()},
+        "camino_activo": activo.a_dict(activo=True)
+        if isinstance(activo, RadioMedicion) else activo,
     })
     guardar_json(ruta_sesion(ruta_imagen), datos, indent=None)

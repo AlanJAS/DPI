@@ -12,8 +12,7 @@ import math
 from modulo_calculo_medicion import anchos_puntos
 import json
 import logging
-from modulo_datos_medicion import (mediciones_desde_anchos, mediciones_radio,
-                                   normalizar_radio)
+from modulo_datos_medicion import mediciones_desde_anchos, mediciones_radio
 from modulo_sesion_medicion import guardar_sesion, leer_sesion
 
 import cv2
@@ -2349,7 +2348,7 @@ class PestanaImagen(QWidget):
         if not nombre or nombre in self.caminos_guardados:
             return QMessageBox.warning(self, "Identificador", "Nombre vacío o ya existente.")
 
-        self.caminos_guardados[nombre] = self._capturar_radio(nombre).a_dict()
+        self.caminos_guardados[nombre] = self._capturar_radio(nombre)
         item = QListWidgetItem(nombre)
         item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
         item.setCheckState(Qt.CheckState.Checked)
@@ -2389,8 +2388,8 @@ class PestanaImagen(QWidget):
                 return
 
         nombre = items[0].text()
-        datos = normalizar_radio(self.caminos_guardados[nombre])
-        if not datos.get("coords"):
+        datos = self.caminos_guardados[nombre]
+        if not datos.puntos or datos.datos_historicos:
             return QMessageBox.warning(self, "Aviso", "El radio no tiene coordenadas editables.")
         self.caminos_guardados.pop(nombre)
 
@@ -2423,10 +2422,10 @@ class PestanaImagen(QWidget):
         self.spin_corteza.blockSignals(True)
         self.combo_dir.blockSignals(True)
         try:
-            self.combo_dir.setCurrentIndex(datos["dir_idx"])
-            self.spin_medula.setValue(datos["anio_medula"])
-            self.spin_corteza.setValue(datos["anio_corteza"])
-            self.vista.cargar_camino_activo(datos["coords"], datos["es_salto"], redibujar=False)
+            self.combo_dir.setCurrentIndex(datos.dir_idx)
+            self.spin_medula.setValue(datos.anio_medula)
+            self.spin_corteza.setValue(datos.anio_corteza)
+            self.vista.modelo_medicion.restaurar(datos.puntos)
         finally:
             self.combo_dir.blockSignals(False)
             self.spin_medula.blockSignals(False)
@@ -2757,7 +2756,7 @@ class PestanaImagen(QWidget):
         if self.vista.anomalias:
             opciones.append("Radio Actual (En progreso)")
         for nombre, datos in self.caminos_guardados.items():
-            if datos.get("anomalias"):
+            if datos.anomalias:
                 opciones.append(nombre)
         if not opciones:
             return QMessageBox.information(
@@ -2775,7 +2774,7 @@ class PestanaImagen(QWidget):
             codigo = self.input_codigo.text().strip() or "radio"
             datos_med = self.datos_medidos
         else:
-            anomalias = dict(self.caminos_guardados[seleccion].get("anomalias", {}))
+            anomalias = dict(self.caminos_guardados[seleccion].anomalias)
             codigo = seleccion
             datos_med = mediciones_radio(self.caminos_guardados[seleccion],
                                          self.vista.pixeles_por_mm)
@@ -2851,10 +2850,10 @@ class PestanaImagen(QWidget):
     # -------------------------------------------------------------------------
 
     def _restaurar_metadatos_radio(self, datos):
-        self.vista.anomalias = {int(k): v for k, v in datos.get("anomalias", {}).items()}
+        self.vista.anomalias = dict(datos.anomalias)
         with QSignalBlocker(self.check_tiene_medula), QSignalBlocker(self.check_tiene_corteza):
-            self.check_tiene_medula.setChecked(datos.get("medula", False))
-            self.check_tiene_corteza.setChecked(datos.get("corteza", False))
+            self.check_tiene_medula.setChecked(datos.medula)
+            self.check_tiene_corteza.setChecked(datos.corteza)
 
     def _capturar_radio(self, codigo=None):
         return RadioMedicion(
@@ -2886,7 +2885,7 @@ class PestanaImagen(QWidget):
                 self.ruta_imagen_actual,
                 self.vista.pixeles_por_mm,
                 self.caminos_guardados,
-                self._capturar_radio().a_dict(activo=True),
+                self._capturar_radio(),
             )
         except Exception:
             logger.exception("No se pudo guardar el estado")
@@ -2894,14 +2893,14 @@ class PestanaImagen(QWidget):
     def _cargar_estado(self) -> bool:
         self._sesion_protegida = None
         try:
-            datos = leer_sesion(self.ruta_imagen_actual)
+            datos = leer_sesion(self.ruta_imagen_actual, tipada=True)
             if datos is None:
                 return False
             activo = datos["camino_activo"]
             if activo:
                 for campo, control in (("anio_medula", self.spin_medula),
                                        ("anio_corteza", self.spin_corteza)):
-                    if not control.minimum() <= activo[campo] <= control.maximum():
+                    if not control.minimum() <= getattr(activo, campo) <= control.maximum():
                         raise ValueError(f"{campo} fuera del rango permitido")
         except (OSError, ValueError, TypeError, KeyError, OverflowError) as exc:
             self._sesion_protegida = self.ruta_imagen_actual
@@ -2931,13 +2930,13 @@ class PestanaImagen(QWidget):
                   QSignalBlocker(self.spin_corteza),
                   QSignalBlocker(self.combo_dir),
                   QSignalBlocker(self.input_codigo)):
-                self.input_codigo.setText(activo.get("codigo", self.input_codigo.text()))
-                self.combo_dir.setCurrentIndex(activo["dir_idx"])
-                self.spin_medula.setValue(activo["anio_medula"])
-                self.spin_corteza.setValue(activo["anio_corteza"])
+                if activo.codigo is not None:
+                    self.input_codigo.setText(activo.codigo)
+                self.combo_dir.setCurrentIndex(activo.dir_idx)
+                self.spin_medula.setValue(activo.anio_medula)
+                self.spin_corteza.setValue(activo.anio_corteza)
                 self.vista.limpiar_historial()
-                self.vista.cargar_camino_activo(
-                    activo["coordenadas"], activo["es_salto"], redibujar=False)
+                self.vista.modelo_medicion.restaurar(activo.puntos)
             self._restaurar_metadatos_radio(activo)
             self.vista.recalcular_todas_las_distancias()
         else:
@@ -2970,18 +2969,13 @@ class PestanaImagen(QWidget):
             coords_export = self.vista.coordenadas_anillos
             saltos_export = self.vista.es_salto
         else:
-            datos = mediciones_radio(self.caminos_guardados[seleccion],
-                                     self.vista.pixeles_por_mm)
+            radio = self.caminos_guardados[seleccion]
+            datos = mediciones_radio(radio, self.vista.pixeles_por_mm)
             codigo = seleccion
-            anom_data = self.caminos_guardados[seleccion].get("anomalias", {})
-            anomalias_export = anom_data
-            # Para EW/LW: usar los coords/saltos GUARDADOS del radio elegido,
-            # NO los de la vista en vivo (que pueden estar vacíos o ser de
-            # otro radio en progreso). Este era el bug que hacía que el
-            # usuario nunca pudiera "guardar" la info de EW/LW de un radio
-            # ya finalizado.
-            coords_export = self.caminos_guardados[seleccion].get("coords", [])
-            saltos_export = self.caminos_guardados[seleccion].get("es_salto", [])
+            anomalias_export = dict(radio.anomalias)
+            # Proyecciones del radio elegido, no del radio activo.
+            coords_export = radio.coordenadas
+            saltos_export = radio.marcas
 
         if not codigo:
             return QMessageBox.warning(self, "Aviso", "El radio no tiene nombre/código.")
@@ -3080,9 +3074,9 @@ class PestanaImagen(QWidget):
             else:
                 radio = self.caminos_guardados[seleccion]
                 _js.guardar_json(self._ruta_sidecar(ruta), {
-                    "code": codigo, "medula": radio.get("medula", False),
-                    "corteza": radio.get("corteza", False),
-                    "anomalias": radio.get("anomalias", {}),
+                    "code": codigo, "medula": radio.medula,
+                    "corteza": radio.corteza,
+                    "anomalias": dict(radio.anomalias),
                 })
         except Exception as exc:
             logger.error("Error al exportar: %s", exc)

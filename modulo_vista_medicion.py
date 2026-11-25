@@ -3223,11 +3223,10 @@ class VistaInteractiva(QGraphicsView):
         escala = self._escala_vista()
 
         for nombre, datos in caminos.items():
-            coords, saltos = datos["coords"], datos["es_salto"]
-            anio_medula = datos.get("anio_medula", 0)
-            anio_corteza = datos.get("anio_corteza", 0)
-            dir_idx = datos.get("dir_idx", 0)
-            medula_a_corteza = (dir_idx == 0)
+            coords, saltos = datos.coordenadas, datos.marcas
+            anio_medula = datos.anio_medula
+            anio_corteza = datos.anio_corteza
+            medula_a_corteza = (datos.dir_idx == 0)
 
             puntos, lineas, textos = [], [], []
             pen_tick_in = QPen(QColor(COLOR_PUNTO_INACTIVO))

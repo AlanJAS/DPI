@@ -1,5 +1,6 @@
 """Proyecciones de medición y migración de radios, independientes de Qt."""
-from modulo_calculo_medicion import anchos_anillos, anios_medicion
+from modulo_calculo_medicion import anchos_anillos, anchos_puntos, anios_medicion
+from modulo_modelo_medicion import RadioMedicion
 
 
 def mediciones_desde_anchos(anchos, medula, corteza, med_a_cor):
@@ -27,6 +28,12 @@ def normalizar_radio(radio):
 
 
 def mediciones_radio(radio, ppm):
+    if isinstance(radio, RadioMedicion):
+        if len(radio.puntos) < 2:
+            return [{"anio": a, "ancho_mm": w} for a, w in radio.datos_historicos]
+        return mediciones_desde_anchos(
+            anchos_puntos(radio.puntos, ppm), radio.anio_medula,
+            radio.anio_corteza, radio.dir_idx == 0)
     datos = normalizar_radio(radio)
     coords = datos.get("coords", datos.get("coordenadas", []))
     marcas = datos.get("es_salto", [])

@@ -123,27 +123,49 @@ class ModeloMedicion:
 
 @dataclass(frozen=True)
 class RadioMedicion:
-    codigo: str
-    puntos: tuple
+    codigo: str | None
+    puntos: tuple[PuntoMedicion, ...]
     anio_medula: int
     anio_corteza: int
     dir_idx: int
     anomalias: dict = field(default_factory=dict)
     medula: bool = False
     corteza: bool = False
+    # Solo para radios históricos sin geometría suficiente.
+    datos_historicos: tuple[tuple[int, float], ...] = ()
 
     def __post_init__(self):
-        object.__setattr__(self, "puntos", tuple(self.puntos))
+        puntos = tuple(self.puntos)
+        if not all(isinstance(p, PuntoMedicion) for p in puntos):
+            raise ValueError("Puntos de radio inválidos")
+        historicos = tuple(tuple(d) for d in self.datos_historicos)
+        if len(puntos) >= 2 and historicos:
+            raise ValueError("Un radio geométrico no admite mediciones históricas")
+        object.__setattr__(self, "puntos", puntos)
+        object.__setattr__(self, "datos_historicos", historicos)
         object.__setattr__(self, "anomalias", MappingProxyType(dict(self.anomalias)))
+
+    @property
+    def coordenadas(self):
+        return tuple(p.coordenada for p in self.puntos)
+
+    @property
+    def marcas(self):
+        return tuple(p.tipo.value for p in self.puntos)
 
     def a_dict(self, *, activo=False):
         clave = "coordenadas" if activo else "coords"
-        return {clave: [p.coordenada for p in self.puntos],
-                "es_salto": [p.tipo.value for p in self.puntos],
-                "codigo": self.codigo, "anio_medula": self.anio_medula,
-                "anio_corteza": self.anio_corteza, "dir_idx": self.dir_idx,
-                "anomalias": dict(self.anomalias), "medula": self.medula,
-                "corteza": self.corteza}
+        datos = {clave: list(self.coordenadas), "es_salto": list(self.marcas),
+                 "anio_medula": self.anio_medula,
+                 "anio_corteza": self.anio_corteza, "dir_idx": self.dir_idx,
+                 "anomalias": dict(self.anomalias), "medula": self.medula,
+                 "corteza": self.corteza}
+        if self.codigo is not None:
+            datos["codigo"] = self.codigo
+        if self.datos_historicos:
+            datos["datos_medidos"] = [
+                {"anio": a, "ancho_mm": w} for a, w in self.datos_historicos]
+        return datos
 
 
 class HistorialMedicion:
