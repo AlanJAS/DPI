@@ -535,7 +535,8 @@ class PanelCodatacion(QWidget):
                                 continue
                             primera_real = ln
                             break
-                except Exception:
+                except (OSError, UnicodeError):
+                    logger.debug("No se pudo inspeccionar el formato de %s", ruta, exc_info=True)
                     primera_real = ""
                 if "\t" not in primera_real:
                     try:
@@ -544,7 +545,7 @@ class PanelCodatacion(QWidget):
                             self._procesar_tucson_como_crono(series, ruta)
                             return
                     except Exception:
-                        pass
+                        logger.debug("Lectura Tucson descartada para %s", ruta, exc_info=True)
 
             # Multi-columna o tabular
             try:
@@ -579,7 +580,7 @@ class PanelCodatacion(QWidget):
                     self._agregar_crono(f"📚 {nombre_crono}", df_serie, ruta)
                 return
             except Exception:
-                pass
+                logger.debug("Lectura multicolumna descartada para %s", ruta, exc_info=True)
 
             df, sid = leer_tabular(ruta)
             self._agregar_crono(f"📚 {sid}", df, ruta)

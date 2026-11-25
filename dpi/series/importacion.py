@@ -8,5 +8,7 @@ def importar_archivo(modelo, ruta):
     from dpi.series.modelo import validar_anchos_fisicos
     for nombre, datos in series.items():
         if nombre not in modelo.datos:
+            if 'Ancho_mm' not in datos.columns:
+                raise ValueError('La serie debe contener Ancho_mm')
             validar_anchos_fisicos(datos['Ancho_mm'])
     return modelo.registrar_lote(series)
