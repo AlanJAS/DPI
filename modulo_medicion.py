@@ -4733,7 +4733,7 @@ class PestanaImagen(QWidget):
         # ensanchar/comprimir el eje X y ver todo. En series largas son
         # imprescindibles para poder mirar el detalle año a año.
         try:
-            from modulo_codatacion import _crear_barra_zoom
+            from modulo_widgets import _crear_barra_zoom
             layout.addWidget(_crear_barra_zoom(self.grafico_unif))
         except Exception as _e:
             print("No se pudo agregar la barra de zoom:", _e)
