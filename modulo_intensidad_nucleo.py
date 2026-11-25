@@ -47,6 +47,7 @@ def extraer_intensidad_por_anillo(
     canales: list | None = None,
     porcentaje: float = 1.0,    # fracción del anillo a medir (0-1)
     alineacion: str = "centro", # "ew" | "centro" | "lw"
+    med_a_cor: bool = True,
 ) -> list[dict]:
     """
     Extrae B/G/R/Gray Intensity por anillo de forma eficiente en memoria.
@@ -60,6 +61,10 @@ def extraer_intensidad_por_anillo(
     """
     import cv2 as _cv2
 
+    if not 0 < porcentaje <= 1 or alineacion not in ("ew", "centro", "lw"):
+        raise ValueError("Recorte de intensidad inválido")
+    if not med_a_cor:
+        alineacion = {"ew": "lw", "lw": "ew", "centro": "centro"}[alineacion]
     if canales is None:
         canales = ["B", "G", "R", "Gray"]
 
@@ -96,7 +101,7 @@ def extraer_intensidad_por_anillo(
     def _muestrar_segmento(x0, y0, x1, y1, acum):
         """Muestrea la banda perpendicular al segmento y actualiza acum."""
         seg_len = math.hypot(x1 - x0, y1 - y0)
-        if seg_len < 1:
+        if seg_len <= 0:
             return
         ux = (x1 - x0) / seg_len
         uy = (y1 - y0) / seg_len
@@ -111,8 +116,8 @@ def extraer_intensidad_por_anillo(
         xs_all = (xs_c + offs * perp_x).ravel()
         ys_all = (ys_c + offs * perp_y).ravel()
 
-        mask = ((xs_all >= 0) & (xs_all < w - 1) &
-                (ys_all >= 0) & (ys_all < h - 1))
+        mask = ((xs_all >= 0) & (xs_all < w) &
+                (ys_all >= 0) & (ys_all < h))
         xi = xs_all[mask].astype(np.int32)
         yi = ys_all[mask].astype(np.int32)
         if len(xi) == 0:
@@ -138,8 +143,11 @@ def extraer_intensidad_por_anillo(
             x0, y0 = coordenadas[ip]
             x1, y1 = coordenadas[ic]
             largo = math.dist((x0,y0), (x1,y1))
-            if pos + largo >= inicio and pos <= fin:
-                _muestrar_segmento(x0, y0, x1, y1, acum)
+            desde, hasta = max(pos, inicio), min(pos + largo, fin)
+            if largo > 0 and hasta > desde:
+                t0, t1 = (desde-pos)/largo, (hasta-pos)/largo
+                _muestrar_segmento(x0+t0*(x1-x0), y0+t0*(y1-y0),
+                                   x0+t1*(x1-x0), y0+t1*(y1-y0), acum)
             pos += largo
         _cerrar_anillo(acum, indice)
         if signal_progreso is not None:

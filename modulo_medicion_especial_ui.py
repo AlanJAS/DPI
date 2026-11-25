@@ -743,6 +743,7 @@ class ControlMedicionEspecial:
 
         pct_calculo  = self._bi_porcentaje / 100.0
         alin_calculo = self._bi_alineacion
+        med_a_cor = self.combo_dir.currentIndex() == 0
 
         def _tarea(sig_prog, img, c, s, p, b, ch, pct, alin):
             return extraer_intensidad_por_anillo(
@@ -754,7 +755,7 @@ class ControlMedicionEspecial:
                 banda_px=b,
                 canales=ch,
                 porcentaje=pct,
-                alineacion=alin,
+                alineacion=alin, med_a_cor=med_a_cor,
             )
 
         worker = _Worker(_tarea, img_bgr, coords, saltos, ppm, banda, canales,
@@ -774,6 +775,7 @@ class ControlMedicionEspecial:
                     or list(self.vista.coordenadas_anillos) != coords
                     or list(self.vista.es_salto) != saltos
                     or self.vista.pixeles_por_mm != ppm
+                    or (self.combo_dir.currentIndex() == 0) != med_a_cor
                     or [d["anio"] for d in self.datos_medidos] != anios_capturados):
                 self.label_estado.setText("Resultados BI descartados: cambió el radio.")
                 return
@@ -824,7 +826,7 @@ class ControlMedicionEspecial:
         self._banda_intensidad.dibujar(self.vista.scene(), img,
             self.vista.coordenadas_anillos, self.vista.es_salto,
             self._bi_canal_vis, self._bi_banda, self._bi_porcentaje / 100.0,
-            self._bi_alineacion)
+            self._bi_alineacion, med_a_cor=self.combo_dir.currentIndex() == 0)
 
 
     def _limpiar_banda_bi(self):

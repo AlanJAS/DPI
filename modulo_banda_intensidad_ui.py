@@ -23,7 +23,7 @@ class BandaIntensidad:
                 pass
         self._items.clear()
 
-    def dibujar(self, escena, img_bgr, coords, saltos, canal, banda, pct, alin):
+    def dibujar(self, escena, img_bgr, coords, saltos, canal, banda, pct, alin, med_a_cor=True):
         """
         Dibuja el área de muestreo BI sobre la imagen.
 
@@ -34,6 +34,8 @@ class BandaIntensidad:
           - Respeta el porcentaje y alineación configurados.
         """
         self.limpiar()
+        if not med_a_cor:
+            alin = {"ew": "lw", "lw": "ew", "centro": "centro"}[alin]
         if img_bgr is None:
             return
 
