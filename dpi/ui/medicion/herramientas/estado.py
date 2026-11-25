@@ -23,6 +23,9 @@ class EstadoSeleccion:
     candidato: int | None = None
     posicion: tuple[float, float] = (0.0, 0.0)
 
+    def alternar(self, indice):
+        self.puntos.symmetric_difference_update({indice})
+
 
 @dataclass
 class EstadoEspacio:

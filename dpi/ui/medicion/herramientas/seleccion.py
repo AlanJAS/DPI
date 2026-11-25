@@ -135,10 +135,7 @@ def _dibujar_marcadores_seleccion(self):
 def _toggle_seleccion_punto(self, idx: int):
     """Alterna la selección de un punto: si estaba seleccionado lo
     deselecciona, si no lo agrega a la selección."""
-    if idx in self._seleccion.puntos:
-        self._seleccion.puntos.discard(idx)
-    else:
-        self._seleccion.puntos.add(idx)
+    self._seleccion.alternar(idx)
     self._dibujar_marcadores_seleccion()
     self._actualizar_panel_seleccion()
 
