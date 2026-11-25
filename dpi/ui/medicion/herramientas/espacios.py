@@ -59,16 +59,16 @@ def _paso_espacio(self, x: float, y: float):
             return
 
         # Primer clic: punto A — suma distancia pero NO cierra anillo
-        if self._idx_espacio_inicio is None:
+        if self._espacio.indice_inicio is None:
             self.guardar_en_historial()
             self.modelo_medicion.agregar((x, y), TipoMarca.QUIEBRE_INI)   # línea azul, suma, no cierra
-            self._idx_espacio_inicio = len(coords) - 1
-            self._espacio_p1   = (x, y)
-            self._espacio_seg1 = -1
+            self._espacio.indice_inicio = len(coords) - 1
+            self._espacio.punto_inicio   = (x, y)
+            self._espacio.segmento_inicio = -1
             # Marcador visual (círculo verde para distinguirlo)
             r = 9 * self._escala_vista()
             m = self.scene().addEllipse(x-r, y-r, 2*r, 2*r, pen_v, brush_nulo)
-            self._items_espacio.append(m)
+            self._espacio.items.append(m)
             self.recalcular_todas_las_distancias()
             self.progreso_modificado.emit()
             try:
@@ -81,7 +81,7 @@ def _paso_espacio(self, x: float, y: float):
         # Segundo clic: punto B — línea AMARILLA desde A, tick amarillo
         self.guardar_en_historial()
         self.modelo_medicion.agregar((x, y), TipoMarca.ESPACIO)   # línea amarilla desde A, tick amarillo
-        self._idx_espacio_inicio = None
+        self._espacio.indice_inicio = None
         self._limpiar_espacio()
         self.recalcular_todas_las_distancias()
         self.progreso_modificado.emit()
@@ -104,14 +104,14 @@ def _paso_espacio(self, x: float, y: float):
     py = y1 + t * (y2 - y1)
 
     # ── Primer clic A ─────────────────────────────────────────────────
-    if self._idx_espacio_inicio is None:
+    if self._espacio.indice_inicio is None:
         self._limpiar_espacio()
         r = 9 * self._escala_vista()
         m = self.scene().addEllipse(px-r, py-r, 2*r, 2*r, pen_v, brush_nulo)
-        self._items_espacio.append(m)
-        self._espacio_p1   = (px, py)
-        self._espacio_seg1 = seg_idx
-        self._idx_espacio_inicio = seg_idx
+        self._espacio.items.append(m)
+        self._espacio.punto_inicio   = (px, py)
+        self._espacio.segmento_inicio = seg_idx
+        self._espacio.indice_inicio = seg_idx
         try:
             self.estado_cambiado.emit(
                 "↔ Inicio del espacio marcado. Haz clic en el borde final.")
@@ -120,9 +120,9 @@ def _paso_espacio(self, x: float, y: float):
         return
 
     # ── Segundo clic A ────────────────────────────────────────────────
-    p1, s1 = self._espacio_p1, self._espacio_seg1
+    p1, s1 = self._espacio.punto_inicio, self._espacio.segmento_inicio
     p2, s2 = (px, py), seg_idx
-    self._idx_espacio_inicio = None
+    self._espacio.indice_inicio = None
     self._limpiar_espacio()
 
     # Ordenar s1 ≤ s2
@@ -196,7 +196,7 @@ def _paso_espacio(self, x: float, y: float):
 
 
 def _limpiar_espacio(self):
-    for item in self._items_espacio:
+    for item in self._espacio.items:
         try: self.scene().removeItem(item)
         except Exception: pass
-    self._items_espacio.clear()
+    self._espacio.items.clear()

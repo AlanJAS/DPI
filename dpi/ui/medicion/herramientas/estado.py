@@ -19,3 +19,12 @@ class EstadoSeleccion:
     rectangulo: Any = None
     candidato: int | None = None
     posicion: tuple[float, float] = (0.0, 0.0)
+
+
+@dataclass
+class EstadoEspacio:
+    puntos: list = field(default_factory=list)
+    items: list = field(default_factory=list)
+    indice_inicio: int | None = None
+    punto_inicio: tuple[float, float] = (0.0, 0.0)
+    segmento_inicio: int = 0

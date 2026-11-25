@@ -57,6 +57,9 @@ from dpi.ui.medicion.herramientas.estado import EstadoCalibracion
 from dpi.ui.medicion.herramientas.estado import EstadoSeleccion
 
 
+from dpi.ui.medicion.herramientas.estado import EstadoEspacio
+
+
 class VistaInteractiva(QGraphicsView):
     """
     Vista de imagen con herramientas de marcado de anillos.
@@ -140,11 +143,7 @@ class VistaInteractiva(QGraphicsView):
         self._imagen_bgr: np.ndarray | None = None
 
         # Espacio intra-anillo: selección de dos puntos existentes
-        self._puntos_espacio: list[tuple[float, float]] = []
-        self._items_espacio: list = []
-        self._idx_espacio_inicio: int | None = None  # flag: None = esperando clic 1
-        self._espacio_p1: tuple[float,float] = (0.0, 0.0)
-        self._espacio_seg1: int = 0
+        self._espacio = EstadoEspacio()
 
         # Pens y brushes — cosméticos (grosor en px pantalla, invariante al zoom)
         self._pen_punto       = QPen()
@@ -261,7 +260,7 @@ class VistaInteractiva(QGraphicsView):
                 self._linea_guia = None
         # Limpiar selección espacio al salir del modo
         if nuevo_modo != ModoMedicion.ESPACIO:
-            self._idx_espacio_inicio = None
+            self._espacio.indice_inicio = None
             self._limpiar_espacio()
         # Limpiar items visuales del modo PITH al salir de ese modo.
         # Bug previo: si el usuario activaba "Anillos al centro" y luego
@@ -734,7 +733,7 @@ class VistaInteractiva(QGraphicsView):
                 return
         if self.modo_actual == ModoMedicion.ESPACIO:
             if event.key() == Qt.Key.Key_Escape:
-                self._idx_espacio_inicio = None
+                self._espacio.indice_inicio = None
                 self._limpiar_espacio()
                 try:
                     self.estado_cambiado.emit("↔ Selección de espacio cancelada.")
@@ -899,8 +898,8 @@ class VistaInteractiva(QGraphicsView):
         # Línea guía hacia el cursor
         if self.modo_actual == ModoMedicion.ESPACIO and self.coordenadas_anillos:
             # Línea guía desde el punto A ya insertado en el camino
-            if self._idx_espacio_inicio is not None:
-                x_ant, y_ant = self._espacio_p1
+            if self._espacio.indice_inicio is not None:
+                x_ant, y_ant = self._espacio.punto_inicio
                 pen_esp = QPen(QColor("#00FF88"))
                 pen_esp.setCosmetic(True)
                 pen_esp.setWidthF(1.5)
