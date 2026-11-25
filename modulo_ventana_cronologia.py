@@ -926,6 +926,12 @@ class VentanaCronologia(QWidget):
         nombre = nombres[0]
         self._comparar_individual_con_cronologia(nombre)
 
+    def _serie_referencia_comparacion(self):
+        columna = self.cronologia_meta.get("columna_valor")
+        if columna not in self.cronologia_df.columns:
+            columna = self.cronologia_df.columns[0]
+        return pd.to_numeric(self.cronologia_df[columna], errors="coerce").dropna()
+
     def _comparar_individual_con_cronologia(self, nombre: str):
         """Modo individual: 1 serie → gráfico + texto + tabla detallada.
 
@@ -935,10 +941,7 @@ class VentanaCronologia(QWidget):
         serie = self._series_cronologia[nombre]
         meta = self.cronologia_meta
         s_a = _serie_transformada_para_comparar(serie, meta)
-        col_val = meta.get("columna_valor") or self.cronologia_df.columns[0]
-        if col_val not in self.cronologia_df.columns:
-            col_val = self.cronologia_df.columns[0]
-        s_b = pd.to_numeric(self.cronologia_df[col_val], errors="coerce").dropna()
+        s_b = self._serie_referencia_comparacion()
 
         # Cálculo de los TRES estadísticos por cada desfase
         shifts, rs, glks, tbps, ns = _estadisticos_por_desfase(
@@ -1044,11 +1047,7 @@ class VentanaCronologia(QWidget):
         por cualquier columna y hacer drill-down con doble clic.
         """
         meta = self.cronologia_meta
-        col_val = meta.get("columna_valor") or self.cronologia_df.columns[0]
-        if col_val not in self.cronologia_df.columns:
-            col_val = self.cronologia_df.columns[0]
-        s_b = pd.to_numeric(self.cronologia_df[col_val],
-                             errors="coerce").dropna()
+        s_b = self._serie_referencia_comparacion()
         max_shift_val = self.spin_shift.value()
         min_overlap_val = self.spin_min_overlap.value()
 
