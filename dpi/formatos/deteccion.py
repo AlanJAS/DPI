@@ -6,6 +6,15 @@ from dpi.formatos.compacto import leer_formato_compacto
 from dpi.formatos.wid import leer_wid
 from dpi.formatos.tabular import leer_tabular, leer_como_columnas_o_tabular
 
+def _inspeccionar_texto(ruta):
+    """Lee una cabecera y la primera línea significativa una sola vez."""
+    with open(ruta, encoding="utf-8-sig", errors="replace") as archivo:
+        cabecera = archivo.read(500)
+        archivo.seek(0)
+        primera = next((ln for ln in archivo if ln.strip() and not ln.lstrip().startswith("#")), "")
+    return cabecera, primera
+
+
 def leer_dendro_auto(ruta: str):
     """Detecta formato y deriva al parser correcto.
 
@@ -22,8 +31,7 @@ def leer_dendro_auto(ruta: str):
     if _es_planilla(ext):
         return leer_tabular(ruta)
 
-    with open(ruta, 'r', encoding='utf-8', errors='replace') as f:
-        primeras_lineas = f.read(500)
+    primeras_lineas, _ = _inspeccionar_texto(ruta)
 
     if "=N" in primeras_lineas and "=I" in primeras_lineas:
         series = leer_formato_compacto(ruta)
@@ -74,10 +82,7 @@ def leer_series_auto(ruta: str) -> dict:
     if ext == ".wid":
         df, sid = leer_wid(ruta)
         return {f"🌲{sid}": df}
-    with open(ruta, encoding="utf-8-sig", errors="replace") as archivo:
-        primeras = archivo.read(500)
-        archivo.seek(0)
-        primera = next((ln for ln in archivo if ln.strip() and not ln.lstrip().startswith("#")), "")
+    primeras, primera = _inspeccionar_texto(ruta)
     if "=N" in primeras and "=I" in primeras:
         return leer_formato_compacto(ruta)
     if ext in (".rwl", ".txt"):
