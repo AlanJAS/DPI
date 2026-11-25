@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import pyqtgraph as pg
 from modulo_widgets import _agregar_hover_anio
-from modulo_estadistica import gleichlaufigkeit, t_baillie_pilcher
+from modulo_estadistica import gleichlaufigkeit, t_baillie_pilcher, pearson
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFileDialog, QMessageBox, QTableWidget, QTableWidgetItem, QHeaderView, QApplication
 from PyQt6.QtGui import QColor
 from PyQt6.QtCore import Qt
@@ -419,12 +419,9 @@ class VentanaTablaOffset(QDialog):
             a_dl_win = a_dl.loc[a_dl.index.intersection(anios_win)]
             b_dl_win = b_dl.loc[b_dl.index.intersection(anios_win)]
             ov_dl = a_dl_win.index.intersection(b_dl_win.index)
-            if len(ov_dl) < 3 or np.std(a_dl_win.loc[ov_dl]) == 0 \
-                    or np.std(b_dl_win.loc[ov_dl]) == 0:
+            if len(ov_dl) < 3:
                 continue
-            r_win = float(np.corrcoef(
-                a_dl_win.loc[ov_dl].to_numpy(),
-                b_dl_win.loc[ov_dl].to_numpy())[0, 1])
+            r_win = pearson(a_dl_win.loc[ov_dl], b_dl_win.loc[ov_dl])
             if not np.isfinite(r_win):
                 continue
 

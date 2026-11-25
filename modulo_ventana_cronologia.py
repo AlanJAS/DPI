@@ -5,7 +5,9 @@ import numpy as np
 import pandas as pd
 import pyqtgraph as pg
 from modulo_widgets import _agregar_hover_anio, _crear_barra_zoom, SpinBoxFlechas, SeccionColapsable
-from modulo_estadistica import _sensibilidad_media, _autocorrelacion_ar1, calcular_eps_rbar_movil, calcular_sss, _estadisticos_por_desfase
+from modulo_estadistica import (sensibilidad_media, autocorrelacion_lag1,
+                                calcular_eps_rbar_movil, calcular_sss,
+                                _estadisticos_por_desfase)
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QListWidget, QListWidgetItem, QSplitter, QFileDialog, QMessageBox, QFormLayout, QComboBox, QCheckBox, QLineEdit, QTextEdit, QGroupBox, QApplication, QProgressDialog
 from PyQt6.QtCore import Qt, QEvent
 from estilos import color_secundario
@@ -1347,8 +1349,8 @@ class VentanaCronologia(QWidget):
         # ── Estadística de la serie ──
         media = float(np.mean(x)) if len(x) else float("nan")
         de = float(np.std(x, ddof=1)) if len(x) > 1 else float("nan")
-        ms = _sensibilidad_media(x, serie.index)
-        ar1 = _autocorrelacion_ar1(x, serie.index)
+        ms = sensibilidad_media(x, serie.index)
+        ar1 = autocorrelacion_lag1(x, serie.index)
 
         def f(v, dec=3):
             return "—" if v is None or not np.isfinite(v) else f"{v:.{dec}f}"

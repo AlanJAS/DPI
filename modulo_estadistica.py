@@ -174,6 +174,7 @@ def sensibilidad_media(valores: np.ndarray, anios=None) -> float:
 
 
 def _sensibilidad_media(x, anios=None):
+    """Adaptador histórico; usar sensibilidad_media en código nuevo."""
     return sensibilidad_media(x, anios)
 
 
@@ -185,6 +186,7 @@ def autocorrelacion_lag1(valores: np.ndarray, anios=None) -> float:
 
 
 def _autocorrelacion_ar1(x, anios=None):
+    """Adaptador histórico; usar autocorrelacion_lag1 en código nuevo."""
     return autocorrelacion_lag1(x, anios)
 
 
@@ -303,11 +305,11 @@ def calcular_eps_rbar_movil(series_dict, nombres, window=15, paso=1, progreso=No
             # total sobreestimaría el EPS en ventanas donde no todas las
             # series están presentes. Esto es clave para que el EPS coincida
             # con ARSTAN.
-            sample_depth = (~np.isnan(win)).sum(axis=1)
+            sample_depth = np.isfinite(win).sum(axis=1)
             n_eff = float(sample_depth[sample_depth > 0].mean()) \
                 if (sample_depth > 0).any() else float(n_series)
             # Fórmula de Wigley et al. (1984): EPS = N·r̄ / (1 + (N−1)·r̄)
-            eps = _eps_formula(rbar, n_eff)
+            eps = calcular_eps(rbar, n_eff)
             resultados.append((years[i], rbar, float(eps)))
 
         if progreso is not None and total > 0 and (k % 10 == 0 or k == total - 1):
@@ -321,28 +323,21 @@ def calcular_eps_rbar_movil(series_dict, nombres, window=15, paso=1, progreso=No
 
 def calcular_rbar(series_dict, nombres):
     series = [series_dict[n]["Ancho_mm"].dropna() for n in nombres if n in series_dict]
-    rs = []
-    for i in range(len(series)):
-        for j in range(i + 1, len(series)):
-            common = series[i].index.intersection(series[j].index)
-            if len(common) < 10:
-                continue
-            a = series[i].loc[common]
-            b = series[j].loc[common]
-            r = pearson(a, b)
-            if np.isfinite(r):
-                rs.append(r)
-    return float(np.mean(rs)) if rs else np.nan
+    if len(series) < 2:
+        return np.nan
+    mat = pd.concat(series, axis=1).to_numpy(dtype=float)
+    rs = correlaciones_pares(mat, min_overlap=10)
+    return float(np.mean(rs)) if rs.size else np.nan
 
 
 def calcular_eps(rbar, n):
-    if n <= 1 or not np.isfinite(rbar):
+    """EPS con profundidad efectiva (puede ser fraccionaria)."""
+    if not np.isfinite(n) or n <= 1 or not np.isfinite(rbar):
         return np.nan
-    return _eps_formula(rbar, n)
-
-
-def _eps_formula(rbar, n):
-    return (n * rbar) / (1 + (n - 1) * rbar)
+    den = 1 + (n - 1) * rbar
+    if den == 0:
+        return np.nan
+    return (n * rbar) / den
 
 
 def calcular_sss(n_por_anio, n_total, rbar):
@@ -494,16 +489,22 @@ def _estadisticos_por_desfase(
     return shifts, rs, glks, tbps, ns
 
 
-def _r_movil(m: pd.Series, t: pd.Series, overlap: list, mitad: int) -> tuple[list, list]:
-    """Correlación de Pearson en ventana deslizante centrada."""
-    years, r_vals = [], []
+def _ventanas_correlacion(m, t, overlap, mitad):
+    """Una sola selección de ventanas y Pearson para ambos consumidores."""
     for anio, ventana in _ventanas_sin_centro(overlap, mitad):
         if len(ventana) < OVERLAP_MINIMO_GRAFICO:
             continue
         r = pearson(m.loc[ventana].values, t.loc[ventana].values)
-        if not np.isnan(r):
-            years.append(float(anio))
-            r_vals.append(r)
+        if np.isfinite(r):
+            yield anio, ventana, r
+
+
+def _r_movil(m: pd.Series, t: pd.Series, overlap: list, mitad: int) -> tuple[list, list]:
+    """Correlación de Pearson en ventana deslizante centrada."""
+    years, r_vals = [], []
+    for anio, _, r in _ventanas_correlacion(m, t, overlap, mitad):
+        years.append(float(anio))
+        r_vals.append(r)
     return years, r_vals
 
 
@@ -516,14 +517,8 @@ def _stats_movil(m, t, overlap, mitad, m_raw=None, t_raw=None):
 
     years, r_vals, glk_vals, tbp_vals, n_vals = [], [], [], [], []
 
-    for anio, ventana in _ventanas_sin_centro(overlap, mitad):
+    for anio, ventana, r in _ventanas_correlacion(m, t, overlap, mitad):
         n_v = len(ventana)
-        if n_v < OVERLAP_MINIMO_GRAFICO:
-            continue
-
-        r = pearson(m.loc[ventana].values, t.loc[ventana].values)
-        if np.isnan(r):
-            continue
 
         m_raw_w = m_raw.loc[m_raw.index.intersection(ventana)]
         t_raw_w = t_raw.loc[t_raw.index.intersection(ventana)]
@@ -592,14 +587,11 @@ def rbar_entre_arboles(series_dict, nombres, min_overlap: int = 10) -> dict:
         return {"rbar_wt": float("nan"), "rbar_bt": float("nan"),
                 "rbar_eff": float("nan"), "n_arboles": 0, "c_eff": float("nan")}
     M = pd.concat(cols, axis=1)
-    R = M.corr(min_periods=min_overlap)
+    ii, jj, rs = correlaciones_pares(M.to_numpy(dtype=float), min_overlap,
+                                      devolver_indices=True)
     wt, bt = [], []
-    for i in range(len(claves)):
-        for j in range(i + 1, len(claves)):
-            r = R.iloc[i, j]
-            if not np.isfinite(r):
-                continue
-            (wt if arbol[claves[i]] == arbol[claves[j]] else bt).append(float(r))
+    for i, j, r in zip(ii, jj, rs):
+        (wt if arbol[claves[i]] == arbol[claves[j]] else bt).append(float(r))
     arboles = {}
     for n in claves:
         arboles.setdefault(arbol[n], []).append(n)
@@ -620,13 +612,20 @@ def rbar_entre_arboles(series_dict, nombres, min_overlap: int = 10) -> dict:
             "n_pares_wt": len(wt), "n_pares_bt": len(bt)}
 
 
-def correlaciones_pares(mat, min_overlap=10):
-    """Correlaciones válidas de la mitad superior, con solape por par."""
+def correlaciones_pares(mat, min_overlap=10, *, devolver_indices=False):
+    """Correlaciones válidas de la mitad superior, con solape por par.
+
+    Con devolver_indices=True devuelve (filas, columnas, correlaciones).
+    Los índices identifican las columnas originales de cada par válido.
+    """
     mat = np.asarray(mat, dtype=float)
     if mat.ndim != 2:
         raise ValueError("Se esperaba una matriz de años por series.")
     if mat.shape[0] < 2 or mat.shape[1] < 2:
-        return np.empty(0, dtype=float)
+        rs = np.empty(0, dtype=float)
+        if devolver_indices:
+            return np.empty(0, dtype=int), np.empty(0, dtype=int), rs
+        return rs
     valido = np.isfinite(mat)
     V = valido.astype(float)
     # Restar una referencia por columna antes de acumular productos.
@@ -661,7 +660,11 @@ def correlaciones_pares(mat, min_overlap=10):
         i, j = iu[0][k], iu[1][k]
         m = valido[:, i] & valido[:, j]
         rs[k] = pearson(mat[m, i], mat[m, j])
-    return np.clip(rs[suficientes & np.isfinite(rs)], -1.0, 1.0)
+    validos = suficientes & np.isfinite(rs)
+    rs = np.clip(rs[validos], -1.0, 1.0)
+    if devolver_indices:
+        return iu[0][validos], iu[1][validos], rs
+    return rs
 
 
 def _ventanas_sin_centro(overlap, mitad):

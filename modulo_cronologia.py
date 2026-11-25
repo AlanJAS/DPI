@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 from modulo_estadistica import (
-    serie_anual, agrupar_por_arbol, rbar_entre_arboles, correlaciones_pares, calcular_eps,
+    serie_anual, agrupar_por_arbol, rbar_entre_arboles, correlaciones_pares, calcular_eps, pearson,
 )
 
 
@@ -963,7 +963,9 @@ def elegir_metodo_para_grupo(series: dict, problematicas: list,
                 a = idx.loc[com].to_numpy(dtype=float)
                 b = maestra.loc[com].to_numpy(dtype=float)
                 if np.std(a) > 1e-12 and np.std(b) > 1e-12:
-                    rs.append(float(np.corrcoef(a, b)[0, 1]))
+                    r = pearson(a, b)
+                    if np.isfinite(r):
+                        rs.append(r)
         tabla.append({
             "metodo": m, "cruces": cruces,
             "valido": cruces == 0,
