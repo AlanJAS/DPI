@@ -39,7 +39,7 @@ class TestLanzador(unittest.TestCase):
 
 class TestImportaciones(unittest.TestCase):
     def test_modulos_de_arranque(self):
-        for nombre in ("modulo_worker_medicion", "modulo_vista_medicion",
+        for nombre in ("dpi.ui.medicion.tareas", "modulo_vista_medicion",
                        "modulo_medicion", "modulo_codatacion", "main_anillos"):
             with self.subTest(modulo=nombre):
                 importlib.import_module(nombre)

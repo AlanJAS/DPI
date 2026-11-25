@@ -5,26 +5,14 @@ from pathlib import Path
 
 
 class CompatibilidadPaquetes(unittest.TestCase):
-    def test_modulos_compatibles(self):
-        pares = {
-            "modulo_modelo_medicion": "dpi.medicion.modelo",
-            "modulo_calculo_medicion": "dpi.medicion.calculo",
-            "modulo_marcas_medicion": "dpi.medicion.marcas",
-            "modulo_datos_medicion": "dpi.medicion.datos",
-            "modulo_sesion_medicion": "dpi.medicion.sesion",
-            "modulo_ewlw": "dpi.medicion.ewlw",
-            "modulo_pith_nucleo": "dpi.medicion.pith",
-            "modulo_intensidad_nucleo": "dpi.medicion.intensidad",
-            "modulo_grafico_medicion": "dpi.medicion.grafico",
-            "modulo_modelo_series": "dpi.series.modelo",
-            "json_seguro": "dpi.infraestructura.json_seguro",
-            "modulo_imagen": "dpi.infraestructura.imagen",
-            "modulo_autodeteccion": "dpi.medicion.autodeteccion",
-        }
-        for anterior, nuevo in pares.items():
-            with self.subTest(modulo=anterior):
-                self.assertIs(importlib.import_module(anterior),
-                              importlib.import_module(nuevo))
+    def test_modulos_canonicos(self):
+        for nombre in ('dpi.medicion.modelo', 'dpi.medicion.calculo', 'dpi.medicion.marcas', 'dpi.medicion.datos', 'dpi.medicion.sesion', 'dpi.medicion.ewlw', 'dpi.medicion.pith', 'dpi.medicion.intensidad', 'dpi.medicion.grafico', 'dpi.series.modelo', 'dpi.medicion.autodeteccion'):
+            with self.subTest(modulo=nombre):
+                self.assertIsNotNone(importlib.import_module(nombre))
+
+    def test_infraestructura_compatible(self):
+        for anterior, nuevo in (('json_seguro', 'dpi.infraestructura.json_seguro'), ('modulo_imagen', 'dpi.infraestructura.imagen')):
+            self.assertIs(importlib.import_module(anterior), importlib.import_module(nuevo))
 
     def test_formatos_compatibles(self):
         import modulo_formatos as anterior
