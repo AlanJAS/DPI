@@ -514,10 +514,6 @@ class PestanaImagen(QWidget):
                 self.label_estado.setText(f"⚠ Error al leer la imagen: {exc}")
                 return
  
-            if img_cv is None:
-                self.label_estado.setText("⚠ Error: no se pudo abrir la imagen.")
-                return
- 
             h, w = img_cv.shape[:2]
             mp = (w * h) / 1e6
             print("[CARGA] cv2.imread %dx%d (%.1f MP) en %.2fs",
