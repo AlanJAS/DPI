@@ -86,6 +86,8 @@ def a_json(obj):
     # Ojo con el orden: `bool` es subclase de `int`, y `pd.Timestamp` lo es de
     # `datetime.datetime`, así que las fechas se resuelven antes que el bloque
     # de escalares para no caer en el `str()` final.
+    if obj is pd.NA or obj is pd.NaT:
+        return None
     if isinstance(obj, (pd.Timestamp, datetime.datetime, datetime.date)):
         return obj.isoformat()
     if isinstance(obj, float):
@@ -95,6 +97,18 @@ def a_json(obj):
     if isinstance(obj, (str, bool, int)) or obj is None:
         return obj
     return str(obj)                        # último recurso: no perder el dato
+
+
+def cargar_json(archivo):
+    """Lee JSON sin descartar claves repetidas silenciosamente."""
+    def pares_unicos(pares):
+        resultado = {}
+        for clave, valor in pares:
+            if clave in resultado:
+                raise ValueError(f"Clave JSON duplicada: {clave!r}")
+            resultado[clave] = valor
+        return resultado
+    return json.load(archivo, object_pairs_hook=pares_unicos)
 
 
 def guardar_json(ruta: str, datos, *, indent: int | None = 2,

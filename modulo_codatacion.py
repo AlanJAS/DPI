@@ -1553,7 +1553,10 @@ class PanelCodatacion(QWidget):
             df_serie = df_serie.dropna()
 
             existe = nombre_lista in self.series_datos
-            self.modelo_series.registrar(nombre_lista, df_serie)
+            if existe:
+                self.modelo_series.reemplazar(nombre_lista, df_serie)
+            else:
+                self.modelo_series.registrar(nombre_lista, df_serie)
             if not existe:
                 item = QListWidgetItem(nombre_lista)
                 item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)

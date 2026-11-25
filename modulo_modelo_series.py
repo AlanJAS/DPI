@@ -103,6 +103,12 @@ class ModeloSeries:
         return datos.sort_index()
 
     def registrar(self, nombre, df):
+        if nombre in self._series:
+            raise ValueError(f"Serie ya registrada: {nombre}")
+        self.reemplazar(nombre, df)
+
+    def reemplazar(self, nombre, df):
+        """Sustitución explícita, incluido el original."""
         self._exigir_sin_prueba(nombre)
         datos = self._validar(df)
         original = datos.copy()

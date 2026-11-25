@@ -1923,7 +1923,7 @@ class PestanaImagen(QWidget):
                 return
         try:
             with open(ruta_s, "r", encoding="utf-8") as fh:
-                datos = json.load(fh)
+                datos = _js.cargar_json(fh)
             self.check_tiene_medula.setChecked(bool(datos.get("medula", False)))
             self.check_tiene_corteza.setChecked(bool(datos.get("corteza", False)))
             self.vista.anomalias = {

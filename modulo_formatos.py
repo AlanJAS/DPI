@@ -638,7 +638,7 @@ def _cargar_metadatos_cronologia(ruta: str) -> dict | None:
         return None
     try:
         with open(meta_path, "r", encoding="utf-8") as f:
-            return _restaurar_claves_anio(json.load(f))
+            return _restaurar_claves_anio(_js.cargar_json(f))
     except Exception:
         logger.exception("No se pudo leer el metadato %s", meta_path)
         return None

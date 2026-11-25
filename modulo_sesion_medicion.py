@@ -4,7 +4,7 @@ import math
 import os
 from numbers import Real
 
-from json_seguro import guardar_json
+from json_seguro import guardar_json, cargar_json
 from modulo_datos_medicion import normalizar_radio, radio_desde_dict
 from modulo_modelo_medicion import ModeloMedicion, RadioMedicion
 
@@ -110,7 +110,7 @@ def leer_sesion(ruta_imagen, *, tipada=False):
     """Devuelve None solo cuando no existe el archivo de sesión."""
     try:
         with open(ruta_sesion(ruta_imagen), encoding="utf-8-sig") as archivo:
-            datos = json.load(archivo)
+            datos = cargar_json(archivo)
     except FileNotFoundError:
         return None
     datos = normalizar_sesion(datos)
