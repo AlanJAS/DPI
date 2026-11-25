@@ -364,7 +364,6 @@ class PestanaImagen(QWidget):
         popup.show()
 
     def _construir_barra_herramientas(self) -> QHBoxLayout:
-        from modulo_contratos_ui import instalar_controles
         acciones = modulo_medicion_ui.AccionesBarraMedicion(
             _activar_calibracion=self._activar_calibracion,
             _al_cambiar_direccion=self._al_cambiar_direccion,
@@ -394,11 +393,46 @@ class PestanaImagen(QWidget):
             set_modo=self.set_modo,
         )
         widget, controles = modulo_medicion_ui.construir_barra_herramientas(self, acciones, self._perfiles_especie, self._especie_activa)
-        instalar_controles(self, controles)
+        self._banda_actual = controles._banda_actual
+        self._botones_modo = controles._botones_modo
+        self._btn_ewlw_dd = controles._btn_ewlw_dd
+        self._btn_herram = controles._btn_herram
+        self._btn_imagen = controles._btn_imagen
+        self._btn_split = controles._btn_split
+        self._grupo_banda = controles._grupo_banda
+        self._popup_ewlw = controles._popup_ewlw
+        self._popup_herram = controles._popup_herram
+        self._popup_imagen = controles._popup_imagen
+        self._slider_brillo = controles._slider_brillo
+        self._slider_contraste = controles._slider_contraste
+        self._timer_banda = controles._timer_banda
+        self.btn_anomalia = controles.btn_anomalia
+        self.btn_autodetect = controles.btn_autodetect
+        self.btn_calibrar = controles.btn_calibrar
+        self.btn_calibrar_dpi = controles.btn_calibrar_dpi
+        self.btn_cfg_especie = controles.btn_cfg_especie
+        self.btn_deshacer = controles.btn_deshacer
+        self.btn_deshacer_pith = controles.btn_deshacer_pith
+        self.btn_ewlw_auto = controles.btn_ewlw_auto
+        self.btn_ewlw_eliminar = controles.btn_ewlw_eliminar
+        self.btn_exportar = controles.btn_exportar
+        self.btn_exportar_anom = controles.btn_exportar_anom
+        self.btn_importar_pos = controles.btn_importar_pos
+        self.btn_nueva_especie = controles.btn_nueva_especie
+        self.btn_pith = controles.btn_pith
+        self.btn_rehacer = controles.btn_rehacer
+        self.check_tiene_corteza = controles.check_tiene_corteza
+        self.check_tiene_medula = controles.check_tiene_medula
+        self.combo_dir = controles.combo_dir
+        self.combo_especie = controles.combo_especie
+        self.combo_tipo_anomalia = controles.combo_tipo_anomalia
+        self.grupo_modos = controles.grupo_modos
+        self.input_codigo = controles.input_codigo
+        self.spin_corteza = controles.spin_corteza
+        self.spin_medula = controles.spin_medula
         return widget
 
     def _construir_splitter_principal(self) -> QWidget:
-        from modulo_contratos_ui import instalar_controles
         acciones = modulo_medicion_ui.AccionesSplitterMedicion(
             _anomalias_modificadas=self._anomalias_modificadas,
             _configuracion_pith=self._configuracion_pith,
@@ -417,11 +451,17 @@ class PestanaImagen(QWidget):
         widget, controles = modulo_medicion_ui.construir_splitter_principal(self, acciones, self.modelo_sesion.activo, self.label_estado.setText,
             lambda: self.datos_medidos, self._construir_panel_radios(),
             self._construir_panel_codatacion())
-        instalar_controles(self, controles)
+        self._btn_toggle_grafico = controles._btn_toggle_grafico
+        self._panel_codatacion = controles._panel_codatacion
+        self._splitter_principal = controles._splitter_principal
+        self._splitter_vistas = controles._splitter_vistas
+        self._timer_autoguardado = controles._timer_autoguardado
+        self.escena = controles.escena
+        self.panel_split = controles.panel_split
+        self.vista = controles.vista
         return widget
 
     def _construir_panel_radios(self) -> QWidget:
-        from modulo_contratos_ui import instalar_controles
         acciones = modulo_medicion_ui.AccionesRadiosMedicion(
             _editar_camino=self._editar_camino,
             _eliminar_camino=self._eliminar_camino,
@@ -429,11 +469,12 @@ class PestanaImagen(QWidget):
             _toggle_visual_camino=self._toggle_visual_camino,
         )
         widget, controles = modulo_medicion_ui.construir_panel_radios(self, acciones)
-        instalar_controles(self, controles)
+        self.btn_editar_camino = controles.btn_editar_camino
+        self.btn_finalizar_camino = controles.btn_finalizar_camino
+        self.lista_caminos = controles.lista_caminos
         return widget
 
     def _construir_panel_codatacion(self) -> QWidget:
-        from modulo_contratos_ui import instalar_controles
         acciones = modulo_medicion_ui.AccionesGraficoMedicion(
             _actualizar_grafico=self._actualizar_grafico,
             _calcular_bi=self._calcular_bi,
@@ -448,7 +489,23 @@ class PestanaImagen(QWidget):
             metodo_correlacion=self.metodo_correlacion,
         )
         widget, controles = modulo_medicion_ui.construir_panel_codatacion(self, acciones)
-        instalar_controles(self, controles)
+        self._btn_cfg_bi = controles._btn_cfg_bi
+        self._item_highlight_anio = controles._item_highlight_anio
+        self.btn_calcular_bi = controles.btn_calcular_bi
+        self.btn_cargar_maestra = controles.btn_cargar_maestra
+        self.btn_cargar_wid = controles.btn_cargar_wid
+        self.btn_eliminar_maestra = controles.btn_eliminar_maestra
+        self.btn_graficar_bi = controles.btn_graficar_bi
+        self.btn_guardar_bi = controles.btn_guardar_bi
+        self.btn_mostrar_banda = controles.btn_mostrar_banda
+        self.combo_maestra = controles.combo_maestra
+        self.combo_metodo_corr = controles.combo_metodo_corr
+        self.grafico_medicion = controles.grafico_medicion
+        self.grafico_unif = controles.grafico_unif
+        self.lbl_nombre_maestra = controles.lbl_nombre_maestra
+        self.lbl_r_total = controles.lbl_r_total
+        self.lbl_ventanas_r = controles.lbl_ventanas_r
+        self.spin_ventana_r = controles.spin_ventana_r
         return widget
 
     # -------------------------------------------------------------------------

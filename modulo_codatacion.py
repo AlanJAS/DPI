@@ -299,7 +299,6 @@ class PanelCodatacion(QWidget):
     # -------------------------------------------------------------------------
 
     def _construir_ui(self):
-        from modulo_contratos_ui import instalar_controles
         acciones = modulo_codatacion_ui.AccionesCodatacion(
             _abrir_editor_anillos_marcada=self._abrir_editor_anillos_marcada,
             _aplicar_fuente_informe=self._aplicar_fuente_informe,
@@ -334,7 +333,48 @@ class PanelCodatacion(QWidget):
             verificar_datacion=self.verificar_datacion,
         )
         controles = modulo_codatacion_ui.construir_ui(self, acciones)
-        instalar_controles(self, controles)
+        self._texto_hover = controles._texto_hover
+        self._widget_izq_panel = controles._widget_izq_panel
+        self.btn_aplicar = controles.btn_aplicar
+        self.btn_buscar = controles.btn_buscar
+        self.btn_cargar_crono = controles.btn_cargar_crono
+        self.btn_cargar_rwl = controles.btn_cargar_rwl
+        self.btn_cof_config = controles.btn_cof_config
+        self.btn_descartar_prueba = controles.btn_descartar_prueba
+        self.btn_editar_anillos = controles.btn_editar_anillos
+        self.btn_eps_crono = controles.btn_eps_crono
+        self.btn_grafico_barras = controles.btn_grafico_barras
+        self.btn_modo_cofecha = controles.btn_modo_cofecha
+        self.btn_multi_vs_crono = controles.btn_multi_vs_crono
+        self.btn_probar = controles.btn_probar
+        self.btn_restablecer_sug = controles.btn_restablecer_sug
+        self.btn_series_nulo = controles.btn_series_nulo
+        self.btn_skeleton = controles.btn_skeleton
+        self.btn_toggle_sel = controles.btn_toggle_sel
+        self.btn_ver_cofechado = controles.btn_ver_cofechado
+        self.btn_ver_tabla_off = controles.btn_ver_tabla_off
+        self.chk_cof_crono = controles.chk_cof_crono
+        self.chk_cof_serie = controles.chk_cof_serie
+        self.combo_anclaje = controles.combo_anclaje
+        self.combo_fuente_informe = controles.combo_fuente_informe
+        self.combo_metrica_offset = controles.combo_metrica_offset
+        self.grafico = controles.grafico
+        self.grafico_offset = controles.grafico_offset
+        self.grafico_perfil = controles.grafico_perfil
+        self.lbl_estado_sug = controles.lbl_estado_sug
+        self.lbl_info_crono = controles.lbl_info_crono
+        self.lbl_prueba = controles.lbl_prueba
+        self.lbl_stats = controles.lbl_stats
+        self.lista_series = controles.lista_series
+        self.sec_sug = controles.sec_sug
+        self.spin_edit_year = controles.spin_edit_year
+        self.spin_fuente_informe = controles.spin_fuente_informe
+        self.spin_max_corr = controles.spin_max_corr
+        self.spin_ventana = controles.spin_ventana
+        self.tabla_sugerencias = controles.tabla_sugerencias
+        self.tabs_inferior = controles.tabs_inferior
+        self.txt_ayuda_perfil = controles.txt_ayuda_perfil
+        self.txt_informe = controles.txt_informe
         self._restaurar_pref_fuente()
 
     # -------------------------------------------------------------------------
