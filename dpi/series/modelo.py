@@ -111,6 +111,17 @@ class ModeloSeries:
             raise ValueError(f"Serie ya registrada: {nombre}")
         self.reemplazar(nombre, df)
 
+    def registrar_lote(self, series):
+        """Valida todo el lote antes de cambiar el modelo."""
+        nuevos = {}
+        for nombre, df in series.items():
+            if nombre not in self._series:
+                datos = self._validar(df)
+                nuevos[nombre] = _Serie(datos.copy(), datos)
+        self._series.update(nuevos)
+        self._revision += len(nuevos)
+        return [(nombre, nombre in nuevos) for nombre in series]
+
     def reemplazar(self, nombre, df):
         """Sustitución explícita, incluido el original."""
         self._exigir_sin_prueba(nombre)
