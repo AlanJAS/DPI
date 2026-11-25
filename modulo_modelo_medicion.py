@@ -153,10 +153,21 @@ class RadioMedicion:
             raise ValueError("Dirección de medición inválida")
         if any(type(a) is not int for a in (self.anio_medula, self.anio_corteza)):
             raise ValueError("Los años del radio deben ser enteros")
+        if self.codigo is not None and not isinstance(self.codigo, str):
+            raise ValueError("Código inválido")
+        if type(self.medula) is not bool or type(self.corteza) is not bool:
+            raise ValueError("Extremos deben ser booleanos")
+        if any(type(k) is not int or not isinstance(v, str) for k,v in self.anomalias.items()):
+            raise ValueError("Anomalías inválidas")
         puntos = tuple(self.puntos)
         if not all(isinstance(p, PuntoMedicion) for p in puntos):
             raise ValueError("Puntos de radio inválidos")
         historicos = tuple(tuple(d) for d in self.datos_historicos)
+        if any(len(d) != 2 or type(d[0]) is not int or not isinstance(d[1], Real)
+               or isinstance(d[1], bool) or not isfinite(d[1]) for d in historicos):
+            raise ValueError("Medición histórica inválida")
+        if len({d[0] for d in historicos}) != len(historicos):
+            raise ValueError("Años históricos duplicados")
         if len(puntos) >= 2 and historicos:
             raise ValueError("Un radio geométrico no admite mediciones históricas")
         object.__setattr__(self, "puntos", puntos)
