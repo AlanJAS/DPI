@@ -10,7 +10,8 @@ from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFile
 from PyQt6.QtCore import Qt
 from estilos import color_secundario
 import estilos_graficos as _gr
-from modulo_formatos import _es_planilla, _escribir_excel, asegurar_extension
+from dpi.formatos.planillas import _es_planilla, _escribir_excel
+from dpi.formatos.exportacion import asegurar_extension
 
 
 def _ultima_carpeta(nueva_ruta: str | None = None) -> str:

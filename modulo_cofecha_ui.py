@@ -31,9 +31,9 @@ from PyQt6.QtWidgets import (
 import dpi.ciencia.cofecha as _cof
 import modulo_cofecha_salida as _sal
 from estilos import SECUNDARIO_QSS, color_secundario
-from modulo_formatos import (
-    leer_tucson_multi, leer_tabular, leer_columna_multi_hojas, _es_planilla,
-)
+from dpi.formatos.tucson import leer_tucson_multi
+from dpi.formatos.tabular import leer_tabular, leer_columna_multi_hojas
+from dpi.formatos.planillas import _es_planilla
 from dpi.ciencia.cronologia import RIGIDEZ_SPLINE_DEFECTO
 
 

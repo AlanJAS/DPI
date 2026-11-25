@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from modulo_formatos import leer_pos, escribir_pos
+from dpi.formatos.pos import leer_pos, escribir_pos
 from constantes import DPI_DEFECTO, MM_POR_PULGADA
 
 

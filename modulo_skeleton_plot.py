@@ -14,8 +14,11 @@ from PyQt6.QtCore import Qt, QEvent
 from estilos import SECUNDARIO_QSS, color_secundario
 import estilos_graficos as _gr
 from dpi.ciencia.datacion import score_compuesto, alineamiento_optimo_anillos
-from modulo_formatos import _es_planilla
-from modulo_formatos import leer_tucson_multi, leer_formato_compacto, leer_wid, leer_tabular, leer_como_columnas_o_tabular
+from dpi.formatos.planillas import _es_planilla
+from dpi.formatos.tucson import leer_tucson_multi
+from dpi.formatos.compacto import leer_formato_compacto
+from dpi.formatos.wid import leer_wid
+from dpi.formatos.tabular import leer_tabular, leer_como_columnas_o_tabular
 from modulo_series_ui_util import _color_r, _color_tbp, _ultima_carpeta
 from modulo_dialogos_series import DialogoEditarAnillos
 

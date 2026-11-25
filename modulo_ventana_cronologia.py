@@ -15,11 +15,15 @@ from estilos import color_secundario
 import estilos_graficos as _gr
 from dpi.ciencia.comparacion_nucleo import resumir_desfases
 from dpi.ciencia.datacion import score_compuesto, _serie_transformada_para_comparar
-from modulo_formatos import _es_planilla, asegurar_extension
-from modulo_formatos import leer_tucson_multi, leer_formato_compacto, leer_wid, leer_tabular
+from dpi.formatos.planillas import _es_planilla
+from dpi.formatos.exportacion import asegurar_extension
+from dpi.formatos.tucson import leer_tucson_multi
+from dpi.formatos.compacto import leer_formato_compacto
+from dpi.formatos.wid import leer_wid
+from dpi.formatos.tabular import leer_tabular
 from dpi.ciencia.cronologia import _detrend_serie_indice, detectar_series_problematicas
 from dpi.ciencia.cronologia import _construir_cronologia_desde_series
-from modulo_formatos import _guardar_metadatos_cronologia, _exportar_cronologia_df, _leer_cronologia_guardada
+from dpi.formatos.cronologias import _guardar_metadatos_cronologia, _exportar_cronologia_df, _leer_cronologia_guardada
 from modulo_series_ui_util import _html_curvas_negativas, _mostrar_dialogo_eps_rbar, _ultima_carpeta
 from modulo_dialogos_series import DialogoCurvasNegativas
 from modulo_comparacion_ui import DialogoComparacionMultiple, VentanaTablaOffset

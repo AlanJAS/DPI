@@ -29,7 +29,13 @@ import dpi.ciencia.transformacion as _tr
 from dpi.medicion.modelo import ModeloSesionMedicion, RadioMedicion, TipoMarca
 import pandas as pd
 from dpi.infraestructura.imagen import detectar_dpi, preparar_banda_rgb
-from modulo_formatos import leer_wid, leer_dendro_auto, leer_pos, escribir_pos, _escribir_excel, asegurar_extension, exportar_tabular, exportar_tucson_ewlw, _escribir_tucson
+from dpi.formatos.wid import leer_wid
+from dpi.formatos.deteccion import leer_dendro_auto
+from dpi.formatos.pos import leer_pos, escribir_pos
+from dpi.formatos.planillas import _escribir_excel
+from dpi.formatos.exportacion import asegurar_extension
+from dpi.formatos.tabular import exportar_tabular
+from dpi.formatos.tucson import exportar_tucson_ewlw, _escribir_tucson
 
 from PyQt6.QtWidgets import QApplication, QGraphicsPixmapItem, QFileDialog, QPushButton, QVBoxLayout, QHBoxLayout, QWidget, QLabel, QInputDialog, QMessageBox, QSpinBox, QListWidgetItem, QDialog
 from PyQt6.QtGui import QImage, QPixmap, QPen, QColor, QBrush, QShortcut, QKeySequence

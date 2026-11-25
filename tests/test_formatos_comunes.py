@@ -2,7 +2,9 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import pandas as pd
-from modulo_formatos import leer_series_auto, escribir_tucson_merge, exportar_tucson_ewlw, leer_archivo_tucson, escribir_tabla
+from dpi.formatos.deteccion import leer_series_auto
+from dpi.formatos.tucson import escribir_tucson_merge, exportar_tucson_ewlw, leer_archivo_tucson
+from dpi.formatos.tabular import escribir_tabla
 class Formatos(unittest.TestCase):
     def test_auto_tucson_y_tabla(self):
         with TemporaryDirectory() as d:

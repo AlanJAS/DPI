@@ -2,8 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 import pandas as pd
-from modulo_formatos import (escribir_tucson, leer_archivo_tucson, leer_tucson_multi,
-                            escribir_tucson_merge, exportar_tucson_ewlw)
+from dpi.formatos.tucson import escribir_tucson, leer_archivo_tucson, leer_tucson_multi, escribir_tucson_merge, exportar_tucson_ewlw
 
 class TucsonTests(unittest.TestCase):
     def test_roundtrip(self):

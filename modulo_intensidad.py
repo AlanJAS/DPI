@@ -5,7 +5,7 @@ import numpy as np
 from dpi.medicion.intensidad import (
     CANALES, extraer_intensidad_por_anillo,
 )
-from modulo_formatos import escribir_rwl_intensidad
+from dpi.formatos.tucson import escribir_rwl_intensidad
 
 logger = logging.getLogger(__name__)
 

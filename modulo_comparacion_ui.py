@@ -13,7 +13,7 @@ from PyQt6.QtCore import Qt
 from estilos import color_secundario
 import estilos_graficos as _gr
 from dpi.ciencia.datacion import score_compuesto
-from modulo_formatos import asegurar_extension
+from dpi.formatos.exportacion import asegurar_extension
 from modulo_series_ui_util import _color_compuesto, _color_glk, _color_r, _color_tbp, _ultima_carpeta
 from modulo_dialogos_series import DialogoAlineamientoAnillos
 

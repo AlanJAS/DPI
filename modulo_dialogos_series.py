@@ -12,7 +12,7 @@ from PyQt6.QtCore import Qt
 from estilos import SECUNDARIO_QSS, color_secundario
 import estilos_graficos as _gr
 from dpi.ciencia.datacion import alineamiento_optimo_anillos
-from modulo_formatos import asegurar_extension
+from dpi.formatos.exportacion import asegurar_extension
 from dpi.ciencia.cronologia import _fit_trend, diagnosticar_curva, elegir_metodo_para_grupo, METODOS_DETREND
 from modulo_series_ui_util import ESTILO_CHK_COFECHA, _color_glk, _color_r, _ultima_carpeta
 

@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 import numpy as np
 import pandas as pd
-from modulo_formatos import leer_pos, escribir_pos
+from dpi.formatos.pos import leer_pos, escribir_pos
 from dpi.ciencia.cofecha_nucleo import Matriz, z_leave_one_out
 
 class TestValidacionCientifica(unittest.TestCase):

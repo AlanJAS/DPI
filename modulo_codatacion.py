@@ -89,13 +89,8 @@ from dpi.ciencia.datacion import (
 # pandas. Incluye .ods (LibreOffice / OpenDocument), que necesita el módulo
 # 'odfpy'. Se usa en todo el módulo para no repetir la lista y para que un
 # .ods nunca caiga por error al parser de texto (CSV), que devolvería basura.
-from modulo_formatos import (
-    EXTS_PLANILLA,
-    _es_planilla,
-    _leer_planilla,
-    _escribir_excel,
-    asegurar_extension,
-)
+from dpi.formatos.planillas import EXTS_PLANILLA, _es_planilla, _leer_planilla, _escribir_excel
+from dpi.formatos.exportacion import asegurar_extension
 
 
 from dpi.ciencia.cronologia import (
@@ -140,19 +135,11 @@ from modulo_series_ui_util import ESTILO_CHK_COFECHA
 # LECTORES DE FORMATO DE ARCHIVO
 # =============================================================================
 
-from modulo_formatos import (
-    detectar_precision_tucson,
-    leer_archivo_tucson,
-    leer_tucson_multi,
-    leer_formato_compacto,
-    leer_dendro_auto,
-    leer_wid,
-    leer_tabular,
-    _indexar_columna_multi,
-    _leer_crudo_tabular,
-    leer_columna_multi,
-    leer_columna_multi_hojas,
-)
+from dpi.formatos.tucson import detectar_precision_tucson, leer_archivo_tucson, leer_tucson_multi
+from dpi.formatos.compacto import leer_formato_compacto
+from dpi.formatos.deteccion import leer_dendro_auto
+from dpi.formatos.wid import leer_wid
+from dpi.formatos.tabular import leer_tabular, _indexar_columna_multi, _leer_crudo_tabular, leer_columna_multi, leer_columna_multi_hojas
 
 
 # =============================================================================
@@ -188,16 +175,8 @@ from dpi.ciencia.cronologia import (
 )
 
 
-from modulo_formatos import (
-    _ruta_metadatos_cronologia,
-    _restaurar_claves_anio,
-    _guardar_metadatos_cronologia,
-    _cargar_metadatos_cronologia,
-    escribir_tucson,
-    _exportar_cronologia_df,
-    _leer_cronologia_guardada,
-    _CAMPOS_POR_ANIO,
-)
+from dpi.formatos.cronologias import _ruta_metadatos_cronologia, _restaurar_claves_anio, _guardar_metadatos_cronologia, _cargar_metadatos_cronologia, _exportar_cronologia_df, _leer_cronologia_guardada, _CAMPOS_POR_ANIO
+from dpi.formatos.tucson import escribir_tucson
 
 
 # =============================================================================
@@ -460,7 +439,7 @@ class PanelCodatacion(QWidget):
         n_duplicadas = 0
         errores: list[str] = []
 
-        from modulo_formatos import leer_series_auto
+        from dpi.formatos.deteccion import leer_series_auto
         for ruta in rutas:
             try:
                 series_extraidas = leer_series_auto(ruta)
@@ -1215,7 +1194,7 @@ class PanelCodatacion(QWidget):
             return
         ruta = asegurar_extension(ruta, fmt)
         _ultima_carpeta(ruta)
-        from modulo_formatos import exportar_serie_2col
+        from dpi.formatos.exportacion import exportar_serie_2col
         try:
             n_anios = exportar_serie_2col(serie, ruta, nombre_archivo)
             if estandarizada:

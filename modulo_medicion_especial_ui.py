@@ -815,7 +815,7 @@ class ControlIntensidad:
             nombre_archivo = f"{base}_{suf}.rwl"
             ruta_rwl = os.path.join(directorio, nombre_archivo)
             try:
-                from modulo_formatos import escribir_tucson
+                from dpi.formatos.tucson import escribir_tucson
                 escribir_tucson(pd.Series(vals_norm, index=anios), ruta_rwl,
                     codigo=f"{codigo[:6]}{canal[:1].lower()}{met[:1] if met else ''}")
                 escritos.append(nombre_archivo)
@@ -840,7 +840,7 @@ class ControlIntensidad:
             data[col_label] = valores_intensidad(self._bi_datos, canal, met)
 
         df = pd.DataFrame(data).sort_values("Anio")
-        from modulo_formatos import escribir_tabla
+        from dpi.formatos.tabular import escribir_tabla
         escribir_tabla(df, ruta)
 
         n_cols = len(df.columns) - 1  # restar la columna Anio

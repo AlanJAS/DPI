@@ -34,7 +34,7 @@ from PyQt6.QtWidgets import (
     QRadioButton, QCheckBox, QButtonGroup, QApplication,
 )
 
-from modulo_formatos import leer_tucson_multi
+from dpi.formatos.tucson import leer_tucson_multi
 from estilos import SECUNDARIO_QSS, color_secundario
 from constantes import TUCSON_MAX_CHARS_ID, TUCSON_VALOR_FIN, TUCSON_DIVISOR
 
@@ -59,11 +59,8 @@ def ordenar_series(series_dict: dict) -> dict:
 # Helpers de escritura
 # =============================================================================
 
-from modulo_formatos import (
-    _escribir_tucson_serie,
-    escribir_tucson_merge,
-    escribir_excel_merge,
-)
+from dpi.formatos.tucson import _escribir_tucson_serie, escribir_tucson_merge
+from dpi.formatos.planillas import escribir_excel_merge
 
 
 # =============================================================================

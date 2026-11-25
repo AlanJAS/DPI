@@ -3,7 +3,9 @@ import os
 import logging
 from PyQt6.QtWidgets import QWidget, QFileDialog, QMessageBox
 from dpi.ui.configuracion import ultima_carpeta
-from modulo_formatos import asegurar_extension, exportar_tabular, exportar_tucson_ewlw, _escribir_tucson
+from dpi.formatos.exportacion import asegurar_extension
+from dpi.formatos.tabular import exportar_tabular
+from dpi.formatos.tucson import exportar_tucson_ewlw, _escribir_tucson
 
 logger = logging.getLogger(__name__)
 
