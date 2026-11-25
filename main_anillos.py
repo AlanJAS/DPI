@@ -507,6 +507,7 @@ class VentanaAnillos(QMainWindow):
         p = self._pestana_activa()
         if p:
             p.check_tiene_medula.setChecked(bool(state))
+            p._guardar_estado()
             p._guardar_sidecar_anom()
 
     def _sync_check_corteza(self, state):
@@ -514,6 +515,7 @@ class VentanaAnillos(QMainWindow):
         p = self._pestana_activa()
         if p:
             p.check_tiene_corteza.setChecked(bool(state))
+            p._guardar_estado()
             p._guardar_sidecar_anom()
 
     def _al_cambiar_pestana(self, _idx):

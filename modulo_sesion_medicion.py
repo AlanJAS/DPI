@@ -35,8 +35,21 @@ def _validar_radio(radio, *, activo=False):
             raise ValueError(f"{campo} debe ser entero")
     if "codigo" in datos and not isinstance(datos["codigo"], str):
         raise ValueError("Código de radio inválido")
-    if "anomalias" in datos and not isinstance(datos["anomalias"], dict):
-        raise ValueError("Anomalías inválidas")
+    if "anomalias" in datos:
+        if not isinstance(datos["anomalias"], dict):
+            raise ValueError("Anomalías inválidas")
+        anomalias = {}
+        for k, v in datos["anomalias"].items():
+            if isinstance(k, bool) or not isinstance(k, (str, int)) or not isinstance(v, str):
+                raise ValueError("Anomalía inválida")
+            anio = int(k)
+            if anio in anomalias:
+                raise ValueError("Año de anomalía duplicado")
+            anomalias[anio] = v
+        datos["anomalias"] = anomalias
+    for campo in ("medula", "corteza"):
+        if campo in datos and type(datos[campo]) is not bool:
+            raise ValueError(f"{campo} debe ser booleano")
 
     clave = "coordenadas" if activo else "coords"
     alternativa = "coords" if activo else "coordenadas"

@@ -251,6 +251,8 @@ class PestanaImagen(QWidget):
         super().__init__()
         self._ventana_padre = ventana_padre
         self.ruta_imagen_actual = ruta_imagen
+        # No escribir antes de comprobar si existe una sesión previa.
+        self._sesion_protegida = ruta_imagen
         self.caminos_guardados: dict = {}
         self.serie_maestra: pd.DataFrame | None = None
         self.nombre_maestra: str = "Ninguna"
@@ -1204,6 +1206,8 @@ class PestanaImagen(QWidget):
             self.label_estado.setText(
                 f"Progreso restaurado. Escala: {self.vista.pixeles_por_mm * MM_POR_PULGADA:.0f} DPI."
             )
+        elif self._sesion_protegida == self.ruta_imagen_actual:
+            self.label_estado.setText("Sesión no restaurada: autoguardado desactivado.")
         else:
             self.label_estado.setText(f"Imagen lista. {msg_escala}")
  
@@ -2335,8 +2339,11 @@ class PestanaImagen(QWidget):
         sufijo = "A" if not self.caminos_guardados else "B"
         nombre_defecto = self.input_codigo.text().strip() + sufijo
         nombre, ok = QInputDialog.getText(self, "Guardar Radio", "Identificador:", text=nombre_defecto)
-        if not ok or not nombre:
+        if not ok:
             return
+        nombre = nombre.strip()
+        if not nombre or nombre in self.caminos_guardados:
+            return QMessageBox.warning(self, "Identificador", "Nombre vacío o ya existente.")
 
         self.caminos_guardados[nombre] = {
             "coords": list(self.vista.coordenadas_anillos),
@@ -2344,6 +2351,9 @@ class PestanaImagen(QWidget):
             "anio_medula": self.spin_medula.value(),
             "anio_corteza": self.spin_corteza.value(),
             "dir_idx": self.combo_dir.currentIndex(),
+            "anomalias": dict(self.vista.anomalias),
+            "medula": self.check_tiene_medula.isChecked(),
+            "corteza": self.check_tiene_corteza.isChecked(),
         }
         item = QListWidgetItem(nombre)
         item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
@@ -2352,6 +2362,11 @@ class PestanaImagen(QWidget):
 
         self.vista.limpiar_historial()
         self.vista.modelo_medicion.limpiar()
+        self.vista.anomalias.clear()
+        self._ultima_ruta_exportada = None
+        with QSignalBlocker(self.check_tiene_medula), QSignalBlocker(self.check_tiene_corteza):
+            self.check_tiene_medula.setChecked(False)
+            self.check_tiene_corteza.setChecked(False)
         self.vista.redibujar_todo()
 
         self.spin_medula.blockSignals(True)
@@ -2423,6 +2438,8 @@ class PestanaImagen(QWidget):
             self.spin_corteza.blockSignals(False)
 
         self.input_codigo.setText(nombre)
+        self._restaurar_metadatos_radio(datos)
+        self._ultima_ruta_exportada = None
         self.vista.recalcular_todas_las_distancias()
         # IMPORTANTE: emitir metadatos_cambiados para que main_anillos.py
         # sincronice los spinboxes/combo GLOBALES del top bar con los locales
@@ -2838,7 +2855,15 @@ class PestanaImagen(QWidget):
     # Persistencia (guardado automático en JSON oculto)
     # -------------------------------------------------------------------------
 
+    def _restaurar_metadatos_radio(self, datos):
+        self.vista.anomalias = {int(k): v for k, v in datos.get("anomalias", {}).items()}
+        with QSignalBlocker(self.check_tiene_medula), QSignalBlocker(self.check_tiene_corteza):
+            self.check_tiene_medula.setChecked(datos.get("medula", False))
+            self.check_tiene_corteza.setChecked(datos.get("corteza", False))
+
     def _guardar_estado(self):
+        if getattr(self, "_sesion_protegida", None) == self.ruta_imagen_actual:
+            return
         try:
             guardar_sesion(
                 self.ruta_imagen_actual,
@@ -2851,12 +2876,16 @@ class PestanaImagen(QWidget):
                     "anio_corteza": self.spin_corteza.value(),
                     "dir_idx": self.combo_dir.currentIndex(),
                     "codigo": self.input_codigo.text(),
+                    "anomalias": dict(self.vista.anomalias),
+                    "medula": self.check_tiene_medula.isChecked(),
+                    "corteza": self.check_tiene_corteza.isChecked(),
                 },
             )
         except Exception:
             logger.exception("No se pudo guardar el estado")
 
     def _cargar_estado(self) -> bool:
+        self._sesion_protegida = None
         try:
             datos = leer_sesion(self.ruta_imagen_actual)
             if datos is None:
@@ -2868,7 +2897,11 @@ class PestanaImagen(QWidget):
                     if not control.minimum() <= activo[campo] <= control.maximum():
                         raise ValueError(f"{campo} fuera del rango permitido")
         except (OSError, ValueError, TypeError, KeyError, OverflowError) as exc:
+            self._sesion_protegida = self.ruta_imagen_actual
             logger.warning("No se pudo cargar el estado guardado: %s", exc)
+            self._mostrar_aviso_dpi("Sesión protegida",
+                "No se pudo restaurar la sesión. El autoguardado queda desactivado "
+                "para esta imagen hasta resolver el archivo de sesión.")
             return False
 
         # La lectura, migración y validación han terminado antes de tocar Qt.
@@ -2898,6 +2931,7 @@ class PestanaImagen(QWidget):
                 self.vista.limpiar_historial()
                 self.vista.cargar_camino_activo(
                     activo["coordenadas"], activo["es_salto"], redibujar=False)
+            self._restaurar_metadatos_radio(activo)
             self.vista.recalcular_todas_las_distancias()
         else:
             self._actualizar_grafico_rt()
@@ -3032,9 +3066,17 @@ class PestanaImagen(QWidget):
                 )
 
             QMessageBox.information(self, "Éxito", f"Exportado a:\n{ruta}")
-            # Guardar sidecar junto al .rwl
-            self._ultima_ruta_exportada = ruta
-            self._guardar_sidecar_anom(ruta)
+            # No asociar las anomalías del radio activo a otro radio.
+            if seleccion == "Radio Actual (En progreso)":
+                self._ultima_ruta_exportada = ruta
+                self._guardar_sidecar_anom(ruta)
+            else:
+                radio = self.caminos_guardados[seleccion]
+                _js.guardar_json(self._ruta_sidecar(ruta), {
+                    "code": codigo, "medula": radio.get("medula", False),
+                    "corteza": radio.get("corteza", False),
+                    "anomalias": radio.get("anomalias", {}),
+                })
         except Exception as exc:
             logger.error("Error al exportar: %s", exc)
             QMessageBox.critical(self, "Error", f"Fallo al exportar:\n{exc}")
@@ -4472,4 +4514,5 @@ class PestanaImagen(QWidget):
 
     def _anomalias_modificadas(self):
         """Llamado desde la vista cuando el usuario cambia una anomalía."""
+        self._guardar_estado()
         self._guardar_sidecar_anom()
