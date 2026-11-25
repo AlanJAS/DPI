@@ -32,13 +32,14 @@ class _LecturaOriginales(Mapping):
 class ModeloSeries:
     """Conserva datos editables y originales independientes.
 
-    Los diccionarios se mantienen accesibles para los consumidores históricos.
+    Las vistas públicas entregan copias independientes de los datos.
     """
     def __init__(self):
-        self.datos: dict[str, pd.DataFrame] = {}
+        self._datos: dict[str, pd.DataFrame] = {}
         self._originales: dict[str, pd.DataFrame] = {}
         self._prueba: _PruebaCorreccion | None = None
         self.originales = _LecturaOriginales(self._originales)
+        self.datos = _LecturaOriginales(self._datos)
 
     @property
     def nombre_en_prueba(self):
@@ -52,9 +53,9 @@ class ModeloSeries:
         """Instala una vista temporal sin alterar la serie original."""
         if self._prueba is not None:
             raise ValueError('Ya existe una corrección temporal')
-        respaldo = self.datos[nombre].copy()
+        respaldo = self._datos[nombre].copy()
         corregido = self._validar(df)
-        self.datos[nombre] = corregido
+        self._datos[nombre] = corregido
         self._prueba = _PruebaCorreccion(nombre, respaldo)
 
     def confirmar_correccion(self):
@@ -69,7 +70,7 @@ class ModeloSeries:
         if self._prueba is None:
             return False
         prueba = self._prueba
-        self.datos[prueba.nombre] = prueba.respaldo
+        self._datos[prueba.nombre] = prueba.respaldo
         self._prueba = None
         return True
 
@@ -94,29 +95,29 @@ class ModeloSeries:
         self._exigir_sin_prueba(nombre)
         datos = self._validar(df)
         original = datos.copy()
-        self.datos[nombre] = datos
+        self._datos[nombre] = datos
         self._originales[nombre] = original
 
     def eliminar(self, nombre):
         self._exigir_sin_prueba(nombre)
-        self.datos.pop(nombre, None)
+        self._datos.pop(nombre, None)
         self._originales.pop(nombre, None)
 
     def restablecer(self, nombre):
         self._exigir_sin_prueba(nombre)
-        self.datos[nombre] = self._originales[nombre].copy()
+        self._datos[nombre] = self._originales[nombre].copy()
 
     def actualizar(self, nombre, df):
         """Valida una edición sin sustituir el respaldo original."""
         self._exigir_sin_prueba(nombre)
-        if nombre not in self.datos:
+        if nombre not in self._datos:
             raise KeyError(nombre)
         datos = self._validar(df)
-        self.datos[nombre] = datos
+        self._datos[nombre] = datos
 
     def desplazar(self, nombre, shift):
         self._exigir_sin_prueba(nombre)
-        df = self.datos.get(nombre)
+        df = self._datos.get(nombre)
         if not shift or df is None or df.empty:
             return False
         if not isinstance(shift, (int, np.integer)) or isinstance(shift, bool):

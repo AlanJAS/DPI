@@ -222,9 +222,8 @@ class VentanaSkeletonPlot(QWidget):
                 if (hasattr(self._panel_cod, "agregar_serie_externa")):
                     self._panel_cod.agregar_serie_externa(nombre, df)
                 else:
-                    self._panel_cod.series_datos[nombre] = df
-                    if hasattr(self._panel_cod, "series_originales"):
-                        self._panel_cod.series_originales[nombre] = df.copy()
+                    self._panel_cod.modelo_series.registrar(nombre, df)
+                    self._panel_cod._series_modificadas()
                 enviadas += 1
             except Exception:
                 pass

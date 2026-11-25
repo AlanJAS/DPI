@@ -33,7 +33,11 @@ class TestModelosDatos(unittest.TestCase):
         m = ModeloSeries()
         df = pd.DataFrame({'Ancho_mm': [1., 2.]}, index=[2000, 2002])
         m.registrar('A', df)
-        m.datos['A'].iloc[0, 0] = 9
+        copia = m.datos['A']
+        copia.iloc[0, 0] = 9
+        self.assertEqual(m.datos['A'].iloc[0, 0], 1)
+        m.actualizar('A', copia)
+        self.assertEqual(m.datos['A'].iloc[0, 0], 9)
         self.assertEqual(m.originales['A'].iloc[0, 0], 1)
         self.assertEqual(df.iloc[0, 0], 1)
         m.restablecer('A')
