@@ -51,6 +51,24 @@ class TestModeloMedicion(unittest.TestCase):
         m.restaurar(despues)
         self.assertEqual(m.captura(), despues)
 
+    def test_historial_incluye_anomalias(self):
+        from modulo_modelo_medicion import HistorialMedicion
+        m = ModeloMedicion()
+        h = HistorialMedicion(m, 3)
+        m.agregar((0, 0))
+        m.anomalias[2000] = 'a'
+        h.guardar()
+        m.agregar((1, 0))
+        m.anomalias[2000] = 'b'
+        m.pixeles_por_mm = 2
+        self.assertTrue(h.deshacer())
+        self.assertEqual(len(m.captura()), 1)
+        self.assertEqual(m.anomalias, {2000: 'a'})
+        self.assertEqual(m.pixeles_por_mm, 2.)
+        self.assertTrue(h.rehacer())
+        self.assertEqual(len(m.captura()), 2)
+        self.assertEqual(m.anomalias, {2000: 'b'})
+
     def test_escala_del_modelo(self):
         m = ModeloMedicion()
         m.pixeles_por_mm = 2

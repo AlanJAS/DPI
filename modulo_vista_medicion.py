@@ -352,12 +352,17 @@ class VistaInteractiva(QGraphicsView):
         self._historial.limpiar()
 
     def deshacer_ultimo(self):
-        if self._historial.deshacer():
-            self._actualizar_tras_historial()
+        self._aplicar_historial(self._historial.deshacer)
 
     def rehacer_ultimo(self):
-        if self._historial.rehacer():
+        self._aplicar_historial(self._historial.rehacer)
+
+    def _aplicar_historial(self, operacion):
+        anomalias = dict(self.anomalias)
+        if operacion():
             self._actualizar_tras_historial()
+            if anomalias != self.anomalias:
+                self.anomalias_modificadas.emit()
 
     def _actualizar_tras_historial(self):
         self._limpiar_anclado()
@@ -1060,6 +1065,7 @@ class VistaInteractiva(QGraphicsView):
         if not tipo_activo:
             return
 
+        self.guardar_en_historial()
         tipo_actual = self.anomalias.get(anio)
         if tipo_actual == tipo_activo:
             # Toggle: quitar si ya tiene el mismo tipo

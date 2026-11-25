@@ -206,8 +206,22 @@ class RadioMedicion:
         return datos
 
 
+@dataclass(frozen=True, slots=True)
+class EstadoEdicion:
+    puntos: tuple[PuntoMedicion, ...]
+    anomalias: tuple[tuple[int, str], ...]
+
+    @classmethod
+    def capturar(cls, modelo):
+        return cls(modelo.captura(), tuple(modelo.anomalias.items()))
+
+    def restaurar(self, modelo):
+        modelo.restaurar(self.puntos)
+        modelo.anomalias = dict(self.anomalias)
+
+
 class HistorialMedicion:
-    """Historial de capturas de puntos, independiente de Qt."""
+    """Historial de geometría y anomalías; la calibración es independiente."""
     def __init__(self, modelo, limite):
         self.modelo = modelo
         self.limite = limite
@@ -215,7 +229,7 @@ class HistorialMedicion:
         self._redo = []
 
     def guardar(self):
-        self._undo.append(self.modelo.captura())
+        self._undo.append(EstadoEdicion.capturar(self.modelo))
         if len(self._undo) > self.limite:
             self._undo.pop(0)
         self._redo.clear()
@@ -227,8 +241,8 @@ class HistorialMedicion:
     def _cambiar(self, origen, destino):
         if not origen:
             return False
-        destino.append(self.modelo.captura())
-        self.modelo.restaurar(origen.pop())
+        destino.append(EstadoEdicion.capturar(self.modelo))
+        origen.pop().restaurar(self.modelo)
         return True
 
     def deshacer(self):
