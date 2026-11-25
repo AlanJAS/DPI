@@ -1,5 +1,6 @@
 """Cálculos geométricos de medición, sin Qt."""
 from dataclasses import dataclass
+from functools import lru_cache
 import math
 from modulo_modelo_medicion import PuntoMedicion, TipoMarca
 
@@ -18,7 +19,13 @@ class AnilloMedido:
 
 
 def calcular_anillos(puntos, ppm):
-    """Conserva las reglas de ancho, incluyendo cierre parcial al final o salto."""
+    """Devuelve una lista independiente de los anillos calculados."""
+    return list(_calcular_anillos(tuple(puntos), ppm))
+
+
+@lru_cache(maxsize=16)
+def _calcular_anillos(puntos, ppm):
+    """Reutiliza el cálculo mientras no cambien los puntos o la escala."""
     if not math.isfinite(ppm) or ppm <= 0:
         raise ValueError('Escala de medición inválida')
     anillos = []
@@ -41,16 +48,16 @@ def calcular_anillos(puntos, ppm):
                 inicio = i
     if acum > 0:
         anillos.append(AnilloMedido(inicio, fin, acum))
-    return anillos
+    return tuple(anillos)
 
 
 def anchos_puntos(puntos, ppm):
-    return [a.ancho_mm for a in calcular_anillos(puntos, ppm)]
+    return [a.ancho_mm for a in _calcular_anillos(tuple(puntos), ppm)]
 
 
 def anios_por_punto(puntos, ppm, medula, corteza, med_a_cor):
     """Años de los puntos y conjunto de índices que cierran un anillo."""
-    cierres = {a.indice_fin for a in calcular_anillos(puntos, ppm)}
+    cierres = {a.indice_fin for a in _calcular_anillos(tuple(puntos), ppm)}
     n = 0
     anios = []
     for i in range(len(puntos)):
