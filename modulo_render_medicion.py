@@ -1,6 +1,6 @@
 """Render de mediciones: posee los elementos gráficos, no la vista."""
 import math
-from modulo_calculo_medicion import anios_por_punto
+from dpi.medicion.calculo import anios_por_punto
 from PyQt6.QtGui import QPen, QColor, QBrush
 from constantes import INTERVALO_MARCADOR_DECADA, INTERVALO_MARCADOR_CINCUENTENA, INTERVALO_MARCADOR_CENTENA, COLOR_PUNTO_INACTIVO, TIPOS_ANOMALIA
 from modulo_marcas_medicion import _es_amarillo, _es_espacio, _es_ewlw, _es_quiebre_ini, _es_salto_real

@@ -17,7 +17,7 @@ from modulo_exportacion_medicion_ui import ExportadorDendro
 import modulo_medicion_ui
 
 import os
-from modulo_calculo_medicion import anchos_puntos
+from dpi.medicion.calculo import anchos_puntos
 import logging
 from modulo_datos_medicion import mediciones_desde_anchos, mediciones_radio
 from modulo_sesion_medicion import guardar_sesion, leer_sesion

@@ -18,7 +18,7 @@ Referencia:
 import math
 import logging
 import numpy as np
-from modulo_calculo_medicion import calcular_anillos, puntos_desde_geometria
+from dpi.medicion.calculo import calcular_anillos, puntos_desde_geometria
 
 logger = logging.getLogger(__name__)
 
