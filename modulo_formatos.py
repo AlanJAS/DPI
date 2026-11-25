@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import json_seguro as _js
 from constantes import (TUCSON_VALOR_FIN, TUCSON_VALOR_FALTANTE,
-                        TUCSON_VALOR_999, TUCSON_MAX_CHARS_ID, TUCSON_DIVISOR)
+                        TUCSON_MAX_CHARS_ID, TUCSON_DIVISOR)
 
 logger = logging.getLogger(__name__)
 
@@ -92,164 +92,75 @@ def _asegurar_extension(ruta: str, filtro: str) -> str:
     return ruta + exts[0]
 
 
-def detectar_precision_tucson(ruta: str) -> dict:
-    """Precisión de cada serie de un archivo Tucson, según SU terminador.
-
-    El formato Tucson no declara la precisión: se deduce del marcador de fin
-    de cada serie, que es el ÚLTIMO valor escrito. Es la regla que usa dplR en
-    `src/readloop.c`:
-
-        terminador  999  ->  las mediciones están en 0,01 mm  (dividir por 100)
-        terminador -9999 ->  en 0,001 mm                      (dividir por 1000)
-        sin terminador   ->  sin escalar
-
-    Y es POR SERIE, no por archivo: un mismo archivo puede mezclar precisiones
-    si se armó juntando mediciones de distintas épocas o equipos.
-
-    DPI dividía siempre por 1000. Con un archivo en centésimas —lo habitual en
-    material antiguo y en buena parte de la ITRDB— eso deja todos los anchos
-    diez veces más chicos. No se nota en la correlación, porque es un factor
-    constante, pero arruina cualquier cifra en milímetros: crecimiento medio,
-    incremento en área basal, comparaciones entre sitios.
-    """
-    ultimo: dict[str, int] = {}
-    try:
-        with open(ruta, "r", encoding="latin-1") as f:
-            for ln in f:
-                ln = ln.rstrip("\r\n")
-                if len(ln) < 13:
-                    continue
-                id_serie = ln[:8].strip()
-                if not id_serie:
-                    continue
-                for i in range(10):
-                    ini = 12 + i * 6
-                    if ini >= len(ln):
-                        break
-                    tok = ln[ini:ini + 6].strip()
-                    if not tok:
-                        continue
-                    try:
-                        ultimo[id_serie] = int(tok)
-                    except ValueError:
-                        continue
-    except Exception:
-        return {}
-    prec = {}
-    for k, v in ultimo.items():
-        prec[k] = 100.0 if v == 999 else (1000.0 if v == -9999 else 1.0)
-    return prec
-
-
-def leer_archivo_tucson(ruta: str) -> tuple[pd.DataFrame, str]:
-    """Lee un .rwl Tucson UNA serie. Devuelve (DataFrame, id_serie)."""
-    anios, mediciones, id_serie = [], [], "Desconocido"
-    # Precisión por serie según su marcador de fin (ver
-    # detectar_precision_tucson). Antes se dividía siempre por 1000.
-    _prec = detectar_precision_tucson(ruta)
-
-    with open(ruta, "r", encoding="utf-8", errors="replace") as f:
+def _registros_tucson(ruta):
+    """Lee campos fijos una sola vez, conservando año y código."""
+    registros = {}
+    codigo = None
+    with open(ruta, encoding="utf-8", errors="replace") as f:
         for linea in f:
             ln = linea.rstrip("\r\n")
-            if not ln or ln.startswith("#"):
+            if not ln.strip() or ln.lstrip().startswith("#"):
                 continue
-            if ln[:8].strip():
-                id_serie = ln[:8].strip()
             try:
-                anio_base = int(ln[8:12])
+                anio = int(ln[8:12])
             except ValueError:
                 continue
+            codigo = ln[:8].strip() or codigo
+            if not codigo:
+                continue
             for i in range(10):
-                inicio = 12 + i * 6
-                if inicio >= len(ln):
-                    break
-                token = ln[inicio: inicio + 6].strip()
+                token = ln[12 + 6*i:18 + 6*i].strip()
                 if not token:
                     continue
                 try:
                     valor = int(token)
                 except ValueError:
+                    logger.warning("Tucson: campo inválido %s, año %s", codigo, anio+i)
                     continue
-                div = _prec.get(id_serie, TUCSON_DIVISOR)
-                # 999 solo es fin de serie cuando el archivo está en
-                # centésimas; con precisión de milésimas es un ancho válido
-                # de 0,999 mm y NO debe cortar la lectura.
-                if valor in (TUCSON_VALOR_FIN, TUCSON_VALOR_FALTANTE):
-                    break
-                if valor == 999 and div == 100.0:
-                    break
-                if valor == TUCSON_VALOR_999:
-                    valor = 999
-                anios.append(anio_base + i)
-                mediciones.append(valor / div)
+                registros.setdefault(codigo, []).append((anio+i, valor))
+    return registros
 
-    df = pd.DataFrame({"Anio": anios, "Ancho_mm": mediciones})
-    if df.empty:
-        raise ValueError(f"No se encontraron datos válidos en: {os.path.basename(ruta)}")
-    df = df.groupby("Anio").mean()
-    df.sort_index(inplace=True)
-    return df, id_serie
+
+def _precision_registros(registros):
+    return {sid: (100.0 if pares[-1][1] == 999 else
+                  1000.0 if pares[-1][1] == TUCSON_VALOR_FIN else 1.0)
+            for sid, pares in registros.items() if pares}
+
+
+def detectar_precision_tucson(ruta: str) -> dict:
+    return _precision_registros(_registros_tucson(ruta))
 
 
 def leer_tucson_multi(ruta: str) -> dict[str, pd.DataFrame]:
-    """Lee un .rwl Tucson con UNA o VARIAS series. Devuelve dict {id: DataFrame}."""
-    series_dict: dict[str, dict[int, float]] = {}
-    # Precisión por serie, deducida de su marcador de fin (ver
-    # detectar_precision_tucson). Antes se dividía siempre por 1000.
-    _prec = detectar_precision_tucson(ruta)
-
-    with open(ruta, "r", encoding="utf-8", errors="replace") as f:
-        for linea in f:
-            ln = linea.rstrip("\r\n")
-            if not ln or ln.startswith("#"):
+    registros = _registros_tucson(ruta)
+    precision = _precision_registros(registros)
+    resultado = {}
+    for sid, pares in registros.items():
+        div = precision[sid]
+        datos = []
+        for anio, valor in pares:
+            if valor == TUCSON_VALOR_FIN or (valor == 999 and div == 100.0):
+                break
+            if valor == TUCSON_VALOR_FALTANTE:
                 continue
-            id_serie = ln[:8].strip()
-            if not id_serie:
-                continue
-
-            try:
-                anio_base = int(ln[8:12])
-            except ValueError:
-                continue
-
-            if id_serie not in series_dict:
-                series_dict[id_serie] = {}
-
-            for i in range(10):
-                inicio = 12 + i * 6
-                if inicio >= len(ln):
-                    break
-                token = ln[inicio: inicio + 6].strip()
-                if not token:
-                    continue
-                try:
-                    valor = int(token)
-                except ValueError:
-                    continue
-                div = _prec.get(id_serie, TUCSON_DIVISOR)
-                if valor in (TUCSON_VALOR_FIN, TUCSON_VALOR_FALTANTE):
-                    break
-                if valor == 999 and div == 100.0:
-                    break
-                if valor == TUCSON_VALOR_999:
-                    valor = 999
-                series_dict[id_serie][anio_base + i] = valor / div
-
-    resultado: dict[str, pd.DataFrame] = {}
-    for sid, anios_vals in series_dict.items():
-        if not anios_vals:
+            datos.append((anio, valor / div))
+        if not datos:
             continue
-        df = pd.DataFrame({
-            "Anio": list(anios_vals.keys()),
-            "Ancho_mm": list(anios_vals.values()),
-        })
-        df = df.groupby("Anio").mean()
-        df.sort_index(inplace=True)
-        resultado[sid] = df
-
+        df = pd.DataFrame(datos, columns=["Anio", "Ancho_mm"])
+        if df["Anio"].duplicated().any():
+            logger.warning("Tucson: años duplicados en %s; se promedian", sid)
+        resultado[sid] = df.groupby("Anio").mean().sort_index()
     if not resultado:
         raise ValueError(f"No se encontraron series válidas en: {os.path.basename(ruta)}")
     return resultado
+
+
+def leer_archivo_tucson(ruta: str) -> tuple[pd.DataFrame, str]:
+    series = leer_tucson_multi(ruta)
+    if len(series) != 1:
+        raise ValueError("El archivo contiene varias series; utilice la importación múltiple.")
+    sid, df = next(iter(series.items()))
+    return df, sid
 
 
 def leer_formato_compacto(ruta: str, divisor: float = 100.0) -> dict:
@@ -351,13 +262,8 @@ def leer_dendro_auto(ruta: str):
             return True
         return False
 
-    if _parece_tucson(primeras_lineas):
-        try:
-            df, nombre = leer_archivo_tucson(ruta)
-            if df is not None and not df.empty:
-                return df, nombre
-        except Exception:
-            pass
+    if ext == ".rwl" or _parece_tucson(primeras_lineas):
+        return leer_archivo_tucson(ruta)
     return leer_tabular(ruta)
 
 
@@ -645,61 +551,53 @@ def _cargar_metadatos_cronologia(ruta: str) -> dict | None:
         return None
 
 
+def _lineas_tucson(serie, codigo, factor=1000.0):
+    """Generador común: campos fijos, años reales y terminador inequívoco."""
+    if factor not in (100.0, 1000.0):
+        raise ValueError("Tucson: factor debe ser 100 o 1000.")
+    codigo = str(codigo)[:TUCSON_MAX_CHARS_ID]
+    if not codigo.strip() or not codigo.isascii() or any(c in codigo for c in "\r\n\t"):
+        raise ValueError("Código Tucson inválido.")
+    if serie.empty or serie.index.has_duplicates:
+        raise ValueError("Tucson: serie vacía o años duplicados.")
+    datos = {}
+    fin = 999 if factor == 100 else TUCSON_VALOR_FIN
+    for anio, valor in serie.items():
+        y = int(anio)
+        if float(anio) != y or not -999 <= y <= 9999:
+            raise ValueError(f"Año Tucson inválido: {anio}")
+        if pd.isna(valor):
+            v = TUCSON_VALOR_FALTANTE
+        else:
+            v = int(round(float(valor) * factor))
+            if v in (fin, TUCSON_VALOR_FIN, TUCSON_VALOR_FALTANTE) or len(str(v)) > 6:
+                raise ValueError(f"Valor Tucson reservado o fuera de rango: {valor} ({y})")
+        datos[y] = v
+    inicio, ultimo = min(datos), max(datos)
+    lineas = []
+    y = inicio
+    while y <= ultimo:
+        n = min(10-y%10, ultimo-y+1)
+        valores = [datos.get(k, TUCSON_VALOR_FALTANTE) for k in range(y,y+n)]
+        lineas.append(f"{codigo:8s}{y:4d}" + "".join(f"{v:6d}" for v in valores))
+        y += n
+    if (len(lineas[-1])-12)//6 < 10 and y%10:
+        lineas[-1] += f"{fin:6d}"
+    else:
+        if y > 9999:
+            raise ValueError("Tucson: año del terminador fuera de rango.")
+        lineas.append(f"{codigo:8s}{y:4d}{fin:6d}")
+    return lineas
+
+
+def _guardar_lineas_tucson(ruta, lineas):
+    with open(ruta, "w", encoding="utf-8", newline="\r\n") as f:
+        f.write("\n".join(lineas) + "\n")
+
+
 def escribir_tucson(serie: pd.Series, ruta: str, codigo: str = "CRONO",
                      factor: float = 1000.0, decimales_mm: bool = True):
-    """Escribe una serie en formato Tucson (decadal, 10 valores por línea).
-
-    `factor` convierte a enteros: 1000 para anchos en mm (0.452 → 452) y
-    también para cronologías, cuyos índices adimensionales rondan 1.0 y se
-    guardan como 1000 = índice 1.000. Esa es la convención de ARSTAN para
-    los archivos .crn, así que un índice de 0.873 queda como 873.
-
-    Cada línea lleva el código, el año de la década y hasta 10 valores; el
-    archivo cierra con el marcador de fin de serie (-9999).
-    """
-    s = pd.to_numeric(serie, errors="coerce").dropna()
-    if s.empty:
-        raise ValueError("La serie está vacía.")
-    s = s.sort_index()
-    cod = str(codigo)[:TUCSON_MAX_CHARS_ID].ljust(TUCSON_MAX_CHARS_ID)
-
-    anios = s.index.to_numpy(dtype=np.int64)
-    vals = s.to_numpy(dtype=float)
-    a_ini, a_fin = int(anios.min()), int(anios.max())
-    por_anio = {int(a): float(v) for a, v in zip(anios, vals)}
-
-    lineas = []
-    decada = (a_ini // 10) * 10
-    while decada <= a_fin:
-        # En Tucson, la primera línea lleva el año REAL de inicio (no el de la
-        # década) y solo los valores hasta el fin de esa década. Si se
-        # etiquetara con la década, al releer el archivo los valores quedarían
-        # corridos hacia atrás.
-        etiqueta = max(decada, a_ini)
-        fila = f"{cod}{etiqueta:4d}"
-        hay = False
-        for k in range(10):
-            anio = decada + k
-            if anio < a_ini or anio > a_fin:
-                continue
-            v = por_anio.get(anio)
-            entero = (TUCSON_VALOR_FALTANTE if v is None
-                      else int(round(v * factor)))
-            fila += f"{entero:6d}"
-            hay = True
-        if hay:
-            lineas.append(fila)
-        decada += 10
-
-    # Marcador de fin de serie
-    ultima_decada = (a_fin // 10) * 10
-    if a_fin % 10 == 9:
-        lineas.append(f"{cod}{ultima_decada + 10:4d}{TUCSON_VALOR_FIN:6d}")
-    else:
-        lineas[-1] += f"{TUCSON_VALOR_FIN:6d}"
-
-    with open(ruta, "w", encoding="utf-8") as f:
-        f.write("\n".join(lineas) + "\n")
+    _guardar_lineas_tucson(ruta, _lineas_tucson(serie, codigo, factor))
 
 
 def _exportar_cronologia_df(df: pd.DataFrame, ruta: str, codigo: str = "CRONO"):
@@ -726,7 +624,10 @@ def _exportar_cronologia_df(df: pd.DataFrame, ruta: str, codigo: str = "CRONO"):
 
 def _leer_cronologia_guardada(ruta: str) -> tuple[pd.DataFrame, dict]:
     ext = os.path.splitext(ruta)[1].lower()
-    if _es_planilla(ext):
+    if ext == ".rwl":
+        df, _ = leer_archivo_tucson(ruta)
+        df = df.reset_index()
+    elif _es_planilla(ext):
         df = _leer_planilla(ruta)
     elif ext == ".csv":
         df = pd.read_csv(ruta)
@@ -812,35 +713,6 @@ def _leer_cronologia_guardada(ruta: str) -> tuple[pd.DataFrame, dict]:
     return df, meta
 
 
-def _filas_tucson_contiguas(codigo, anio_inicio, mods):
-    n = len(mods)
-    lineas: list[str] = []
-    idx = 0
-
-    # Primera fila parcial (si el año de inicio no es múltiplo de 10)
-    resto = anio_inicio % 10
-    primeros = (10 - resto) if resto != 0 else 10
-    if primeros < 10:
-        cantidad = min(primeros, n - idx)
-        if cantidad > 0:
-            fila = f"{codigo:8s}{anio_inicio + idx:4d}"
-            for v in mods[idx: idx + cantidad]:
-                fila += f"{v:6d}"
-            lineas.append(fila)
-            idx += cantidad
-
-    # Filas completas de 10 valores
-    while idx < n:
-        cantidad = min(10, n - idx)
-        fila = f"{codigo:8s}{anio_inicio + idx:4d}"
-        for v in mods[idx: idx + cantidad]:
-            fila += f"{v:6d}"
-        lineas.append(fila)
-        idx += cantidad
-
-    return lineas, idx
-
-
 def _exportar_tabular(id_serie: str, anios: list, anchos: list, ruta: str,
                        formato: str, anchos_ewlw: list | None = None):
     """Exporta a CSV o Excel. Si anchos_ewlw está presente, agrega columnas EW_mm y LW_mm."""
@@ -861,135 +733,51 @@ def _exportar_tabular(id_serie: str, anios: list, anchos: list, ruta: str,
 
 def _exportar_tucson_ewlw(id_serie: str, anios: list,
                             anchos_ewlw: list, ruta_base: str):
-    """Exporta archivos Tucson separados para EW y LW (convención Velmex).
-
-    Crea {ruta_base}_EW.rwl y {ruta_base}_LW.rwl junto al archivo principal.
-    Solo escribe los anillos que tienen límite EW/LW detectado; los demás
-    se exportan con el valor especial Tucson para missing (999).
-    """
-    if not anchos_ewlw or len(anchos_ewlw) != len(anios):
-        return
-
-    # Separar nombre base y extensión
+    if not anios or len(anchos_ewlw) != len(anios):
+        raise ValueError("EW/LW: cantidad de años y mediciones incompatible.")
     base, ext = os.path.splitext(ruta_base)
-    if not ext:
-        ext = ".rwl"
+    ext = ext or ".rwl"
+    salidas = []
+    for sufijo, columna in (("_EW", 1), ("_LW", 2)):
+        valores = [t[columna] if t[1] is not None and t[2] is not None else np.nan
+                   for t in anchos_ewlw]
+        codigo = id_serie[:TUCSON_MAX_CHARS_ID-len(sufijo)] + sufijo
+        salidas.append((base+sufijo+ext, _lineas_tucson(pd.Series(valores, index=anios), codigo)))
+    for ruta, lineas in salidas:
+        _guardar_lineas_tucson(ruta, lineas)
 
-    ew_vals = []
-    lw_vals = []
-    for (_, ew, lw) in anchos_ewlw:
-        if ew is None or lw is None:
-            # Anillo sin EW/LW detectado → marcar como missing (999)
-            ew_vals.append(999)
-            lw_vals.append(999)
-        else:
-            ew_vals.append(int(round(ew * 1000)))
-            lw_vals.append(int(round(lw * 1000)))
 
-    ruta_ew = base + "_EW" + ext
-    ruta_lw = base + "_LW" + ext
-
-    _escribir_tucson(id_serie + "_EW", anios[0], ew_vals, ruta_ew)
-    _escribir_tucson(id_serie + "_LW", anios[0], lw_vals, ruta_lw)
-
-def _escribir_tucson(codigo: str, anio_inicio: int, mediciones: list[int], ruta: str):
-    """Escribe el archivo en formato Tucson (.rwl / .txt)."""
+def _escribir_tucson(codigo: str, anio_inicio: int, mediciones: list[int], ruta: str,
+                     *, anios=None):
     if not ruta.lower().endswith((".txt", ".rwl")):
         ruta += ".txt"
-
-    codigo = codigo[:TUCSON_MAX_CHARS_ID]
-    # Reemplaza el valor 999 colisionante con el código reservado 998
-    mods = [TUCSON_VALOR_999 if v == 999 else v for v in mediciones]
-    n = len(mods)
-    lineas, idx = _filas_tucson_contiguas(codigo, anio_inicio, mods)
-
-    # Marcador de fin de serie
-    if n == 0:
-        lineas = [f"{codigo:8s}{anio_inicio:4d}{TUCSON_VALOR_FIN:6d}"]
-    else:
-        ultima = lineas[-1].split()
-        if max(0, len(ultima) - 2) >= 10:
-            lineas.append(f"{codigo:8s}{int(ultima[1]) + 10:4d}{TUCSON_VALOR_FIN:6d}")
-        else:
-            lineas[-1] += f"{TUCSON_VALOR_FIN:6d}"
-
-    with open(ruta, "w", encoding="utf-8", newline="\r\n") as f:
-        for ln in lineas:
-            f.write(ln.rstrip() + "\n")
+    if anios is None:
+        anios = range(anio_inicio, anio_inicio+len(mediciones))
+    serie = pd.Series(mediciones, index=anios, dtype=float) / 1000.0
+    escribir_tucson(serie, ruta, codigo)
 
 
 def _escribir_tucson_serie(codigo: str, anio_inicio: int,
                             mediciones_mm: list[float], buffer: list[str]) -> None:
-    """Agrega las líneas Tucson de UNA serie a una lista de líneas.
-
-    Sigue el formato fijo de columnas (8 chars id + 4 chars año + 10 valores
-    de 6 chars), con primera línea PARCIAL si el año de inicio no es múltiplo
-    de 10, y marcador `TUCSON_VALOR_FIN` al final.
-
-    Réplica de la lógica probada de ExportadorDendro._escribir_tucson
-    (modulo_medicion.py), generalizada para escribir varias series al mismo
-    buffer compartido.
-    """
-    codigo = codigo[:TUCSON_MAX_CHARS_ID]
-
-    # Convertir mediciones mm → centésimas de mm (entero), reemplazar 999
-    mods: list[int] = []
-    for v in mediciones_mm:
-        try:
-            ent = int(round(float(v) * TUCSON_DIVISOR))
-        except (TypeError, ValueError):
-            ent = 0
-        if ent == 999:
-            ent = TUCSON_VALOR_999
-        mods.append(ent)
-
-    n = len(mods)
-    lineas_serie, idx = _filas_tucson_contiguas(codigo, anio_inicio, mods)
-
-    # Marcador de fin de serie
-    if n == 0:
-        lineas_serie = [f"{codigo:8s}{anio_inicio:4d}{TUCSON_VALOR_FIN:6d}"]
-    else:
-        # Si la última fila tenía 10 valores, agregamos una nueva fila con
-        # solo el marcador de fin para no exceder la columna
-        ultima = lineas_serie[-1]
-        # Contar valores en la última fila (cada uno ocupa 6 chars desde col 12)
-        n_valores_ultima = (len(ultima) - 12) // 6
-        if n_valores_ultima >= 10:
-            lineas_serie.append(
-                f"{codigo:8s}{anio_inicio + idx:4d}{TUCSON_VALOR_FIN:6d}")
-        else:
-            lineas_serie[-1] += f"{TUCSON_VALOR_FIN:6d}"
-
-    buffer.extend(lineas_serie)
+    serie = pd.Series(mediciones_mm, index=range(anio_inicio, anio_inicio+len(mediciones_mm)))
+    buffer.extend(_lineas_tucson(serie, codigo))
 
 
 def escribir_tucson_merge(series_dict: dict[str, pd.DataFrame], ruta: str) -> None:
-    """Escribe un archivo Tucson .rwl con TODAS las series en `series_dict`.
-
-    `series_dict[id] = DataFrame` con index Anio y columna Ancho_mm.
-    Cada serie va una tras otra, con un encabezado de comentario para
-    documentar el origen.
-    """
     if not ruta.lower().endswith((".rwl", ".txt")):
         ruta += ".rwl"
-
-    buffer: list[str] = []
+    buffer = []
+    codigos = set()
     for sid, df in series_dict.items():
-        # df puede tener index Anio o columna; uniformamos
-        if "Anio" in df.columns:
-            df_local = df.set_index("Anio")
-        else:
-            df_local = df
-
-        df_local = df_local.sort_index()
-        anio_inicio = int(df_local.index.min())
-        mediciones = df_local["Ancho_mm"].tolist()
-        _escribir_tucson_serie(sid, anio_inicio, mediciones, buffer)
-
-    with open(ruta, "w", encoding="utf-8", newline="\r\n") as f:
-        for ln in buffer:
-            f.write(ln.rstrip() + "\n")
+        codigo = str(sid)[:TUCSON_MAX_CHARS_ID].strip()
+        if codigo in codigos:
+            raise ValueError(f"Identificadores Tucson coincidentes: {codigo}")
+        codigos.add(codigo)
+        df = df.set_index("Anio") if "Anio" in df.columns else df
+        buffer.extend(_lineas_tucson(df["Ancho_mm"], codigo))
+    if not buffer:
+        raise ValueError("No hay series para exportar.")
+    _guardar_lineas_tucson(ruta, buffer)
 
 
 def escribir_excel_merge(series_dict: dict[str, pd.DataFrame], ruta: str) -> None:

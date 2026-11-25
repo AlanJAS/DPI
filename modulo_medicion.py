@@ -159,7 +159,10 @@ class ExportadorDendro:
         if not lista_mediciones:
             return QMessageBox.warning(self._parent, "Error", "No hay mediciones para exportar.")
 
-        datos = sorted(lista_mediciones, key=lambda d: d["anio"])
+        orden = sorted(range(len(lista_mediciones)), key=lambda i: lista_mediciones[i]["anio"])
+        datos = [lista_mediciones[i] for i in orden]
+        if anchos_ewlw is not None and len(anchos_ewlw) == len(datos):
+            anchos_ewlw = [anchos_ewlw[i] for i in orden]
         anios = [d["anio"] for d in datos]
         anchos = [d["ancho_mm"] for d in datos]
 
@@ -197,7 +200,7 @@ class ExportadorDendro:
                 )
             else:
                 mediciones_int = [int(round(m * 1000)) for m in anchos]
-                self._escribir_tucson(id_serie, anios[0], mediciones_int, ruta)
+                self._escribir_tucson(id_serie, anios[0], mediciones_int, ruta, anios=anios)
 
                 # Si hay EW/LW, ofrecer exportar archivos separados
                 # (convención CooRecorder/Velmex: _EW.rwl y _LW.rwl).
@@ -7117,7 +7120,7 @@ class PestanaImagen(QWidget):
                     anchos_ewlw=anchos_ewlw)
             else:
                 mediciones_int = [int(round(m * 1000)) for m in anchos]
-                ExportadorDendro._escribir_tucson(codigo, anios[0], mediciones_int, ruta)
+                ExportadorDendro._escribir_tucson(codigo, anios[0], mediciones_int, ruta, anios=anios)
 
             # Exportar EW/LW si hay límites marcados en el radio elegido
             # (no en la vista en vivo, que puede ser distinta).
@@ -7888,7 +7891,7 @@ class PestanaImagen(QWidget):
             try:
                 mediciones_int = [int(round(a * 1000)) for a in anchos]
                 ExportadorDendro._escribir_tucson(
-                    f"{codigo[:7]}{sufijo[0]}", anios[0], mediciones_int, ruta_rwl
+                    f"{codigo[:7]}{sufijo[0]}", anios[0], mediciones_int, ruta_rwl, anios=anios
                 )
             except Exception as exc:
                 logger.warning("Error escribiendo %s: %s", ruta_rwl, exc)
