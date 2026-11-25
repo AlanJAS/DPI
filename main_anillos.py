@@ -473,9 +473,7 @@ class VentanaAnillos(QMainWindow):
 
     @staticmethod
     def _tareas_medicion_en_curso(widget):
-        return any(worker is not None and worker.isRunning()
-                   for worker in (getattr(widget, "_ewlw_worker", None),
-                                  getattr(widget, "_bi_worker", None)))
+        return widget is not None and widget.tareas_medicion_en_curso()
 
     def _cerrar_pestana(self, index: int):
         widget = self._tabs_imagenes.widget(index)

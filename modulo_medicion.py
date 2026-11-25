@@ -7,8 +7,7 @@ Contiene:
   - PestanaImagen: pestaña completa por imagen con panel de co-datación en vivo.
 """
 
-import modulo_medicion_especial_ui
-from modulo_banda_intensidad_ui import BandaIntensidad
+from modulo_medicion_especial_ui import ControlMedicionEspecial
 
 
 import modulo_medicion_ui
@@ -258,23 +257,6 @@ class PestanaImagen(QWidget):
         # Perfiles de especie para auto-detección
         self._perfiles_especie = cargar_perfiles()
         self._especie_activa: str = next(iter(self._perfiles_especie))
-        # Estimación de médula
-        self._pith_estimacion: dict | None = None
-        self._pith_undo: dict | None = None
-        # Blue/Red/Green Intensity
-        self._bi_datos: list[dict] = []    # resultados por anillo
-        self._bi_banda: int = 30           # banda de muestreo en px (estándar CooRecorder)
-        self._bi_porcentaje: int = 100     # % del anillo a medir
-        self._bi_alineacion: str = "centro"  # "ew" | "centro" | "lw"
-        self._bi_canal_vis: str = "B"      # canal activo para visualización
-        self._bi_canales: list[str] = ["B", "G", "R", "Gray"]
-        self._banda_intensidad = BandaIntensidad()
-        self._pith_metodo: str = "arco"
-        self._pith_n_int: int = 5
-        self._pith_usar_ref: bool = False
-        self._pith_dap_mm: float = 200.0
-        self._pith_metodo_calculo: str = "rg"  # 'rg', 'bai', o 'promedio'
-
         # Origen del DPI actual. Posibles valores:
         #   "auto"     → detectado automáticamente desde metadata JFIF/EXIF/TIFF
         #   "manual"   → cambiado a mano por el usuario en el diálogo DPI
@@ -288,6 +270,17 @@ class PestanaImagen(QWidget):
         self._dpi_modo: str = "default"
 
         self._construir_ui()
+        self._especial = ControlMedicionEspecial(
+            parent=self, vista=self.vista, datos_medidos=lambda: self.datos_medidos,
+            serie_maestra=lambda: self.serie_maestra, imagen=lambda: self._img_bgr_original,
+            ruta=lambda: self.ruta_imagen_actual, set_modo=self.set_modo,
+            guardar_estado=self._guardar_estado, guardar_sidecar=self._guardar_sidecar_anom,
+            label_estado=self.label_estado, spin_medula=self.spin_medula,
+            spin_corteza=self.spin_corteza, combo_dir=self.combo_dir,
+            check_tiene_medula=self.check_tiene_medula, btn_pith=self.btn_pith,
+            btn_deshacer_pith=self.btn_deshacer_pith, btn_mostrar_banda=self.btn_mostrar_banda,
+            btn_graficar_bi=self.btn_graficar_bi, btn_guardar_bi=self.btn_guardar_bi,
+            input_codigo=self.input_codigo)
         self._cargar_imagen(ruta_imagen)
 
     # -------------------------------------------------------------------------
@@ -669,7 +662,8 @@ class PestanaImagen(QWidget):
         return combo.currentData() if combo is not None else None
 
     def _configuracion_pith(self):
-        return self._pith_n_int, self._pith_metodo_calculo
+        especial = getattr(self, "_especial", None)
+        return especial.configuracion_pith if especial is not None else (5, "rg")
 
     def _origen_calibracion(self, origen):
         self._dpi_modo = origen
@@ -1824,86 +1818,60 @@ class PestanaImagen(QWidget):
     # -------------------------------------------------------------------------
 
     def _iniciar_estimacion_pith(self):
-        return modulo_medicion_especial_ui._iniciar_estimacion_pith(self)
+        return self._especial._iniciar_estimacion_pith()
 
-    def _calcular_pith_por_dap(self):
-        return modulo_medicion_especial_ui._calcular_pith_por_dap(self)
 
     def _confirmar_estimacion_pith(self):
-        return modulo_medicion_especial_ui._confirmar_estimacion_pith(self)
+        return self._especial._confirmar_estimacion_pith()
 
-    def _mostrar_dialogo_resultados_pith(
-        self,
-        cx: float, cy: float,
-        radio_px: float,
-        distancia_faltante_px: float,
-        metodo: str,
-    ):
-        return modulo_medicion_especial_ui._mostrar_dialogo_resultados_pith(self, cx, cy, radio_px, distancia_faltante_px, metodo)
 
-    def _aplicar_pith_offset(
-        self,
-        n_anillos: int,
-        marcar_estimada: bool,
-        resultados: dict,
-        metodo: str,
-        radio_mm: float,
-        distancia_faltante_mm: float,
-    ):
-        return modulo_medicion_especial_ui._aplicar_pith_offset(self, n_anillos, marcar_estimada, resultados, metodo, radio_mm, distancia_faltante_mm)
 
     def _deshacer_pith_offset(self):
-        return modulo_medicion_especial_ui._deshacer_pith_offset(self)
+        return self._especial._deshacer_pith_offset()
 
     # -------------------------------------------------------------------------
     # Earlywood / Latewood
     # -------------------------------------------------------------------------
 
     def _eliminar_ewlw(self):
-        return modulo_medicion_especial_ui._eliminar_ewlw(self)
+        return self._especial._eliminar_ewlw()
 
     def _detectar_ewlw_automatico(self):
-        return modulo_medicion_especial_ui._detectar_ewlw_automatico(self)
+        return self._especial._detectar_ewlw_automatico()
 
     def _exportar_ewlw(self, codigo: str, ruta_base: str,
                         coords: list | None = None,
                         saltos: list | None = None,
                         datos_medidos: list | None = None):
-        return modulo_medicion_especial_ui._exportar_ewlw(self, codigo, ruta_base, coords, saltos, datos_medidos)
+        return self._especial._exportar_ewlw(codigo, ruta_base, coords, saltos, datos_medidos)
 
     # -------------------------------------------------------------------------
     # Blue / Red / Green Intensity
     # -------------------------------------------------------------------------
 
     def _configurar_bi(self):
-        return modulo_medicion_especial_ui._configurar_bi(self)
+        return self._especial._configurar_bi()
 
     def _calcular_bi(self):
-        return modulo_medicion_especial_ui._calcular_bi(self)
+        return self._especial._calcular_bi()
 
     # ── Banda de muestreo BI sobre la imagen ─────────────────────────────
     def _toggle_banda_bi(self, activo: bool):
-        return modulo_medicion_especial_ui._toggle_banda_bi(self, activo)
+        return self._especial._toggle_banda_bi(activo)
 
-    def _dibujar_banda_bi(self):
-        return modulo_medicion_especial_ui._dibujar_banda_bi(self)
 
-    def _limpiar_banda_bi(self):
-        return modulo_medicion_especial_ui._limpiar_banda_bi(self)
 
     def _graficar_bi_ventana(self):
-        return modulo_medicion_especial_ui._graficar_bi_ventana(self)
+        return self._especial._graficar_bi_ventana()
 
     def _guardar_bi(self):
-        return modulo_medicion_especial_ui._guardar_bi(self)
+        return self._especial._guardar_bi()
  
-    def _exportar_bi_tucson(self, ruta: str, anios: list, seleccion: list):
-        return modulo_medicion_especial_ui._exportar_bi_tucson(self, ruta, anios, seleccion)
  
-    def _exportar_bi_multicolumna(self, ruta: str, ext: str, anios: list,
-                                    seleccion: list, codigo: str):
-        return modulo_medicion_especial_ui._exportar_bi_multicolumna(self, ruta, ext, anios, seleccion, codigo)
  
+
+    def tareas_medicion_en_curso(self):
+        return self._especial.tareas_en_curso
 
     def _ruta_sidecar(self, ruta_rwl: str | None = None) -> str | None:
         """Devuelve la ruta del archivo sidecar (oculto) para el radio exportado más reciente."""
@@ -1930,7 +1898,7 @@ class PestanaImagen(QWidget):
                 },
             }
             # Agregar datos de estimación de médula si existen
-            pith_est = getattr(self, "_pith_estimacion", None)
+            pith_est = self._especial.estimacion
             if pith_est:
                 datos.update(pith_est)
             _js.guardar_json(ruta_s, datos)
@@ -1958,24 +1926,7 @@ class PestanaImagen(QWidget):
                 int(k): v for k, v in datos.get("anomalias", {}).items()
             }
             self.vista._dibujar_anomalias()
-            # Restaurar datos de estimación de médula si existen
-            if datos.get("pith_estimated"):
-                self._pith_estimacion = {
-                    k: datos[k] for k in datos
-                    if k.startswith("pith_")
-                }
-                # Reconstruir undo para permitir revertir
-                offset = datos.get("pith_offset", 0)
-                if offset > 0:
-                    med_a_cor = self.combo_dir.currentIndex() == 0
-                    self._pith_undo = {
-                        "med_a_cor":        med_a_cor,
-                        "anio_medula_old":  self.spin_medula.value() + (offset if med_a_cor else 0),
-                        "anio_corteza_old": self.spin_corteza.value() - (offset if not med_a_cor else 0),
-                        "medula_checked":   False,
-                        "n_anillos":        offset,
-                    }
-                    self.btn_deshacer_pith.show()
+            self._especial.restaurar_estimacion(datos)
         except Exception as e:
             logger.warning("No se pudo cargar sidecar: %s", e)
 

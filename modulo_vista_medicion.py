@@ -414,8 +414,8 @@ class VistaInteractiva(QGraphicsView):
         # Usamos modo_anterior (capturado antes de asignar) porque
         # self.modo_actual ya fue actualizado a nuevo_modo arriba.
         if (modo_anterior == ModoMedicion.PITH and nuevo_modo != ModoMedicion.PITH
-                and hasattr(self, "_limpiar_items_pith")):
-            self._limpiar_items_pith()
+                and hasattr(self, "limpiar_pith")):
+            self.limpiar_pith()
         # NOTA: NO limpiamos items de calibración al cambiar de modo.
         # Las marcas persisten como recordatorio visual de que la imagen
         # fue calibrada. Solo se borran cuando el usuario inicia una nueva
@@ -1080,10 +1080,10 @@ class VistaInteractiva(QGraphicsView):
     def _actualizar_circulo_pith(self):
         return self._herramienta_pith._actualizar_circulo_pith()
 
-    def _confirmar_pith(self):
+    def confirmar_pith(self):
         return self._herramienta_pith._confirmar_pith()
 
-    def _limpiar_items_pith(self):
+    def limpiar_pith(self):
         return self._herramienta_pith._limpiar_items_pith()
 
     def _actualizar_hud_pith(self, html_text: str, color: str = "#FF8C00"):
@@ -1393,7 +1393,7 @@ class VistaInteractiva(QGraphicsView):
                     pass
                 return
             if event.key() == Qt.Key.Key_Escape:
-                self._limpiar_items_pith()
+                self.limpiar_pith()
                 try:
                     self._cambiar_modo_usuario(ModoMedicion.MEDIR)
                     self.estado_cambiado.emit("Estimación cancelada.")
