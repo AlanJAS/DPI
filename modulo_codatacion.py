@@ -55,11 +55,9 @@ from PyQt6.QtCore import Qt, QSettings, QEvent
 from estilos import SECUNDARIO_QSS, color_secundario
 import estilos_graficos as _gr
 import dpi.infraestructura.json_seguro as _js
-from constantes import (
-    TUCSON_VALOR_FIN, TUCSON_VALOR_FALTANTE, TUCSON_MAX_CHARS_ID, TUCSON_DIVISOR,
-    OVERLAP_MINIMO_ANALISIS, OVERLAP_MINIMO_GRAFICO, OVERLAP_MINIMO_FLOTANTE, UMBRAL_ANCLA_DEFECTO,
-    VENTANA_COFECHADO_DEFECTO, COLORES_SERIES,
-)
+from dpi.formatos.constantes import TUCSON_VALOR_FIN, TUCSON_VALOR_FALTANTE, TUCSON_MAX_CHARS_ID, TUCSON_DIVISOR
+from dpi.ciencia.constantes import OVERLAP_MINIMO_ANALISIS, OVERLAP_MINIMO_GRAFICO, OVERLAP_MINIMO_FLOTANTE, UMBRAL_ANCLA_DEFECTO, VENTANA_COFECHADO_DEFECTO
+from dpi.ui.colores import COLORES_SERIES
 
 logger = logging.getLogger(__name__)
 

@@ -12,7 +12,9 @@ from PyQt6.QtWidgets import QWidget, QDialog, QGraphicsView, QGraphicsScene, QPu
 from PyQt6.QtGui import QPainter, QPen, QColor, QBrush
 from PyQt6.QtCore import Qt, pyqtSignal, QEvent
 from modulo_pith import ajustar_circulo_minimos_cuadrados, ajuste_degenerado
-from constantes import MM_POR_PULGADA, PIXELES_POR_MM_DEFECTO, MAX_PASOS_HISTORIAL, TOLERANCIA_CLICK_PUNTO, TOLERANCIA_CLICK_SEGMENTO, INTERVALO_MARCADOR_DECADA, INTERVALO_MARCADOR_CINCUENTENA, INTERVALO_MARCADOR_CENTENA, COLOR_PUNTO_ACTIVO, COLOR_LINEA_ACTIVA, COLOR_SALTO, COLOR_GUIA, COLOR_CALIBRACION, COLOR_PUNTO_INACTIVO, COLOR_EWLW, TIPOS_ANOMALIA
+from dpi.medicion.constantes import MM_POR_PULGADA, PIXELES_POR_MM_DEFECTO, MAX_PASOS_HISTORIAL
+from dpi.ui.medicion.constantes import TOLERANCIA_CLICK_PUNTO, TOLERANCIA_CLICK_SEGMENTO
+from dpi.ui.colores import INTERVALO_MARCADOR_DECADA, INTERVALO_MARCADOR_CINCUENTENA, INTERVALO_MARCADOR_CENTENA, COLOR_PUNTO_ACTIVO, COLOR_LINEA_ACTIVA, COLOR_SALTO, COLOR_GUIA, COLOR_CALIBRACION, COLOR_PUNTO_INACTIVO, COLOR_EWLW, TIPOS_ANOMALIA
 from dpi.medicion.marcas import _es_amarillo, _es_espacio, _es_ewlw, _es_quiebre_ini, _es_salto_real
 from dpi.medicion.marcas import ModoMedicion
 

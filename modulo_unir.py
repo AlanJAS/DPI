@@ -36,7 +36,7 @@ from PyQt6.QtWidgets import (
 
 from dpi.formatos.tucson import leer_tucson_multi
 from estilos import SECUNDARIO_QSS, color_secundario
-from constantes import TUCSON_MAX_CHARS_ID, TUCSON_VALOR_FIN, TUCSON_DIVISOR
+from dpi.formatos.constantes import TUCSON_MAX_CHARS_ID, TUCSON_VALOR_FIN, TUCSON_DIVISOR
 
 
 # =============================================================================

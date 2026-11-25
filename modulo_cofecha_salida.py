@@ -159,7 +159,7 @@ def _parte1(res: dict, titulo: str, fecha: str) -> list[str]:
 
 def _VERSION_DPI() -> str:
     try:
-        from constantes import VERSION
+        from dpi.version import VERSION
         return VERSION
     except Exception:
         return ""

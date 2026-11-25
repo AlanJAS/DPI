@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButt
 from PyQt6.QtGui import QFont, QKeySequence, QShortcut
 from PyQt6.QtCore import Qt
 import estilos_graficos as _gr
-from constantes import VENTANA_COFECHADO_DEFECTO
+from dpi.ciencia.constantes import VENTANA_COFECHADO_DEFECTO
 from dpi.ciencia.datacion import MAX_CORRECCION
 TOOLTIP_STATS = (
     "<b>Estadísticos de cofechado:</b><br><br>"

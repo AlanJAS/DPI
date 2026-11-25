@@ -29,7 +29,8 @@ def crear_splash(app):
     p.fillRect(0, 0, W, H, QColor("#2b2b2b"))
 
     # Ícono centrado (200px), tomando la mayor resolución interna del .ico
-    from constantes import APP_NOMBRE, APP_SUITE, VERSION, pixmap_icono
+    from dpi.version import APP_NOMBRE, APP_SUITE, VERSION
+    from dpi.ui.recursos import pixmap_icono
     s = pixmap_icono(200)
     if not s.isNull():
         p.drawPixmap((W - s.width()) // 2, 25, s)
@@ -71,7 +72,7 @@ def main():
     from PyQt6.QtWidgets import QApplication
     from PyQt6.QtGui import QIcon
 
-    from constantes import icono_app, ruta_icono
+    from dpi.ui.recursos import icono_app, ruta_icono
     app = QApplication(sys.argv)
     if ruta_icono():
         app.setWindowIcon(icono_app())

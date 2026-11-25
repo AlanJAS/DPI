@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 from dpi.formatos.pos import leer_pos, escribir_pos
-from constantes import DPI_DEFECTO, MM_POR_PULGADA
+from dpi.medicion.constantes import DPI_DEFECTO, MM_POR_PULGADA
 
 
 class TestPos(unittest.TestCase):

@@ -48,7 +48,9 @@ from dpi.medicion.autodeteccion import (
     extraer_perfil, detectar_limites, posiciones_a_coordenadas,
  )
 from modulo_autodeteccion_ui import DialogoEspecie, DialogoPreviewDeteccion
-from constantes import DPI_DEFECTO, MM_POR_PULGADA, PIXELES_POR_MM_DEFECTO, TUCSON_MAX_CHARS_ID, TIPOS_ANOMALIA
+from dpi.medicion.constantes import DPI_DEFECTO, MM_POR_PULGADA, PIXELES_POR_MM_DEFECTO
+from dpi.formatos.constantes import TUCSON_MAX_CHARS_ID
+from dpi.ui.colores import TIPOS_ANOMALIA
 
 logger = logging.getLogger(__name__)
 

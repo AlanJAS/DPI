@@ -11,7 +11,8 @@ from PyQt6.QtGui import QShortcut, QKeySequence
 from PyQt6.QtCore import Qt, QTimer
 from estilos import SECUNDARIO_QSS
 import estilos_graficos as _gr
-from constantes import TUCSON_MAX_CHARS_ID, TIPOS_ANOMALIA
+from dpi.formatos.constantes import TUCSON_MAX_CHARS_ID
+from dpi.ui.colores import TIPOS_ANOMALIA
 from dpi.medicion.marcas import ModoMedicion
 from modulo_vista_medicion import PanelSplit, VistaInteractiva
 

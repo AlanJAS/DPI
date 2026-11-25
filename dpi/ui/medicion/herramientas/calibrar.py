@@ -3,7 +3,8 @@ import math
 from PyQt6.QtWidgets import QMessageBox
 from PyQt6.QtGui import QPen, QColor, QBrush
 from PyQt6.QtCore import Qt
-from constantes import MM_POR_PULGADA, COLOR_CALIBRACION
+from dpi.medicion.constantes import MM_POR_PULGADA
+from dpi.ui.colores import COLOR_CALIBRACION
 from dpi.medicion.marcas import ModoMedicion
 from dpi.ui.medicion.calibracion import DialogoCalibracionRegla
 

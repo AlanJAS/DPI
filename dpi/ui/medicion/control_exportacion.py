@@ -10,7 +10,9 @@ from dpi.infraestructura.escritura import ruta_atomica
 from dpi.formatos.tucson import exportar_tucson_ewlw, _escribir_tucson
 from PyQt6.QtWidgets import QFileDialog, QInputDialog, QMessageBox
 import dpi.infraestructura.json_seguro as _js
-from constantes import MM_POR_PULGADA, TUCSON_MAX_CHARS_ID, TIPOS_ANOMALIA
+from dpi.medicion.constantes import MM_POR_PULGADA
+from dpi.formatos.constantes import TUCSON_MAX_CHARS_ID
+from dpi.ui.colores import TIPOS_ANOMALIA
 from dpi.medicion.ewlw import anchos_ewlw_puntos
 import logging
 logger = logging.getLogger(__name__)

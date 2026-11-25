@@ -21,8 +21,8 @@ from PyQt6.QtWidgets import (
     QSpinBox, QComboBox, QCheckBox,
 )
 
-from constantes import (
-    APP_NOMBRE, APP_SIGLA, VERSION, icono_app, ruta_icono)
+from dpi.version import APP_NOMBRE, APP_SIGLA, VERSION
+from dpi.ui.recursos import icono_app, ruta_icono
 from estilos import aplicar_tema, tema_del_sistema
 from modulo_medicion import PestanaImagen
 from modulo_exportacion_medicion_ui import ExportadorDendro

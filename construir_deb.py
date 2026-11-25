@@ -35,7 +35,7 @@ PAQUETE = "dendro-pixel-interface-dpi"
 MANTENEDOR = "Moisés E. Rojas-Badilla <moisese.rojasbadilla@gmail.com>"
 
 sys.path.insert(0, str(ORIGEN))
-from constantes import VERSION, APP_NOMBRE  # noqa
+from dpi.version import VERSION, APP_NOMBRE
 
 RAIZ = SALIDA / f"{PAQUETE}_{VERSION}"
 if RAIZ.exists():
