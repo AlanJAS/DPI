@@ -60,3 +60,30 @@ class ArquitecturaUI(unittest.TestCase):
             pestana._timer_autoguardado.stop()
             pestana.close()
         padre.close()
+
+    def test_vista_sin_pestana(self):
+        from PyQt6.QtWidgets import QGraphicsScene
+        from modulo_vista_medicion import VistaInteractiva
+        from modulo_modelo_medicion import ModeloMedicion
+        modelo = ModeloMedicion()
+        escena = QGraphicsScene()
+        vista = VistaInteractiva(escena, modelo=modelo, datacion=lambda: (2000, 2001, True))
+        modelo.cargar([(0,0),(2,0),(4,0)], [False]*3)
+        vista.pixeles_por_mm = 2.
+        vista.redibujar_todo()
+        self.assertEqual(vista.mapa_anio_coordenada(), {2000:(2.,0.), 2001:(4.,0.)})
+        self.assertIs(vista.modelo_medicion, modelo)
+        vista.close()
+
+    def test_entrada_externa_no_sobrescribe(self):
+        import pandas as pd
+        from PyQt6.QtWidgets import QWidget
+        from modulo_codatacion import PanelCodatacion
+        padre = QWidget()
+        panel = PanelCodatacion(padre)
+        original = pd.DataFrame({'Ancho_mm':[1.,2.]}, index=[2000,2001])
+        self.assertTrue(panel.agregar_serie_externa('A', original))
+        self.assertFalse(panel.agregar_serie_externa('A', original * 2))
+        pd.testing.assert_frame_equal(panel.modelo_series.originales['A'], original)
+        panel.close()
+        padre.close()
