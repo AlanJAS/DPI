@@ -26,3 +26,15 @@ La migración de archivos no equivale por sí sola a desacoplamiento completo.
 PanelCodatacion, PestanaImagen y VistaInteractiva todavía coordinan numerosas
 operaciones; su descomposición funcional requiere pruebas de interacción Qt.
 El estado temporal de las herramientas está agrupado en objetos independientes; las operaciones Qt todavía reciben la vista. Falta verificar la distribución en Windows y Linux.
+
+## Refactorización incremental 161–200
+
+La importación de series valida un lote antes de modificar el modelo; los
+anchos físicos se validan en esa frontera. Las cronologías externas mantienen
+su semántica de índices. Se comparten cálculos geométricos y la preparación de
+series. Alineamiento, correcciones y diagnóstico científico viven en módulos
+propios; `datacion` conserva los nombres existentes por importación directa.
+La presentación de desfases y utilidades de series se encuentran en `dpi/ui`.
+Las herramientas siguen recibiendo parte del contexto Qt; la extracción no
+constituye un desacoplamiento completo. Ejecutar las pruebas Qt y comprobar
+los instaladores reales antes de distribuir.
