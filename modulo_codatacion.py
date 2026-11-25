@@ -279,7 +279,8 @@ class PanelCodatacion(QWidget):
         # Cronología activa
         self.cronologia_activa: pd.DataFrame | None = None
         self.meta_cronologia: dict | None = None
-        self._ventana_cronologia = None
+        self._obtener_series_cronologia = lambda: {}
+        self._abrir_cronologia = getattr(ventana_padre, "ir_a_pestana_cronologia", None)
         self._nombre_cronologia_activa: str = ""
 
         # Parámetros del modo COFECHA
@@ -450,6 +451,18 @@ class PanelCodatacion(QWidget):
                 msg += f"\n{n_duplicadas} duplicada(s) omitida(s)."
             msg += "\n\nErrores:\n" + "\n".join(errores)
             QMessageBox.warning(self, "Carga con errores", msg)
+
+    def agregar_serie_externa(self, nombre, df):
+        """Entrada pública: registra y representa la serie una sola vez."""
+        if nombre in self.series_datos:
+            return False
+        self.modelo_series.registrar(nombre, df)
+        item = QListWidgetItem(nombre)
+        item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+        item.setCheckState(Qt.CheckState.Unchecked)
+        self.lista_series.addItem(item)
+        self._series_modificadas()
+        return True
 
     def _leer_como_columnas_o_tabular(self, ruta: str, base_nombre: str) -> dict:
         from modulo_formatos import leer_como_columnas_o_tabular
@@ -1501,17 +1514,14 @@ class PanelCodatacion(QWidget):
     # CRONOLOGÍA ACTIVA
     # -------------------------------------------------------------------------
 
+    def conectar_fuente_cronologia(self, obtener_series, abrir=None):
+        self._obtener_series_cronologia = obtener_series
+        if abrir is not None:
+            self._abrir_cronologia = abrir
+
     def abrir_ventana_cronologia(self):
-        """Cambia a la pestaña de Cronología (antes abría una ventana
-        flotante; ahora la cronología es una pestaña propia)."""
-        vp = getattr(self, "_ventana_padre", None)
-        if vp is not None and hasattr(vp, "ir_a_pestana_cronologia"):
-            vp.ir_a_pestana_cronologia()
-        elif self._ventana_cronologia is not None:
-            # Respaldo: si no hay ventana principal con pestañas, mostrar
-            # como ventana flotante (compatibilidad).
-            self._ventana_cronologia.show()
-            self._ventana_cronologia.raise_()
+        if self._abrir_cronologia is not None:
+            self._abrir_cronologia()
 
     def set_cronologia_activa(self, df: pd.DataFrame, meta: dict, nombre: str,
                                agregar_a_lista: bool = True):
@@ -2478,9 +2488,7 @@ class PanelCodatacion(QWidget):
                     continue
 
         _sumar(getattr(self, "series_datos", None))
-        vc = getattr(self, "_ventana_cronologia", None)
-        if vc is not None:
-            _sumar(getattr(vc, "_series_cronologia", None))
+        _sumar(self._obtener_series_cronologia())
         _sumar(getattr(self, "_series_nulo", None))
 
         out = {}

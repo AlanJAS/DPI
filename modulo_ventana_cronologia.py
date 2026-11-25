@@ -24,29 +24,12 @@ from modulo_codatacion_comparacion import DialogoComparacionMultiple, VentanaTab
 
 
 class VentanaCronologia(QWidget):
-    """Panel para construir, cargar, exportar y comparar cronologías.
+    """Panel de cronologías con una salida explícita hacia el coordinador."""
 
-    Antes era un QDialog flotante abierto desde Co-Datación. Ahora es un
-    panel embebible que vive en su propia pestaña (la generación de
-    cronologías no pertenece a la co-datación). Sigue pasando la cronología
-    generada a Co-Datación mediante `self._panel.set_cronologia_activa(...)`.
-
-    `panel_codatacion`: el PanelCodatacion al que se le pasa la cronología
-    activa. `parent`: el widget contenedor (la ventana principal / pestaña).
-    """
-
-    def __init__(self, panel_codatacion, parent=None):
+    def __init__(self, enviar_cronologia=None, parent=None):
         super().__init__(parent)
         self._series_cronologia: dict[str, pd.DataFrame] = {}
-        self._panel = panel_codatacion
-        # Registro inverso: el panel necesita alcanzar las series con que se
-        # construyó la cronología, porque sirven de nulo para el localizador
-        # de quiebres. Sin esto, cargar solo la cronología terminada dejaba al
-        # panel sin colección con qué comparar.
-        try:
-            panel_codatacion._ventana_cronologia = self
-        except Exception:
-            pass
+        self._enviar_cronologia = enviar_cronologia
         self.setWindowTitle("Cronología")
         self.setMinimumSize(900, 600)
 
@@ -523,6 +506,10 @@ class VentanaCronologia(QWidget):
         if hasattr(self, "btn_exportar"):
             self.btn_exportar.setEnabled(False)
 
+    def series_para_nulo(self):
+        """Instantánea independiente para las comparaciones externas."""
+        return {nombre: df.copy(deep=True) for nombre, df in self._series_cronologia.items()}
+
     def refresh_series(self, marcar_todas: bool = False):
         """Refresca la lista de series disponibles.
 
@@ -894,7 +881,10 @@ class VentanaCronologia(QWidget):
         if self.cronologia_df is None or self.cronologia_df.empty:
             return
         nombre = self.cronologia_meta.get("nombre", "Cronología")
-        self._panel.set_cronologia_activa(self.cronologia_df, self.cronologia_meta, nombre)
+        if self._enviar_cronologia is None:
+            QMessageBox.warning(self, "Sin destino", "No hay un panel de cofechado conectado.")
+            return
+        self._enviar_cronologia(self.cronologia_df, self.cronologia_meta, nombre)
         QMessageBox.information(
             self, "OK",
             f"Cronología '{nombre}' activada en el panel de cofechado.\n\n"

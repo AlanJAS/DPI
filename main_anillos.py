@@ -207,7 +207,9 @@ class VentanaAnillos(QMainWindow):
         # La generación de cronologías es una tarea distinta de la
         # co-datación, así que vive en su propia pestaña. Le pasamos el panel
         # de co-datación como destino de la cronología activa.
-        self._tab_cronologia = VentanaCronologia(self._tab_codatacion, parent=self)
+        self._tab_cronologia = VentanaCronologia(self._tab_codatacion.set_cronologia_activa, parent=self)
+        self._tab_codatacion.conectar_fuente_cronologia(
+            self._tab_cronologia.series_para_nulo, self.ir_a_pestana_cronologia)
         self._tabs.addTab(self._tab_cronologia, "🧭 Cronología")
 
         self._tabs.addTab(self._tab_codatacion, "📊 Co-Datación")
@@ -215,7 +217,10 @@ class VentanaAnillos(QMainWindow):
         # ── Pestaña Skeleton (cofechado visual) ───────────────────────────
         # Banco de trabajo de cofechado con su propio selector de series.
         # Puede importar/enviar series desde/hacia Co-Datación.
-        self._tab_skeleton = VentanaSkeletonPlot(self._tab_codatacion, parent=self)
+        self._tab_skeleton = VentanaSkeletonPlot(parent=self,
+            obtener_series=lambda: self._tab_codatacion.series_datos,
+            agregar_serie=self._tab_codatacion.agregar_serie_externa,
+            reemplazar_serie=self._tab_codatacion.reemplazar_serie)
         self._tabs.addTab(self._tab_skeleton, "🦴 Skeleton")
 
         # ── Pestaña COFECHA (control de calidad de la colección) ──────────

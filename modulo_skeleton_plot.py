@@ -14,7 +14,7 @@ from estilos import SECUNDARIO_QSS, color_secundario
 import estilos_graficos as _gr
 from modulo_datacion import score_compuesto, alineamiento_optimo_anillos
 from modulo_formatos import _es_planilla
-from modulo_formatos import leer_tucson_multi, leer_formato_compacto, leer_wid, leer_tabular
+from modulo_formatos import leer_tucson_multi, leer_formato_compacto, leer_wid, leer_tabular, leer_como_columnas_o_tabular
 from modulo_codatacion_util import _color_r, _color_tbp, _ultima_carpeta
 from modulo_codatacion_dialogos import DialogoEditarAnillos
 
@@ -38,9 +38,12 @@ class VentanaSkeletonPlot(QWidget):
     anillos de la flotante (probando) y aplicarlos a la serie real.
     """
 
-    def __init__(self, panel_cod, parent=None):
+    def __init__(self, parent=None, *, obtener_series=lambda: {},
+                 agregar_serie=None, reemplazar_serie=None):
         super().__init__(parent)
-        self._panel_cod = panel_cod
+        self._obtener_series = obtener_series
+        self._agregar_serie = agregar_serie
+        self._reemplazar_externa = reemplazar_serie
         self._series = {}  # nombre -> pd.Series (Ancho_mm), almacenamiento propio
 
         # Estado del par activo (referencia vs flotante)
@@ -71,7 +74,7 @@ class VentanaSkeletonPlot(QWidget):
             _gr.aplicar_a_todos(self)
 
     def _serie_de_panel(self, nombre):
-        df = self._panel_cod.series_datos.get(nombre) if self._panel_cod else None
+        df = self._obtener_series().get(nombre)
         if df is None:
             return pd.Series(dtype=float)
         return pd.to_numeric(df["Ancho_mm"], errors="coerce").dropna()
@@ -162,22 +165,13 @@ class VentanaSkeletonPlot(QWidget):
             QMessageBox.warning(self, "Carga con errores", msg)
 
     def _leer_tabular_via_panel(self, ruta, base_nombre):
-        """Reutiliza el lector tabular/columnas del panel de Co-Datación; si
-        no está disponible, cae a leer_tabular."""
-        if (self._panel_cod is not None
-                and hasattr(self._panel_cod, "_leer_como_columnas_o_tabular")):
-            return self._panel_cod._leer_como_columnas_o_tabular(
-                ruta, base_nombre)
-        df, sid = leer_tabular(ruta)
-        return {sid: df}
+        return leer_como_columnas_o_tabular(ruta, base_nombre)
 
     def importar_de_codatacion(self):
         """Copia todas las series del panel de Co-Datación al almacenamiento
         propio del skeleton."""
-        if self._panel_cod is None:
-            return
         n = 0
-        for nombre, df in self._panel_cod.series_datos.items():
+        for nombre, df in self._obtener_series().items():
             try:
                 s = pd.to_numeric(df["Ancho_mm"], errors="coerce").dropna()
             except Exception:
@@ -212,24 +206,15 @@ class VentanaSkeletonPlot(QWidget):
 
     def _enviar_a_codatacion(self):
         """Envía las series propias del skeleton al panel de Co-Datación."""
-        if self._panel_cod is None or not self._series:
+        if self._agregar_serie is None or not self._series:
             return
         enviadas = 0
         for nombre, s in self._series.items():
             df = pd.DataFrame({"Ancho_mm": s.values},
                               index=pd.Index(s.index, name="Anio"))
             try:
-                if (hasattr(self._panel_cod, "agregar_serie_externa")):
-                    self._panel_cod.agregar_serie_externa(nombre, df)
-                else:
-                    self._panel_cod.modelo_series.registrar(nombre, df)
-                    self._panel_cod._series_modificadas()
-                enviadas += 1
-            except Exception:
-                pass
-        if hasattr(self._panel_cod, "actualizar_lista_series"):
-            try:
-                self._panel_cod.actualizar_lista_series()
+                if self._agregar_serie(nombre, df):
+                    enviadas += 1
             except Exception:
                 pass
         QMessageBox.information(
@@ -876,12 +861,8 @@ class VentanaSkeletonPlot(QWidget):
         self._series[self._flo_nombre_full] = self._flo.copy()
         # Propagar a Co-Datación si esa serie existe allí
         propagado = ""
-        if (self._panel_cod is not None
-                and hasattr(self._panel_cod, "series_datos")
-                and self._flo_nombre_full in self._panel_cod.series_datos
-                and hasattr(self._panel_cod, "reemplazar_serie")):
-            self._panel_cod.reemplazar_serie(
-                self._flo_nombre_full, df, regraficar=True)
+        if self._reemplazar_externa is not None and self._flo_nombre_full in self._obtener_series():
+            self._reemplazar_externa(self._flo_nombre_full, df, regraficar=True)
             propagado = " y en Co-Datación"
         self._flo_original = self._flo.copy()
         self._marcar_modificado(False)
