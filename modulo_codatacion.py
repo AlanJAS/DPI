@@ -3010,7 +3010,12 @@ class PanelCodatacion(QWidget):
             h.update(pd.util.hash_pandas_object(df, index=True).to_numpy().tobytes())
             return h.digest()
 
-        partes = [(n, _firma(self.series_datos.get(n))) for n in sorted(nombres)]
+        modelo = getattr(self, "modelo_series", None)
+        if modelo is None:
+            # Compatibilidad con consumidores sin modelo.
+            partes = [(n, _firma(self.series_datos.get(n))) for n in sorted(nombres)]
+        else:
+            partes = [("__series__", modelo.revision, tuple(sorted(nombres)))]
         partes.append((self._nombre_cronologia_activa,
                        _firma(self.cronologia_activa),
                        repr(self.meta_cronologia or {})))

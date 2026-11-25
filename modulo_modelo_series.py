@@ -45,8 +45,13 @@ class ModeloSeries:
     def __init__(self):
         self._series: dict[str, _Serie] = {}
         self._prueba: _PruebaCorreccion | None = None
+        self._revision = 0
         self.originales = _LecturaSeries(self._series, "original")
         self.datos = _LecturaSeries(self._series, "actual")
+
+    @property
+    def revision(self):
+        return self._revision
 
     @property
     def nombre_en_prueba(self):
@@ -64,6 +69,7 @@ class ModeloSeries:
         corregido = self._validar(df)
         self._series[nombre].actual = corregido
         self._prueba = _PruebaCorreccion(nombre, respaldo)
+        self._revision += 1
 
     def confirmar_correccion(self):
         """Conserva los datos de la prueba, no sustituye el original."""
@@ -78,6 +84,7 @@ class ModeloSeries:
             return False
         prueba = self._prueba
         self._series[prueba.nombre].actual = prueba.respaldo
+        self._revision += 1
         self._prueba = None
         return True
 
@@ -100,14 +107,17 @@ class ModeloSeries:
         datos = self._validar(df)
         original = datos.copy()
         self._series[nombre] = _Serie(original, datos)
+        self._revision += 1
 
     def eliminar(self, nombre):
         self._exigir_sin_prueba(nombre)
         self._series.pop(nombre, None)
+        self._revision += 1
 
     def restablecer(self, nombre):
         self._exigir_sin_prueba(nombre)
         self._series[nombre].actual = self._series[nombre].original.copy()
+        self._revision += 1
 
     def actualizar(self, nombre, df):
         """Valida una edición sin sustituir el respaldo original."""
@@ -116,6 +126,7 @@ class ModeloSeries:
             raise KeyError(nombre)
         datos = self._validar(df)
         self._series[nombre].actual = datos
+        self._revision += 1
 
     def desplazar(self, nombre, shift):
         self._exigir_sin_prueba(nombre)
