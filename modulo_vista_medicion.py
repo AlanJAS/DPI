@@ -1,6 +1,6 @@
 """Componentes de medición de DPI."""
 
-import modulo_pith_ui
+from modulo_pith_ui import HerramientaPith
 
 from modulo_render_medicion import RenderMedicion
 
@@ -286,13 +286,6 @@ class VistaInteractiva(QGraphicsView):
         # Imagen OpenCV cacheada para no releerla en cada detección
         self._imagen_bgr: np.ndarray | None = None
 
-        # Estimación de médula: puntos del arco marcados por el usuario
-        self._puntos_pith: list[tuple[float, float]] = []
-        self._items_pith: list = []   # marcadores visuales temporales
-        self._item_circulo_pith = None  # círculo ajustado visualizado
-        self._items_pith_extras: list = []  # línea, centro, texto de preview
-        self._item_pith_mouse_preview = None  # arco preview siguiendo el mouse
-
         # Espacio intra-anillo: selección de dos puntos existentes
         self._puntos_espacio: list[tuple[float, float]] = []
         self._items_espacio: list = []
@@ -313,22 +306,14 @@ class VistaInteractiva(QGraphicsView):
         self._pen_ewlw        = QPen()
         self._actualizar_pens()   # inicializa colores y grosores
 
-        # HUD overlay para mostrar resultado de "anillos al centro".
-        # Es un QLabel hijo del VIEWPORT (no de la escena), así NO se mueve
-        # cuando el usuario hace pan/zoom. Solución al problema de que el
-        # texto quedaba en el centro estimado de la médula que muchas veces
-        # cae FUERA de la muestra visible (justo el caso típico — la médula
-        # no está en la muestra, por eso la estamos estimando).
-        from PyQt6.QtWidgets import QLabel
-        self._hud_pith = QLabel(self.viewport())
-        self._hud_pith.setStyleSheet(
-            "QLabel { background-color: rgba(0,0,0,220); color: #FF8C00; "
-            "padding: 6px 12px; border-radius: 4px; font-size: 13px; "
-            "font-weight: bold; font-family: Arial; "
-            "border: 1px solid rgba(255,140,0,150); }"
-        )
-        self._hud_pith.setVisible(False)
-        self._hud_pith.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self._herramienta_pith = HerramientaPith(
+            self.scene, self.viewport, self._escala_vista,
+            lambda: self.coordenadas_anillos, lambda: self.pixeles_por_mm,
+            lambda: (self._datacion_render() or (0, 0, True))[2],
+            lambda: (getattr(pestana_padre, '_pith_n_int', 5),
+                     getattr(pestana_padre, '_pith_metodo_calculo', 'rg')),
+            lambda: pestana_padre.datos_medidos,
+            lambda mensaje: pestana_padre.label_estado.setText(mensaje))
 
         # ── Herramienta de selección múltiple ──
         # Permite al usuario seleccionar varios anillos a la vez (clic
@@ -1086,34 +1071,32 @@ class VistaInteractiva(QGraphicsView):
             pass
 
     def _paso_pith(self, x: float, y: float):
-        return modulo_pith_ui._paso_pith(self, x, y)
+        return self._herramienta_pith._paso_pith(x, y)
 
     def _preview_pith_mouse(self, x: float, y: float):
-        return modulo_pith_ui._preview_pith_mouse(self, x, y)
+        return self._herramienta_pith._preview_pith_mouse(x, y)
 
     def _limpiar_preview_pith_mouse(self):
-        return modulo_pith_ui._limpiar_preview_pith_mouse(self)
+        return self._herramienta_pith._limpiar_preview_pith_mouse()
 
     def _actualizar_circulo_pith(self):
-        return modulo_pith_ui._actualizar_circulo_pith(self)
+        return self._herramienta_pith._actualizar_circulo_pith()
 
     def _confirmar_pith(self):
-        return modulo_pith_ui._confirmar_pith(self)
+        return self._herramienta_pith._confirmar_pith()
 
     def _limpiar_items_pith(self):
-        return modulo_pith_ui._limpiar_items_pith(self)
+        return self._herramienta_pith._limpiar_items_pith()
 
     def _actualizar_hud_pith(self, html_text: str, color: str = "#FF8C00"):
-        return modulo_pith_ui._actualizar_hud_pith(self, html_text, color)
+        return self._herramienta_pith._actualizar_hud_pith(html_text, color)
 
     def resizeEvent(self, event):
         """Reposicionar el HUD del pith y el panel de selección cuando
         cambia el tamaño del widget."""
         super().resizeEvent(event)
-        if hasattr(self, "_hud_pith") and self._hud_pith.isVisible():
-            vp = self.viewport()
-            x = max(10, (vp.width() - self._hud_pith.width()) // 2)
-            self._hud_pith.move(x, 12)
+        if hasattr(self, "_herramienta_pith"):
+            self._herramienta_pith.reposicionar_hud()
         # Reposicionar también el panel de selección si está visible
         if (hasattr(self, "_panel_seleccion")
                 and self._panel_seleccion is not None
@@ -1800,7 +1783,7 @@ class VistaInteractiva(QGraphicsView):
         if self._actualizar_seleccion_mouse(x, y):
             return
         # ── Preview de arco en modo pith con 2 puntos ──
-        if self.modo_actual == ModoMedicion.PITH and len(self._puntos_pith) == 2:
+        if self.modo_actual == ModoMedicion.PITH and self._herramienta_pith.esperando_curvatura:
             self._preview_pith_mouse(x, y)
 
         self._actualizar_cursor_mouse(x, y)
