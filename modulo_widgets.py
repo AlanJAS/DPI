@@ -263,3 +263,21 @@ class SeccionColapsable(QWidget):
 
     def agregar_layout(self, layout):
         self._contenido_layout.addLayout(layout)
+
+
+import modulo_transformacion as _tr
+
+
+def crear_selector(parent=None, metodo_inicial: str = _tr.DIFFLOG):
+    """QComboBox con los métodos disponibles, para reutilizar en las pestañas."""
+    from PyQt6.QtWidgets import QComboBox
+    combo = QComboBox(parent)
+    for m in _tr.METODOS:
+        combo.addItem(_tr.ETIQUETAS[m], m)
+    combo.setCurrentIndex(_tr.METODOS.index(metodo_inicial)
+                          if metodo_inicial in _tr.METODOS else 0)
+    combo.setToolTip(
+        "Transformación aplicada antes de calcular la correlación.\n\n"
+        + "\n\n".join(f"• {_tr.ETIQUETAS[m]}\n{_tr.DESCRIPCIONES[m]}" for m in _tr.METODOS)
+        + "\n\nCon el mismo método, la r coincide entre pestañas.")
+    return combo

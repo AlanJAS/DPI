@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import pyqtgraph as pg
 from modulo_widgets import _agregar_hover_anio
+from modulo_widgets import crear_selector
 import modulo_transformacion as _tr
 from modulo_estadistica import gleichlaufigkeit, glk_significance, t_baillie_pilcher, pearson
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFileDialog, QMessageBox, QSpinBox, QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QDialog, QComboBox, QCheckBox, QSlider
@@ -461,7 +462,7 @@ class VentanaSkeletonPlot(QWidget):
         # Mismo selector que en Medición: sin él, esta ventana calculaba
         # siempre con diferencias-log mientras el panel de Co-Datación usaba
         # el método de COFECHA, y las dos r del mismo par no coincidían.
-        self.combo_metodo_corr = _tr.crear_selector(self, _tr.DIFFLOG)
+        self.combo_metodo_corr = crear_selector(self, _tr.DIFFLOG)
         self.combo_metodo_corr.currentIndexChanged.connect(
             lambda *_: (self._actualizar_stats(), self._redibujar()))
         sim_row.addWidget(self.combo_metodo_corr)

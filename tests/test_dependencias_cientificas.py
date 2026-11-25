@@ -9,7 +9,7 @@ NUCLEOS = (
     'modulo_estadistica', 'modulo_cronologia', 'modulo_datacion', 'modulo_quiebres',
     'modulo_cofecha', 'modulo_cofecha_nucleo', 'modulo_comparacion_nucleo',
     'modulo_pith_nucleo', 'modulo_intensidad_nucleo', 'modulo_indice_anual',
-    'modulo_grafico_medicion', 'modulo_datos_medicion',
+    'modulo_transformacion', 'modulo_grafico_medicion', 'modulo_datos_medicion',
 )
 
 class DependenciasCientificas(unittest.TestCase):

@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from collections.abc import Callable
 from modulo_widgets import crear_boton
 from modulo_grafico_medicion_ui import GraficoMedicion
+from modulo_widgets import crear_selector
 import modulo_transformacion as _tr
 import pyqtgraph as pg
 from PyQt6.QtWidgets import QGraphicsScene, QPushButton, QVBoxLayout, QHBoxLayout, QWidget, QLabel, QSpinBox, QComboBox, QButtonGroup, QLineEdit, QListWidget, QSplitter
@@ -614,7 +615,7 @@ def construir_panel_codatacion(parent, acciones):
     # Selector de método. Antes esta pestaña usaba siempre diferencias-log
     # mientras que Co-Datación usaba el método de COFECHA, así que el mismo
     # par de series daba r distintas en cada pestaña sin aviso alguno.
-    _ui_combo_metodo_corr = _tr.crear_selector(parent, _tr.DIFFLOG)
+    _ui_combo_metodo_corr = crear_selector(parent, _tr.DIFFLOG)
     _ui_combo_metodo_corr.currentIndexChanged.connect(
         acciones._actualizar_grafico)
     fila_maestra.addWidget(_ui_combo_metodo_corr)

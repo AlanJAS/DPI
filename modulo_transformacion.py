@@ -110,21 +110,6 @@ def r_pearson(serie_a: pd.Series, serie_b: pd.Series, metodo: str = DIFFLOG,
     return pearson(x, y, tolerancia=1e-12), n
 
 
-def crear_selector(parent=None, metodo_inicial: str = DIFFLOG):
-    """QComboBox con los métodos disponibles, para reutilizar en las pestañas."""
-    from PyQt6.QtWidgets import QComboBox
-    combo = QComboBox(parent)
-    for m in METODOS:
-        combo.addItem(ETIQUETAS[m], m)
-    combo.setCurrentIndex(METODOS.index(metodo_inicial)
-                          if metodo_inicial in METODOS else 0)
-    combo.setToolTip(
-        "Transformación aplicada antes de calcular la correlación.\n\n"
-        + "\n\n".join(f"• {ETIQUETAS[m]}\n{DESCRIPCIONES[m]}" for m in METODOS)
-        + "\n\nCon el mismo método, la r coincide entre pestañas.")
-    return combo
-
-
 def transformar_para_correlacion(serie_mm: pd.Series, es_crono: bool, *, activo, aplicar_serie, aplicar_crono, meta, cronologia, parametros) -> pd.Series:
     """Transformación para calcular la r de correlación, gobernada por el
     botón modo COFECHA.
