@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 # MATEMÁTICA DE AJUSTE DE CÍRCULO
 # =============================================================================
 
-from modulo_pith_nucleo import (
+from dpi.medicion.pith import (
     ajuste_degenerado, ajustar_circulo_minimos_cuadrados, estimar_anillos_faltantes,
 )
 

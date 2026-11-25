@@ -2,7 +2,7 @@
 import math
 from PyQt6.QtGui import QPen, QColor, QBrush
 from PyQt6.QtCore import Qt
-from modulo_pith_nucleo import ajustar_circulo_minimos_cuadrados, ajuste_degenerado
+from dpi.medicion.pith import ajustar_circulo_minimos_cuadrados, ajuste_degenerado
 
 
 class HerramientaPith:

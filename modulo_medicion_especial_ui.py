@@ -16,7 +16,7 @@ from modulo_intensidad import DialogoConfigBI, DialogoGuardarBI
 from modulo_intensidad_nucleo import extraer_intensidad_por_anillo
 from modulo_intensidad_nucleo import valores_intensidad
 from modulo_pith import estimar_anillos_faltantes, DialogoMetodoPith, DialogoEstimacionPith
-from modulo_pith_nucleo import distancia_faltante_dap
+from dpi.medicion.pith import distancia_faltante_dap
 logger = logging.getLogger(__name__)
 from dpi.medicion.marcas import ModoMedicion, _es_ewlw
 from dpi.medicion.ewlw import detectar_ewlw_imagen
