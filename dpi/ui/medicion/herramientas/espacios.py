@@ -1,5 +1,6 @@
 """Operaciones de interfaz extraídas; reciben explícitamente el contexto de la vista."""
 import math
+from dpi.medicion.calculo import ordenar_extremos_espacio
 from dpi.medicion.modelo import TipoMarca
 from PyQt6.QtGui import QPen, QColor, QBrush
 from PyQt6.QtCore import Qt
@@ -125,16 +126,7 @@ def _paso_espacio(self, x: float, y: float):
     self._espacio.indice_inicio = None
     self._limpiar_espacio()
 
-    # Ordenar s1 ≤ s2
-    if s1 > s2:
-        p1, p2 = p2, p1
-        s1, s2 = s2, s1
-    elif s1 == s2:
-        xr1, yr1 = coords[s1]
-        d1 = math.hypot(p1[0]-xr1, p1[1]-yr1)
-        d2 = math.hypot(p2[0]-xr1, p2[1]-yr1)
-        if d1 > d2:
-            p1, p2 = p2, p1
+    p1, s1, p2, s2 = ordenar_extremos_espacio(coords, p1, s1, p2, s2)
 
     if math.hypot(p1[0]-p2[0], p1[1]-p2[1]) < 2:
         try:

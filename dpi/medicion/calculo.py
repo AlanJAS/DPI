@@ -139,3 +139,9 @@ def posicion_insercion(coords, ancla, punto):
     if ancla == 0:
         return 0
     return ancla + 1 if math.dist(punto, coords[ancla+1]) < math.dist(punto, coords[ancla-1]) else ancla
+
+
+def ordenar_extremos_espacio(coords, p1, s1, p2, s2):
+    if s1 > s2 or (s1 == s2 and math.dist(p1, coords[s1]) > math.dist(p2, coords[s1])):
+        return p2, s2, p1, s1
+    return p1, s1, p2, s2
