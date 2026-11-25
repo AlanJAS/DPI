@@ -6,8 +6,8 @@ EXTS_PLANILLA = (".xlsx", ".xls", ".ods")
 
 def _es_planilla(ruta_o_ext: str) -> bool:
     """True si la ruta (o extensión) corresponde a una planilla Excel/ODS."""
-    valor = (ruta_o_ext or "").lower()
-    ext = valor if valor.startswith(".") else os.path.splitext(valor)[1].lower()
+    valor = os.fspath(ruta_o_ext).lower() if ruta_o_ext is not None else ""
+    ext = valor if valor in EXTS_PLANILLA else os.path.splitext(valor)[1]
     return ext in EXTS_PLANILLA
 
 
