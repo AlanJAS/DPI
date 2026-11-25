@@ -18,6 +18,7 @@ Referencia:
 import math
 import logging
 import numpy as np
+from modulo_calculo_medicion import calcular_anillos, puntos_desde_geometria
 from modulo_marcas_medicion import (_es_normal, _es_salto_real,
                                      _es_quiebre, _excluye_intensidad, _es_espacio)
 
@@ -82,10 +83,10 @@ def extraer_intensidad_por_anillo(
         return {ch: [0.0, float('inf'), float('-inf'), 0] for ch in ch_arrays}
         # [suma, min, max, count]
 
-    def _cerrar_anillo(acum):
+    def _cerrar_anillo(acum, indice):
         if not any(v[3] > 0 for v in acum.values()):
             return
-        entry = {}
+        entry = {"indice_anillo": indice}
         for ch, (s, mn, mx, cnt) in acum.items():
             entry[f"{ch}_mean"] = s / cnt if cnt > 0 else 0.0
             entry[f"{ch}_min"]  = mn
@@ -125,86 +126,25 @@ def extraer_intensidad_por_anillo(
                         max(mx, float(vals.max())),
                         cnt + len(vals)]
 
-    acum = _nuevo_acum()
-    n_anillos = sum(1 for v in es_salto if _es_normal(v))
-    anillo_num = 0
-
-    # Pre-calcular longitudes de cada anillo para el recorte por porcentaje
-    # Recorrer primero para saber la longitud total de cada anillo
-    # Construir lista de anillos: cada anillo = list of (i, val)
-    def _long_anillo_desde(idx_ini):
-        """Longitud total del anillo que empieza en idx_ini."""
-        total = 0.0
-        for j in range(idx_ini + 1, n):
-            if _es_salto_real(es_salto[j]):
-                break
-            if _es_espacio_sal(es_salto[j]):
-                continue
-            xp, yp = coordenadas[j - 1]
-            xc, yc = coordenadas[j]
-            total += math.hypot(xc-xp, yc-yp)
-            if _es_normal(es_salto[j]):
-                break
-        return total
-
-    ini_anillo = 0
-    acum_en_anillo = 0.0
-    long_anillo_actual = _long_anillo_desde(0)
-    # Calcular rango válido para el primer anillo
-    recorte = 1.0 - porcentaje
-    def _rango(long_tot):
-        if alineacion == "ew":
-            return 0.0, long_tot * porcentaje
-        elif alineacion == "lw":
-            return long_tot * recorte, long_tot
-        else:
-            m = recorte / 2.0
-            return long_tot * m, long_tot * (1.0 - m)
-
-    long_ini_val, long_fin_val = _rango(long_anillo_actual)
-
-    for i in range(1, n):
-        val = es_salto[i]
-
-        if _es_salto_real(val):
-            _cerrar_anillo(acum)
-            acum = _nuevo_acum()
-            acum_en_anillo = 0.0
-            ini_anillo = i
-            long_anillo_actual = _long_anillo_desde(i)
-            long_ini_val, long_fin_val = _rango(long_anillo_actual)
-            continue
-
-        if _es_espacio_sal(val):
-            continue
-
-        x0, y0 = coordenadas[i - 1]
-        x1, y1 = coordenadas[i]
-        seg_len = math.hypot(x1-x0, y1-y0)
-
-        # Solo muestrear si el segmento cae dentro del rango válido
-        seg_ini = acum_en_anillo
-        seg_fin = acum_en_anillo + seg_len
-        if seg_fin >= long_ini_val and seg_ini <= long_fin_val:
-            _muestrar_segmento(x0, y0, x1, y1, acum)
-
-        acum_en_anillo += seg_len
-
-        val_next = es_salto[i + 1] if i + 1 < n else False
-        if _es_normal(val_next) or _es_salto_real(val_next):
-            _cerrar_anillo(acum)
-            acum = _nuevo_acum()
-            acum_en_anillo = 0.0
-            anillo_num += 1
-            if signal_progreso is not None and n_anillos > 0:
-                pct_prog = int(anillo_num * 100 / n_anillos)
-                signal_progreso.emit(pct_prog,
-                    f"Anillo {anillo_num}/{n_anillos} · banda {banda_px}px")
-            if i + 1 < n:
-                long_anillo_actual = _long_anillo_desde(i)
-                long_ini_val, long_fin_val = _rango(long_anillo_actual)
-
-    _cerrar_anillo(acum)
+    anillos = segmentos_banda_intensidad(coordenadas, es_salto)
+    for indice, segmentos in enumerate(anillos):
+        acum = _nuevo_acum()
+        longitud = sum(math.dist(coordenadas[ip], coordenadas[ic]) for ip, ic in segmentos)
+        recorte = 1.0 - porcentaje
+        inicio = 0.0 if alineacion == "ew" else longitud * (recorte if alineacion == "lw" else recorte / 2)
+        fin = inicio + longitud * porcentaje
+        pos = 0.0
+        for ip, ic in segmentos:
+            x0, y0 = coordenadas[ip]
+            x1, y1 = coordenadas[ic]
+            largo = math.dist((x0,y0), (x1,y1))
+            if pos + largo >= inicio and pos <= fin:
+                _muestrar_segmento(x0, y0, x1, y1, acum)
+            pos += largo
+        _cerrar_anillo(acum, indice)
+        if signal_progreso is not None:
+            signal_progreso.emit(int(100 * (indice + 1) / len(anillos)),
+                                 f"Anillo {indice+1}/{len(anillos)} · banda {banda_px}px")
     return resultados
 
 
@@ -283,30 +223,7 @@ def valores_intensidad(datos, canal, metrica):
 
 
 def segmentos_banda_intensidad(coords, saltos):
-    """
-    Cada anillo = todos los segmentos entre dos límites False.
-    Los segmentos ew_lw son parte del anillo (no lo cierran).
-    Los quiebres/espacios se saltan pero no cierran el anillo.
-    Los saltos reales (True) descartan el acumulado.
-    """
-    anillos = []
-    segs = []
-    for i in range(1, len(coords)):
-        val = saltos[i] if i < len(saltos) else False
-        if _es_salto_real(val):  # salto real: descartar y reiniciar
-            segs = []
-            continue
-        if _es_espacio(val):   # quiebre/espacio: no cuenta como segmento
-            continue
-        # Segmento normal (False) o ew_lw: añadir al anillo actual
-        segs.append((i-1, i))
-        # Solo cerrar el anillo en el límite final (val is False)
-        # ew_lw NO cierra el anillo — es interno
-        if _es_normal(val):
-            if segs:
-                anillos.append(list(segs))
-            segs = []
-        # Nota: val == "ew_lw" → continúa acumulando en el mismo anillo
-    if segs:
-        anillos.append(segs)
-    return anillos
+    """Un grupo por anillo geométrico, incluso si no admite muestras."""
+    puntos = puntos_desde_geometria(coords, saltos)
+    return [[(i-1, i) for i in a.segmentos if not puntos[i].tipo.excluye_intensidad]
+            for a in calcular_anillos(puntos, 1)]

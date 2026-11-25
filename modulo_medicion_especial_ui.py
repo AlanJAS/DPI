@@ -777,8 +777,8 @@ class ControlMedicionEspecial:
                     or [d["anio"] for d in self.datos_medidos] != anios_capturados):
                 self.label_estado.setText("Resultados BI descartados: cambió el radio.")
                 return
-            for k in range(min(len(resultados), n_anillos)):
-                resultados[k]["anio"] = anios_capturados[k]
+            for resultado in resultados:
+                resultado["anio"] = anios_capturados[resultado["indice_anillo"]]
             self._bi_datos = resultados
             self.btn_guardar_bi.setEnabled(bool(resultados))
             self.btn_graficar_bi.setEnabled(bool(resultados))
@@ -1011,12 +1011,9 @@ class ControlMedicionEspecial:
             nombre_archivo = f"{base}_{suf}.rwl"
             ruta_rwl = os.path.join(directorio, nombre_archivo)
             try:
-                escribir_rwl_intensidad(
-                    codigo=f"{codigo[:6]}{canal[:1].lower()}{met[:1] if met else ''}",
-                    anio_inicio=anios[0],
-                    valores=vals_norm,
-                    ruta=ruta_rwl,
-                )
+                from modulo_formatos import escribir_tucson
+                escribir_tucson(pd.Series(vals_norm, index=anios), ruta_rwl,
+                    codigo=f"{codigo[:6]}{canal[:1].lower()}{met[:1] if met else ''}")
                 escritos.append(nombre_archivo)
             except Exception as exc:
                 errores.append(f"{nombre_archivo}: {exc}")
