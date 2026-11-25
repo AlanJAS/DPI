@@ -80,7 +80,16 @@ class GestorTareasMedicion(QObject):
         self._dialogo.cancelado.connect(self.cancelar)
         worker.finished.connect(self._finalizar, Qt.ConnectionType.QueuedConnection)
         self._dialogo.show()
-        worker.start()
+        try:
+            worker.start()
+        except Exception:
+            self._worker = None
+            self._callbacks = None
+            dialogo, self._dialogo = self._dialogo, None
+            dialogo.done(0)
+            worker.deleteLater()
+            dialogo.deleteLater()
+            raise
         return True
 
     @pyqtSlot()
