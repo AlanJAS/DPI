@@ -60,6 +60,9 @@ from dpi.ui.medicion.herramientas.estado import EstadoSeleccion
 from dpi.ui.medicion.herramientas.estado import EstadoEspacio
 
 
+from dpi.ui.medicion.herramientas.estado import EstadoAutodeteccion
+
+
 class VistaInteractiva(QGraphicsView):
     """
     Vista de imagen con herramientas de marcado de anillos.
@@ -137,10 +140,8 @@ class VistaInteractiva(QGraphicsView):
         self._historial = HistorialMedicion(self.modelo_medicion, MAX_PASOS_HISTORIAL)
 
         # Auto-detección: almacena los dos puntos (médula, corteza)
-        self._puntos_autodetect: list[tuple[float, float]] = []
-        self._items_autodetect: list = []   # marcadores visuales temporales
+        self._autodeteccion = EstadoAutodeteccion()
         # Imagen OpenCV cacheada para no releerla en cada detección
-        self._imagen_bgr: np.ndarray | None = None
 
         # Espacio intra-anillo: selección de dos puntos existentes
         self._espacio = EstadoEspacio()

@@ -28,3 +28,11 @@ class EstadoEspacio:
     indice_inicio: int | None = None
     punto_inicio: tuple[float, float] = (0.0, 0.0)
     segmento_inicio: int = 0
+
+
+@dataclass
+class EstadoAutodeteccion:
+    puntos: list = field(default_factory=list)
+    items: list = field(default_factory=list)
+    imagen: Any = None
+    indice_ancla: int | None = None

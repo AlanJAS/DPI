@@ -20,12 +20,12 @@ def iniciar_autodetect(self, imagen_bgr: np.ndarray):
     limpio a la vista. El usuario tenía que hacer dos clicks para
     cada punto, que era exactamente lo que reportó como bug.
     """
-    self._imagen_bgr = imagen_bgr
-    self._puntos_autodetect = []
-    self._idx_ancla_autodetect = None   # índice del punto anclado (si existe)
-    for item in self._items_autodetect:
+    self._autodeteccion.imagen = imagen_bgr
+    self._autodeteccion.puntos = []
+    self._autodeteccion.indice_ancla = None   # índice del punto anclado (si existe)
+    for item in self._autodeteccion.items:
         self.scene().removeItem(item)
-    self._items_autodetect.clear()
+    self._autodeteccion.items.clear()
     self.cambiar_modo(ModoMedicion.AUTODETECT)
     # Forzar foco en la vista y procesar eventos pendientes — sin esto
     # el primer click se pierde porque el botón "🔍 Auto-detectar" del
@@ -56,49 +56,49 @@ def _paso_autodetect(self, x: float, y: float):
     coords = self.coordenadas_anillos
 
     # ── Primer clic ───────────────────────────────────────────────────────
-    if len(self._puntos_autodetect) == 0:
+    if len(self._autodeteccion.puntos) == 0:
         idx_cercano = self._indice_punto_mas_cercano(x, y)
 
         if idx_cercano is not None and coords:
             # Anclar punto existente
-            self._idx_ancla_autodetect = idx_cercano
+            self._autodeteccion.indice_ancla = idx_cercano
             ax, ay = coords[idx_cercano]
             marker = self.scene().addEllipse(ax - 10, ay - 10, 20, 20,
                                               pen_amarillo, brush_nulo)
-            self._items_autodetect.append(marker)
-            self._puntos_autodetect.append(coords[idx_cercano])
+            self._autodeteccion.items.append(marker)
+            self._autodeteccion.puntos.append(coords[idx_cercano])
         else:
             # Extremo libre
-            self._idx_ancla_autodetect = None
+            self._autodeteccion.indice_ancla = None
             marker = self.scene().addEllipse(x - 8, y - 8, 16, 16,
                                               pen_verde, brush_verde)
-            self._items_autodetect.append(marker)
-            self._puntos_autodetect.append((x, y))
+            self._autodeteccion.items.append(marker)
+            self._autodeteccion.puntos.append((x, y))
         return
 
     # ── Segundo clic: definir extremo y lanzar detección ─────────────────
     marker2 = self.scene().addEllipse(x - 8, y - 8, 16, 16, pen_verde, brush_verde)
-    self._items_autodetect.append(marker2)
-    self._puntos_autodetect.append((x, y))
+    self._autodeteccion.items.append(marker2)
+    self._autodeteccion.puntos.append((x, y))
 
-    p1 = self._puntos_autodetect[0]
-    p2 = self._puntos_autodetect[1]
+    p1 = self._autodeteccion.puntos[0]
+    p2 = self._autodeteccion.puntos[1]
 
     # Línea visual del segmento a detectar
     pen_linea = QPen(QColor("#00FF88")); pen_linea.setCosmetic(True); pen_linea.setWidthF(2.0)
     pen_linea.setStyle(Qt.PenStyle.DashLine)
     linea = self.scene().addLine(p1[0], p1[1], p2[0], p2[1], pen_linea)
-    self._items_autodetect.append(linea)
+    self._autodeteccion.items.append(linea)
 
     # Delegar a la pestaña con información del ancla
-    self.autodeteccion_solicitada.emit(p1, p2, self._imagen_bgr, self._idx_ancla_autodetect)
+    self.autodeteccion_solicitada.emit(p1, p2, self._autodeteccion.imagen, self._autodeteccion.indice_ancla)
 
     # Limpiar y volver a Medir
-    for item in self._items_autodetect:
+    for item in self._autodeteccion.items:
         self.scene().removeItem(item)
-    self._items_autodetect.clear()
-    self._puntos_autodetect.clear()
-    self._idx_ancla_autodetect = None
+    self._autodeteccion.items.clear()
+    self._autodeteccion.puntos.clear()
+    self._autodeteccion.indice_ancla = None
     self.cambiar_modo(ModoMedicion.MEDIR)
 
 
