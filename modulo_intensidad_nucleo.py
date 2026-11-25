@@ -19,7 +19,7 @@ import math
 import logging
 import numpy as np
 from modulo_marcas_medicion import (_es_normal, _es_salto_real,
-                                     _es_quiebre, _excluye_intensidad)
+                                     _es_quiebre, _excluye_intensidad, _es_espacio)
 
 logger = logging.getLogger(__name__)
 
@@ -280,3 +280,33 @@ def valores_intensidad(datos, canal, metrica):
         return [d.get("B_mean", 0.0) / d.get(f"{otro}_mean", 1.0)
                 if d.get(f"{otro}_mean", 1.0) > 0 else 0.0 for d in datos]
     return [d.get(f"{canal}_{metrica}", 0.0) for d in datos]
+
+
+def segmentos_banda_intensidad(coords, saltos):
+    """
+    Cada anillo = todos los segmentos entre dos límites False.
+    Los segmentos ew_lw son parte del anillo (no lo cierran).
+    Los quiebres/espacios se saltan pero no cierran el anillo.
+    Los saltos reales (True) descartan el acumulado.
+    """
+    anillos = []
+    segs = []
+    for i in range(1, len(coords)):
+        val = saltos[i] if i < len(saltos) else False
+        if _es_salto_real(val):  # salto real: descartar y reiniciar
+            segs = []
+            continue
+        if _es_espacio(val):   # quiebre/espacio: no cuenta como segmento
+            continue
+        # Segmento normal (False) o ew_lw: añadir al anillo actual
+        segs.append((i-1, i))
+        # Solo cerrar el anillo en el límite final (val is False)
+        # ew_lw NO cierra el anillo — es interno
+        if _es_normal(val):
+            if segs:
+                anillos.append(list(segs))
+            segs = []
+        # Nota: val == "ew_lw" → continúa acumulando en el mismo anillo
+    if segs:
+        anillos.append(segs)
+    return anillos

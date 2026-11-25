@@ -8,6 +8,7 @@ Contiene:
 """
 
 import modulo_medicion_especial_ui
+from modulo_banda_intensidad_ui import BandaIntensidad
 
 
 import modulo_medicion_ui
@@ -267,8 +268,7 @@ class PestanaImagen(QWidget):
         self._bi_alineacion: str = "centro"  # "ew" | "centro" | "lw"
         self._bi_canal_vis: str = "B"      # canal activo para visualización
         self._bi_canales: list[str] = ["B", "G", "R", "Gray"]
-        self._bi_plot_items: dict = {}     # items del gráfico BI
-        self._items_banda_bi: list = []    # marcadores de banda en la imagen
+        self._banda_intensidad = BandaIntensidad()
         self._pith_metodo: str = "arco"
         self._pith_n_int: int = 5
         self._pith_usar_ref: bool = False
