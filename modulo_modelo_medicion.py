@@ -1,6 +1,7 @@
 """Modelo de puntos de medición, independiente de la interfaz gráfica."""
 from collections.abc import Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, replace, field
+from types import MappingProxyType
 from enum import Enum
 from math import isfinite
 from numbers import Real
@@ -108,6 +109,31 @@ class ModeloMedicion:
         if not all(isinstance(p, PuntoMedicion) for p in puntos):
             raise ValueError("Captura de medición inválida")
         self._puntos = puntos
+
+
+@dataclass(frozen=True)
+class RadioMedicion:
+    codigo: str
+    puntos: tuple
+    anio_medula: int
+    anio_corteza: int
+    dir_idx: int
+    anomalias: dict = field(default_factory=dict)
+    medula: bool = False
+    corteza: bool = False
+
+    def __post_init__(self):
+        object.__setattr__(self, "puntos", tuple(self.puntos))
+        object.__setattr__(self, "anomalias", MappingProxyType(dict(self.anomalias)))
+
+    def a_dict(self, *, activo=False):
+        clave = "coordenadas" if activo else "coords"
+        return {clave: [p.coordenada for p in self.puntos],
+                "es_salto": [p.tipo.value for p in self.puntos],
+                "codigo": self.codigo, "anio_medula": self.anio_medula,
+                "anio_corteza": self.anio_corteza, "dir_idx": self.dir_idx,
+                "anomalias": dict(self.anomalias), "medula": self.medula,
+                "corteza": self.corteza}
 
 
 class HistorialMedicion:

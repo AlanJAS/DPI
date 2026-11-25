@@ -22,7 +22,7 @@ from modulo_dialogos_archivo import ultima_carpeta
 import modulo_transformacion as _tr
 from modulo_grafico_medicion import (correlacion_deslizante, correlacion_global,
                                      transformar_medicion)
-from modulo_modelo_medicion import ModeloMedicion, PuntoMedicion
+from modulo_modelo_medicion import ModeloMedicion, PuntoMedicion, RadioMedicion
 import pandas as pd
 import pyqtgraph as pg
 from PIL import Image
@@ -2345,16 +2345,7 @@ class PestanaImagen(QWidget):
         if not nombre or nombre in self.caminos_guardados:
             return QMessageBox.warning(self, "Identificador", "Nombre vacío o ya existente.")
 
-        self.caminos_guardados[nombre] = {
-            "coords": list(self.vista.coordenadas_anillos),
-            "es_salto": list(self.vista.es_salto),
-            "anio_medula": self.spin_medula.value(),
-            "anio_corteza": self.spin_corteza.value(),
-            "dir_idx": self.combo_dir.currentIndex(),
-            "anomalias": dict(self.vista.anomalias),
-            "medula": self.check_tiene_medula.isChecked(),
-            "corteza": self.check_tiene_corteza.isChecked(),
-        }
+        self.caminos_guardados[nombre] = self._capturar_radio(nombre).a_dict()
         item = QListWidgetItem(nombre)
         item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
         item.setCheckState(Qt.CheckState.Checked)
@@ -2861,6 +2852,18 @@ class PestanaImagen(QWidget):
             self.check_tiene_medula.setChecked(datos.get("medula", False))
             self.check_tiene_corteza.setChecked(datos.get("corteza", False))
 
+    def _capturar_radio(self, codigo=None):
+        return RadioMedicion(
+            codigo=self.input_codigo.text() if codigo is None else codigo,
+            puntos=self.vista.modelo_medicion.captura(),
+            anio_medula=self.spin_medula.value(),
+            anio_corteza=self.spin_corteza.value(),
+            dir_idx=self.combo_dir.currentIndex(),
+            anomalias=dict(self.vista.anomalias),
+            medula=self.check_tiene_medula.isChecked(),
+            corteza=self.check_tiene_corteza.isChecked(),
+        )
+
     def _guardar_estado(self):
         if getattr(self, "_sesion_protegida", None) == self.ruta_imagen_actual:
             return
@@ -2869,17 +2872,7 @@ class PestanaImagen(QWidget):
                 self.ruta_imagen_actual,
                 self.vista.pixeles_por_mm,
                 self.caminos_guardados,
-                {
-                    "coordenadas": list(self.vista.coordenadas_anillos),
-                    "es_salto": list(self.vista.es_salto),
-                    "anio_medula": self.spin_medula.value(),
-                    "anio_corteza": self.spin_corteza.value(),
-                    "dir_idx": self.combo_dir.currentIndex(),
-                    "codigo": self.input_codigo.text(),
-                    "anomalias": dict(self.vista.anomalias),
-                    "medula": self.check_tiene_medula.isChecked(),
-                    "corteza": self.check_tiene_corteza.isChecked(),
-                },
+                self._capturar_radio().a_dict(activo=True),
             )
         except Exception:
             logger.exception("No se pudo guardar el estado")
