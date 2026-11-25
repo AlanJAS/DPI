@@ -5961,15 +5961,11 @@ class PestanaImagen(QWidget):
         """r de Pearson en el solape completo, con el método seleccionado."""
         if len(anios_a) < 5 or len(anios_b) < 5:
             return None
-        da = self._transformar_corr(anios_a, anchos_a)
-        db = self._transformar_corr(anios_b, anchos_b)
-        idx = da.index.intersection(db.index)
-        if len(idx) < 5:
-            return None
-        if np.std(da[idx].values) < 1e-12 or np.std(db[idx].values) < 1e-12:
-            return None
-        r = np.corrcoef(da[idx].values, db[idx].values)[0, 1]
-        return None if np.isnan(r) else float(r)
+        r, _ = _tr.r_pearson(
+            pd.Series(anchos_a, index=anios_a).clip(lower=0.01),
+            pd.Series(anchos_b, index=anios_b).clip(lower=0.01),
+            metodo=self.metodo_correlacion(), min_overlap=5)
+        return float(r) if np.isfinite(r) else None
 
     def _r_deslizante(self, anios_a, anchos_a, anios_b, anchos_b, ventana: int):
         """

@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 import pyqtgraph as pg
 import modulo_transformacion as _tr
+import modulo_estadistica as _est
 import modulo_quiebres as _qb
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
@@ -363,18 +364,7 @@ def gleichlaufigkeit(serie_a, serie_b, min_overlap: int = 10):
     a = a.loc[overlap].sort_index().to_numpy(dtype=float)
     b = b.loc[overlap].sort_index().to_numpy(dtype=float)
 
-    da = np.sign(np.diff(a))
-    db = np.sign(np.diff(b))
-    n = len(da)
-    if n == 0:
-        return float("nan"), len(overlap)
-
-    coinciden = (da == db) & (da != 0)
-    # Misma fórmula que dplR (glk.R): 1 − Σ|signo_a − signo_b| / (2n).
-    # Da crédito completo cuando ambas series están planas en el mismo par de
-    # años; DPI le daba 0,5. Ver el comentario extendido en `_glk_np`.
-    glk = 1.0 - np.sum(np.abs(da - db)) / (2.0 * n)
-    return float(glk), int(len(overlap))
+    return _est.glk_alineado(a, b, min_overlap), int(len(overlap))
 
 
 def glk_significance(glk: float, n: int) -> str:
@@ -408,14 +398,7 @@ def t_baillie_pilcher(serie_a, serie_b, min_overlap: int = 20):
 
     a = a_filt.loc[overlap].to_numpy(dtype=float)
     b = b_filt.loc[overlap].to_numpy(dtype=float)
-    if np.std(a) == 0 or np.std(b) == 0:
-        return float("nan"), float("nan"), n
-
-    r = float(np.corrcoef(a, b)[0, 1])
-    if np.isnan(r) or abs(r) >= 1.0:
-        return float("nan"), r, n
-    t_bp = r * np.sqrt(n - 2) / np.sqrt(1.0 - r * r)
-    return float(t_bp), r, n
+    return _est.tbp_filtrado(a, b, min_overlap)
 
 
 def estadisticos_cofechado(serie_a, serie_b, min_overlap: int = 20) -> dict:
@@ -436,10 +419,7 @@ def estadisticos_cofechado(serie_a, serie_b, min_overlap: int = 20) -> dict:
 
     a_ov = a.loc[overlap].to_numpy(dtype=float)
     b_ov = b.loc[overlap].to_numpy(dtype=float)
-    if np.std(a_ov) > 0 and np.std(b_ov) > 0:
-        r = float(np.corrcoef(a_ov, b_ov)[0, 1])
-        if np.isfinite(r):
-            resultado["r"] = r
+    resultado["r"] = _est.pearson(a_ov, b_ov)
 
     glk, _ = gleichlaufigkeit(serie_a, serie_b, min_overlap)
     resultado["glk"] = glk
@@ -2750,55 +2730,17 @@ def _correlacion_por_desfase(serie_a: pd.Series, serie_b: pd.Series,
             continue
         a = shifted.loc[overlap].to_numpy(dtype=float)
         b = serie_b.loc[overlap].to_numpy(dtype=float)
-        if len(a) < 2 or len(b) < 2 or np.std(a) == 0 or np.std(b) == 0:
-            continue
-        r = float(np.corrcoef(a, b)[0, 1])
+        r = _est.pearson(a, b)
         if np.isfinite(r):
             shifts.append(shift)
             rs.append(r)
     return shifts, rs
 
 
-def _glk_np(a: np.ndarray, b: np.ndarray, min_overlap: int) -> float:
-    """GLK sobre arreglos numpy ya alineados (réplica de gleichlaufigkeit)."""
-    if len(a) < min_overlap:
-        return float("nan")
-    da = np.sign(np.diff(a))
-    db = np.sign(np.diff(b))
-    n = len(da)
-    if n == 0:
-        return float("nan")
-    # Fórmula de dplR (glk.R): GLK = 1 − Σ|signo_a − signo_b| / (2n).
-    # Desglosada, eso da crédito COMPLETO cuando los dos signos coinciden,
-    # incluido el caso en que AMBAS series están planas: si las dos repiten
-    # valor entre dos años, eso es coincidencia, no medio acierto.
-    # DPI le daba 0,5 a ese caso. Con mediciones a 0,01 mm los valores
-    # repetidos no son raros, así que la diferencia aparece de verdad.
-    #   ambos signos iguales (incl. ambos cero) -> 1
-    #   uno plano y el otro no                  -> 0,5
-    #   signos opuestos                         -> 0
-    return float(1.0 - np.sum(np.abs(da - db)) / (2.0 * n))
+_glk_np = _est.glk_alineado
 
 
-def _tbp_np(a: np.ndarray, b: np.ndarray, min_overlap: int) -> float:
-    """t-BP sobre arreglos numpy ya alineados (réplica de t_baillie_pilcher:
-    filtro de Hollstein 100·log-diff → Pearson → t)."""
-    m = (a > 0) & (b > 0)
-    if int(m.sum()) < 2:
-        return float("nan")
-    la = np.log(a[m])
-    lb = np.log(b[m])
-    ha = 100.0 * np.diff(la)
-    hb = 100.0 * np.diff(lb)
-    n = len(ha)
-    if n < min_overlap:
-        return float("nan")
-    if np.std(ha) == 0 or np.std(hb) == 0:
-        return float("nan")
-    r = float(np.corrcoef(ha, hb)[0, 1])
-    if not np.isfinite(r) or abs(r) >= 1.0:
-        return float("nan")
-    return float(r * np.sqrt(n - 2) / np.sqrt(1.0 - r * r))
+_tbp_np = _est.tbp_alineado
 
 
 def _estadisticos_por_desfase(
@@ -3061,11 +3003,7 @@ def _diff_log(serie: pd.Series) -> pd.Series:
     return np.log(serie.replace(0, np.nan).dropna()).diff().dropna()
 
 
-def _r_pearson(a: np.ndarray, b: np.ndarray) -> float:
-    if np.std(a) == 0 or np.std(b) == 0:
-        return np.nan
-    r = np.corrcoef(a, b)[0, 1]
-    return float(r) if not np.isnan(r) else np.nan
+_r_pearson = _est.pearson
 
 
 def _r_movil(m: pd.Series, t: pd.Series, overlap: list, mitad: int) -> tuple[list, list]:

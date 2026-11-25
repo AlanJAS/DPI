@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+from modulo_estadistica import pearson
 
 DIFFLOG = "difflog"
 COFECHA = "cofecha"
@@ -105,10 +106,7 @@ def r_pearson(serie_a: pd.Series, serie_b: pd.Series, metodo: str = DIFFLOG,
         return float("nan"), n
     x = da.loc[comun].to_numpy(dtype=float)
     y = db.loc[comun].to_numpy(dtype=float)
-    if np.std(x) < 1e-12 or np.std(y) < 1e-12:
-        return float("nan"), n
-    r = float(np.corrcoef(x, y)[0, 1])
-    return (r if np.isfinite(r) else float("nan")), n
+    return pearson(x, y, tolerancia=1e-12), n
 
 
 def crear_selector(parent=None, metodo_inicial: str = DIFFLOG):
