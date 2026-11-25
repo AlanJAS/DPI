@@ -809,7 +809,11 @@ class PestanaImagen(QWidget):
         self.escena = QGraphicsScene()
         self.vista = VistaInteractiva(self.escena, self)
         self.vista.mediciones_actualizadas.connect(self._sincronizar_mediciones)
-        self.vista.progreso_modificado.connect(self._guardar_estado)
+        self._timer_autoguardado = QTimer(self)
+        self._timer_autoguardado.setSingleShot(True)
+        self._timer_autoguardado.setInterval(350)
+        self._timer_autoguardado.timeout.connect(self._guardar_estado)
+        self.vista.progreso_modificado.connect(self._programar_guardado)
         self._splitter_vistas.addWidget(self.vista)
 
         # Vista secundaria (panel dividido, oculto por defecto)
@@ -2864,7 +2868,17 @@ class PestanaImagen(QWidget):
             corteza=self.check_tiene_corteza.isChecked(),
         )
 
+    def _programar_guardado(self):
+        self._timer_autoguardado.start()
+
+    def guardar_pendiente(self):
+        if self._timer_autoguardado.isActive():
+            self._guardar_estado()
+
     def _guardar_estado(self):
+        timer = getattr(self, "_timer_autoguardado", None)
+        if timer is not None:
+            timer.stop()
         if getattr(self, "_sesion_protegida", None) == self.ruta_imagen_actual:
             return
         try:
@@ -3233,14 +3247,15 @@ class PestanaImagen(QWidget):
         # Obtener los N anillos más internos (los primeros en la lista)
         # datos_medidos está ordenado médula→corteza
         med_a_cor = self.combo_dir.currentIndex() == 0
+        dm = self.datos_medidos
         if med_a_cor:
             # Los más internos son los del inicio
-            anchos_internos = [d["ancho_mm"] for d in self.datos_medidos[:n_int]]
-            anio_inicio = self.datos_medidos[0]["anio"] if self.datos_medidos else None
+            anchos_internos = [d["ancho_mm"] for d in dm[:n_int]]
+            anio_inicio = dm[0]["anio"] if dm else None
         else:
             # Los más internos son los del final
-            anchos_internos = [d["ancho_mm"] for d in self.datos_medidos[-n_int:]]
-            anio_inicio = self.datos_medidos[-1]["anio"] if self.datos_medidos else None
+            anchos_internos = [d["ancho_mm"] for d in dm[-n_int:]]
+            anio_inicio = dm[-1]["anio"] if dm else None
 
         anchos_internos = [a for a in anchos_internos if a > 0]
 
