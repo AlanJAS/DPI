@@ -1,4 +1,12 @@
 """Componentes de medición de DPI."""
+from modulo_modelo_medicion import TipoMarca
+
+
+def _tipo(val):
+    try:
+        return TipoMarca.desde_valor(val)
+    except ValueError:
+        return None
 
 MODO_ANADIR = 1   # alias mantenido por compatibilidad interna
 
@@ -30,29 +38,29 @@ MODO_SELECCIONAR = 12  # Seleccionar múltiples anillos para borrar/convertir
 
 def _es_salto_real(val) -> bool:
     """True solo si el segmento es un salto que rompe la cuenta."""
-    return val is True
+    return _tipo(val) is TipoMarca.SALTO
 
 
 
 def _es_espacio(val) -> bool:
     """True si el segmento es un espacio intra-anillo."""
-    return val == "espacio"
+    return _tipo(val) is TipoMarca.ESPACIO
 
 
 
 def _es_quiebre_ini(val) -> bool:
     """True si el segmento es inicio de quiebre (suma distancia, no cierra)."""
-    return val == "quiebre_ini"
+    return _tipo(val) is TipoMarca.QUIEBRE_INI
 
 
 
 def _es_ewlw(val) -> bool:
     """True si el segmento es un límite earlywood/latewood."""
-    return val == "ew_lw"
+    return _tipo(val) is TipoMarca.EW_LW
 
 
 
 def _es_amarillo(val) -> bool:
     """True si el segmento debe dibujarse en amarillo (salto o espacio)."""
-    return val is True or val == "espacio"
+    return _tipo(val) in (TipoMarca.SALTO, TipoMarca.ESPACIO)
 

@@ -2,6 +2,8 @@
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from enum import Enum
+from math import isfinite
+from numbers import Real
 
 
 class TipoMarca(Enum):
@@ -12,10 +14,32 @@ class TipoMarca(Enum):
     QUIEBRE_INI = 'quiebre_ini'
 
 
+    @classmethod
+    def desde_valor(cls, valor):
+        """Acepta marcas tipadas y los valores históricos del proyecto."""
+        if isinstance(valor, cls):
+            return valor
+        if type(valor) not in (bool, str):
+            raise ValueError(f"Marca inválida: {valor!r}")
+        return cls(valor)
+
+    @property
+    def es_amarillo(self):
+        return self in (TipoMarca.SALTO, TipoMarca.ESPACIO)
+
+
 @dataclass(frozen=True, slots=True)
 class PuntoMedicion:
     coordenada: tuple[float, float]
     tipo: TipoMarca = TipoMarca.NORMAL
+
+    def __post_init__(self):
+        x, y = self.coordenada
+        if not all(isinstance(v, Real) and not isinstance(v, bool)
+                   and isfinite(v) for v in (x, y)):
+            raise ValueError("Las coordenadas deben ser números finitos")
+        object.__setattr__(self, "coordenada", (float(x), float(y)))
+        object.__setattr__(self, "tipo", TipoMarca.desde_valor(self.tipo))
 
 
 class _VistaCampo(Sequence):
@@ -51,8 +75,7 @@ class ModeloMedicion:
 
     @staticmethod
     def _crear(coordenada, marca):
-        x, y = coordenada
-        return PuntoMedicion((x, y), TipoMarca(marca))
+        return PuntoMedicion(coordenada, marca)
 
     def cargar(self, coordenadas, marcas):
         # Validar antes de sustituir el estado activo.
@@ -72,14 +95,16 @@ class ModeloMedicion:
         self._puntos.clear()
 
     def mover(self, indice, coordenada):
-        x, y = coordenada
-        self._puntos[indice] = replace(self._puntos[indice], coordenada=(x, y))
+        self._puntos[indice] = replace(self._puntos[indice], coordenada=coordenada)
 
     def marcar(self, indice, marca):
-        self._puntos[indice] = replace(self._puntos[indice], tipo=TipoMarca(marca))
+        self._puntos[indice] = replace(self._puntos[indice], tipo=marca)
 
     def captura(self):
         return tuple(self._puntos)
 
     def restaurar(self, captura):
-        self._puntos = list(captura)
+        puntos = list(captura)
+        if not all(isinstance(p, PuntoMedicion) for p in puntos):
+            raise ValueError("Captura de medición inválida")
+        self._puntos = puntos

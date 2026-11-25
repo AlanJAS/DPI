@@ -20,6 +20,7 @@ from modulo_widgets import (
     _ensanchar_dialogo, _agregar_hover_anio, _crear_barra_zoom,
     SpinBoxFlechas, SeccionColapsable,
 )
+from modulo_modelo_series import ModeloSeries
 import modulo_transformacion as _tr
 import modulo_estadistica as _est
 from modulo_estadistica import (
@@ -333,8 +334,9 @@ class PanelCodatacion(QWidget):
         super().__init__()
         self._ventana_padre = ventana_padre
 
-        self.series_originales: dict[str, pd.DataFrame] = {}
-        self.series_datos: dict[str, pd.DataFrame] = {}
+        self.modelo_series = ModeloSeries()
+        self.series_originales = self.modelo_series.originales
+        self.series_datos = self.modelo_series.datos
 
         # Datos del análisis de offset (analizar_offset)
         self._shifts_actuales: list[int] = []
@@ -1207,8 +1209,7 @@ class PanelCodatacion(QWidget):
                     if id_serie in self.series_datos:
                         n_duplicadas += 1
                         continue
-                    self.series_datos[id_serie] = df_serie.copy()
-                    self.series_originales[id_serie] = df_serie.copy()
+                    self.modelo_series.registrar(id_serie, df_serie)
                     item = QListWidgetItem(id_serie)
                     item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
                     item.setCheckState(Qt.CheckState.Unchecked)
@@ -1552,8 +1553,7 @@ class PanelCodatacion(QWidget):
         """
         if nombre in self.series_datos:
             return
-        self.series_datos[nombre] = df.copy()
-        self.series_originales[nombre] = df.copy()
+        self.modelo_series.registrar(nombre, df)
         item = QListWidgetItem(nombre)
         item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
         item.setCheckState(Qt.CheckState.Unchecked)
@@ -1670,8 +1670,7 @@ class PanelCodatacion(QWidget):
         nombres_set = set(nombres_a_eliminar)
 
         for nombre in nombres_a_eliminar:
-            self.series_datos.pop(nombre, None)
-            self.series_originales.pop(nombre, None)
+            self.modelo_series.eliminar(nombre)
 
         for i in range(self.lista_series.count() - 1, -1, -1):
             if self.lista_series.item(i).text() in nombres_set:
@@ -1825,8 +1824,7 @@ class PanelCodatacion(QWidget):
         df_nuevo.index = nuevo_idx
         df_nuevo.sort_index(inplace=True)
 
-        self.series_datos[nombre] = df_nuevo
-        self.series_originales[nombre] = df_nuevo.copy()
+        self.modelo_series.registrar(nombre, df_nuevo)
 
         self.graficar_series()
         QMessageBox.information(
@@ -2062,7 +2060,7 @@ class PanelCodatacion(QWidget):
                 f"'{nombre}' no tiene una copia original guardada "
                 "(no se le han aplicado correcciones).")
             return
-        self.series_datos[nombre] = self.series_originales[nombre].copy()
+        self.modelo_series.restablecer(nombre)
         self.graficar_series()
         QMessageBox.information(
             self, "Restaurada",
@@ -2090,7 +2088,7 @@ class PanelCodatacion(QWidget):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
         if resp != QMessageBox.StandardButton.Yes:
             return
-        self.series_datos[nombre] = self.series_originales[nombre].copy()
+        self.modelo_series.restablecer(nombre)
         self._limpiar_preview()
         self._sugerencias.clear()
         self.tabla_sugerencias.setRowCount(0)
@@ -2357,11 +2355,9 @@ class PanelCodatacion(QWidget):
             df_serie = df_serie.dropna()
 
             if nombre_lista in self.series_datos:
-                self.series_datos[nombre_lista] = df_serie
-                self.series_originales[nombre_lista] = df_serie.copy()
+                self.modelo_series.registrar(nombre_lista, df_serie)
             else:
-                self.series_datos[nombre_lista] = df_serie
-                self.series_originales[nombre_lista] = df_serie.copy()
+                self.modelo_series.registrar(nombre_lista, df_serie)
                 item = QListWidgetItem(nombre_lista)
                 item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
                 item.setCheckState(Qt.CheckState.Unchecked)
