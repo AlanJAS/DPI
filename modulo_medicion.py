@@ -14,6 +14,7 @@ import json
 import logging
 from modulo_datos_medicion import (mediciones_desde_anchos, mediciones_radio,
                                    normalizar_radio)
+from modulo_sesion_medicion import guardar_sesion, leer_sesion
 
 import cv2
 import numpy as np
@@ -39,7 +40,7 @@ from PyQt6.QtWidgets import (
     QSplitter, QListWidgetItem, QDialog,
 )
 from PyQt6.QtGui import QImage, QPixmap, QPen, QColor, QBrush, QShortcut, QKeySequence
-from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QSettings
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QSettings, QSignalBlocker
 
 from estilos import SECUNDARIO_QSS, color_secundario
 import json_seguro as _js
@@ -2842,89 +2843,70 @@ class PestanaImagen(QWidget):
     # Persistencia (guardado automático en JSON oculto)
     # -------------------------------------------------------------------------
 
-    def _ruta_json(self) -> str:
-        directorio = os.path.dirname(self.ruta_imagen_actual)
-        nombre = os.path.basename(self.ruta_imagen_actual)
-        return os.path.join(directorio, f".{nombre}_dpi.json")
-
     def _guardar_estado(self):
         try:
-            datos = {
-                "pixeles_por_mm": self.vista.pixeles_por_mm,
-                "caminos_guardados": self.caminos_guardados,
-                "camino_activo": {
-                    "coordenadas": [list(c) for c in self.vista.coordenadas_anillos],
+            guardar_sesion(
+                self.ruta_imagen_actual,
+                self.vista.pixeles_por_mm,
+                self.caminos_guardados,
+                {
+                    "coordenadas": list(self.vista.coordenadas_anillos),
                     "es_salto": list(self.vista.es_salto),
                     "anio_medula": self.spin_medula.value(),
                     "anio_corteza": self.spin_corteza.value(),
                     "dir_idx": self.combo_dir.currentIndex(),
                     "codigo": self.input_codigo.text(),
                 },
-            }
-            _js.guardar_json(self._ruta_json(), datos, indent=None)
-        except Exception as exc:
-            # Antes solo se atrapaba OSError. Este es el autoguardado del
-            # trabajo en curso y corre solo, sin que el usuario lo pida: si un
-            # dato no serializable se colara en `datos`, el TypeError subía y
-            # cortaba la acción que hubiera disparado el guardado. Que falle
-            # el autoguardado es malo, pero tumbar la medición en curso es peor.
-            logger.warning("No se pudo guardar el estado: %s", exc)
+            )
+        except Exception:
+            logger.exception("No se pudo guardar el estado")
 
     def _cargar_estado(self) -> bool:
-        ruta = self._ruta_json()
-        if not os.path.exists(ruta):
-            return False
         try:
-            with open(ruta, "r") as f:
-                datos = json.load(f)
+            datos = leer_sesion(self.ruta_imagen_actual)
+            if datos is None:
+                return False
+            activo = datos["camino_activo"]
+            if activo:
+                for campo, control in (("anio_medula", self.spin_medula),
+                                       ("anio_corteza", self.spin_corteza)):
+                    if not control.minimum() <= activo[campo] <= control.maximum():
+                        raise ValueError(f"{campo} fuera del rango permitido")
+        except (OSError, ValueError, TypeError, KeyError, OverflowError) as exc:
+            logger.warning("No se pudo cargar el estado guardado: %s", exc)
+            return False
 
-            if "pixeles_por_mm" in datos:
-                self.vista.pixeles_por_mm = datos["pixeles_por_mm"]
-                # Marcar como restaurado desde sesión. Si después el usuario
-                # quiere saber de dónde viene este DPI, el diálogo le dirá
-                # que fue cargado de un estado guardado, no detectado en
-                # este momento.
-                self._dpi_modo = "guardado"
+        # La lectura, migración y validación han terminado antes de tocar Qt.
+        if "pixeles_por_mm" in datos:
+            self.vista.pixeles_por_mm = datos["pixeles_por_mm"]
+            self._dpi_modo = "guardado"
 
-            self.caminos_guardados = {
-                nombre: normalizar_radio(radio)
-                for nombre, radio in datos.get("caminos_guardados", {}).items()
-            }
+        self.caminos_guardados = datos["caminos_guardados"]
+        with QSignalBlocker(self.lista_caminos):
             self.lista_caminos.clear()
             for nombre in self.caminos_guardados:
                 item = QListWidgetItem(nombre)
                 item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
                 item.setCheckState(Qt.CheckState.Checked)
                 self.lista_caminos.addItem(item)
-            self.vista.cargar_caminos_inactivos(self.caminos_guardados)
+        self.vista.cargar_caminos_inactivos(self.caminos_guardados)
 
-            activo = datos.get("camino_activo", {})
-            if activo:
-                activo = normalizar_radio(activo)
-                self.spin_medula.blockSignals(True)
-                self.spin_corteza.blockSignals(True)
-                self.combo_dir.blockSignals(True)
-                try:
-                    self.input_codigo.setText(activo.get("codigo", self.input_codigo.text()))
-                    self.combo_dir.setCurrentIndex(activo["dir_idx"])
-                    self.spin_medula.setValue(activo["anio_medula"])
-                    self.spin_corteza.setValue(activo["anio_corteza"])
-                    self.vista.limpiar_historial()
-                    self.vista.cargar_camino_activo(
-                        activo.get("coordenadas", []), activo.get("es_salto", [])
-                    )
-                finally:
-                    self.combo_dir.blockSignals(False)
-                    self.spin_medula.blockSignals(False)
-                    self.spin_corteza.blockSignals(False)
-                self.vista.recalcular_todas_las_distancias()
-
+        if activo:
+            with (QSignalBlocker(self.spin_medula),
+                  QSignalBlocker(self.spin_corteza),
+                  QSignalBlocker(self.combo_dir),
+                  QSignalBlocker(self.input_codigo)):
+                self.input_codigo.setText(activo.get("codigo", self.input_codigo.text()))
+                self.combo_dir.setCurrentIndex(activo["dir_idx"])
+                self.spin_medula.setValue(activo["anio_medula"])
+                self.spin_corteza.setValue(activo["anio_corteza"])
+                self.vista.limpiar_historial()
+                self.vista.cargar_camino_activo(
+                    activo["coordenadas"], activo["es_salto"])
+            self.vista.recalcular_todas_las_distancias()
+        else:
             self._actualizar_grafico_rt()
-            return True
-
-        except (OSError, json.JSONDecodeError, KeyError) as exc:
-            logger.warning("No se pudo cargar el estado guardado: %s", exc)
-            return False
+        return True
 
     # -------------------------------------------------------------------------
     # Exportación
