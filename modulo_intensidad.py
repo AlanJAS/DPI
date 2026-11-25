@@ -2,7 +2,7 @@
 import math
 import logging
 import numpy as np
-from modulo_intensidad_nucleo import (
+from dpi.medicion.intensidad import (
     CANALES, extraer_intensidad_por_anillo,
 )
 from modulo_formatos import escribir_rwl_intensidad

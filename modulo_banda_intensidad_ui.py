@@ -3,7 +3,7 @@ import math
 import numpy as np
 from PyQt6.QtGui import QPen, QColor, QBrush
 from PyQt6.QtCore import Qt
-from modulo_intensidad_nucleo import segmentos_banda_intensidad
+from dpi.medicion.intensidad import segmentos_banda_intensidad
 
 
 class BandaIntensidad:

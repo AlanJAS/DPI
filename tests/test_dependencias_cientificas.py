@@ -8,7 +8,7 @@ NUCLEOS = (
     'dpi.medicion.calculo', 'dpi.medicion.modelo', 'modulo_modelo_series',
     'dpi.ciencia.estadistica', 'dpi.ciencia.cronologia', 'dpi.ciencia.datacion', 'dpi.ciencia.quiebres',
     'dpi.ciencia.cofecha', 'dpi.ciencia.cofecha_nucleo', 'dpi.ciencia.comparacion_nucleo',
-    'dpi.medicion.pith', 'modulo_intensidad_nucleo', 'dpi.ciencia.indice_anual',
+    'dpi.medicion.pith', 'dpi.medicion.intensidad', 'dpi.ciencia.indice_anual',
     'modulo_autodeteccion', 'dpi.ciencia.transformacion', 'modulo_grafico_medicion', 'dpi.medicion.datos',
 )
 

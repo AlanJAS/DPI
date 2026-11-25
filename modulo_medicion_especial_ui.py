@@ -13,8 +13,8 @@ from PyQt6.QtWidgets import QFileDialog, QVBoxLayout, QMessageBox, QDialog
 from PyQt6.QtCore import Qt
 import estilos_graficos as _gr
 from modulo_intensidad import DialogoConfigBI, DialogoGuardarBI
-from modulo_intensidad_nucleo import extraer_intensidad_por_anillo
-from modulo_intensidad_nucleo import valores_intensidad
+from dpi.medicion.intensidad import extraer_intensidad_por_anillo
+from dpi.medicion.intensidad import valores_intensidad
 from modulo_pith import estimar_anillos_faltantes, DialogoMetodoPith, DialogoEstimacionPith
 from dpi.medicion.pith import distancia_faltante_dap
 logger = logging.getLogger(__name__)
