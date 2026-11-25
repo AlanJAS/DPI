@@ -1,5 +1,6 @@
 """Estado de series de co-datación, independiente de Qt."""
 from dataclasses import dataclass
+from collections.abc import Mapping
 
 import pandas as pd
 import numpy as np
@@ -11,6 +12,23 @@ class _PruebaCorreccion:
     respaldo: pd.DataFrame
 
 
+class _LecturaOriginales(Mapping):
+    def __init__(self, datos):
+        self._datos = datos
+
+    def __getitem__(self, nombre):
+        return self._datos[nombre].copy(deep=True)
+
+    def __iter__(self):
+        return iter(self._datos)
+
+    def __len__(self):
+        return len(self._datos)
+
+    def __contains__(self, nombre):
+        return nombre in self._datos
+
+
 class ModeloSeries:
     """Conserva datos editables y originales independientes.
 
@@ -18,8 +36,9 @@ class ModeloSeries:
     """
     def __init__(self):
         self.datos: dict[str, pd.DataFrame] = {}
-        self.originales: dict[str, pd.DataFrame] = {}
+        self._originales: dict[str, pd.DataFrame] = {}
         self._prueba: _PruebaCorreccion | None = None
+        self.originales = _LecturaOriginales(self._originales)
 
     @property
     def nombre_en_prueba(self):
@@ -76,16 +95,16 @@ class ModeloSeries:
         datos = self._validar(df)
         original = datos.copy()
         self.datos[nombre] = datos
-        self.originales[nombre] = original
+        self._originales[nombre] = original
 
     def eliminar(self, nombre):
         self._exigir_sin_prueba(nombre)
         self.datos.pop(nombre, None)
-        self.originales.pop(nombre, None)
+        self._originales.pop(nombre, None)
 
     def restablecer(self, nombre):
         self._exigir_sin_prueba(nombre)
-        self.datos[nombre] = self.originales[nombre].copy()
+        self.datos[nombre] = self._originales[nombre].copy()
 
     def actualizar(self, nombre, df):
         """Valida una edición sin sustituir el respaldo original."""
