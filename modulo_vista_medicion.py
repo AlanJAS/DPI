@@ -5,7 +5,7 @@ from modulo_pith_ui import HerramientaPith
 from dpi.ui.medicion.render import RenderMedicion
 
 import math
-from dpi.medicion.calculo import anchos_puntos, anios_por_punto, dist_punto_segmento
+from dpi.medicion.calculo import indice_punto_mas_cercano, anchos_puntos, anios_por_punto, dist_punto_segmento
 import numpy as np
 from dpi.medicion.modelo import ModeloMedicion, PuntoMedicion, HistorialMedicion, TipoMarca
 from PyQt6.QtWidgets import QWidget, QDialog, QGraphicsView, QGraphicsScene, QPushButton, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox, QDoubleSpinBox, QComboBox, QToolTip, QGraphicsEllipseItem, QDialogButtonBox
@@ -438,13 +438,7 @@ class VistaInteractiva(QGraphicsView):
         return TOLERANCIA_CLICK_SEGMENTO / self.transform().m11()
 
     def _indice_punto_mas_cercano(self, x: float, y: float) -> int | None:
-        tol = self._tolerancia_punto()
-        mejor_idx, mejor_d = None, float("inf")
-        for i, (px, py) in enumerate(self.coordenadas_anillos):
-            d = math.hypot(px - x, py - y)
-            if d < tol and d < mejor_d:
-                mejor_d, mejor_idx = d, i
-        return mejor_idx
+        return indice_punto_mas_cercano(self.coordenadas_anillos, x, y, self._tolerancia_punto())
 
     # =========================================================================
     # Selección múltiple — métodos

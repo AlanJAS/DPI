@@ -119,3 +119,12 @@ def segmento_mas_cercano(coords, x: float, y: float, tol: float) -> tuple[int, f
     if mejor_idx == -1 or mejor_d > tol:
         return None
     return mejor_idx, mejor_t, mejor_d
+
+def indice_punto_mas_cercano(coordenadas, x, y, tol):
+    """Índice del punto más cercano dentro de la tolerancia estricta."""
+    mejor_idx, mejor_d = None, float("inf")
+    for i, (px, py) in enumerate(coordenadas):
+        d = math.hypot(px - x, py - y)
+        if d < tol and d < mejor_d:
+            mejor_d, mejor_idx = d, i
+    return mejor_idx
