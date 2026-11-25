@@ -75,7 +75,7 @@ def _paso_calibracion(self, x, y):
 
     # Ya tenemos los 2 puntos
     p1, p2 = self._calibracion.puntos
-    dist_px = math.hypot(p2[0] - p1[0], p2[1] - p1[1])
+    dist_px = math.dist(p1, p2)
 
     # Dibujar la línea entre los 2 puntos
     pen_linea = QPen(QColor(COLOR_CALIBRACION))
