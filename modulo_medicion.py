@@ -20,7 +20,7 @@ import os
 from dpi.medicion.calculo import anchos_puntos
 import logging
 from dpi.medicion.datos import mediciones_desde_anchos, mediciones_radio
-from modulo_sesion_medicion import guardar_sesion, leer_sesion
+from dpi.medicion.sesion import guardar_sesion, leer_sesion
 
 import cv2
 import numpy as np
