@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import dpi.ciencia.estadistica as _est
 import dpi.ciencia.quiebres as _qb
+from dpi.ciencia.prioridad import clave_prioridad_correccion
 from dpi.ciencia.estadistica import _r_movil
 from dpi.ciencia.cronologia import normalizar_serie_para_tipo
 from dpi.ciencia.constantes import OVERLAP_MINIMO_ANALISIS, OVERLAP_MINIMO_GRAFICO
@@ -787,15 +788,8 @@ def _buscar_y_priorizar(ref, problema, mitad_ventana, max_corr,
             coherentes = generadas[:10]
             es_marginal = True  # ninguna superó el umbral global
 
-    def _clave(sug):
-        dist = abs(int(sug.get("anio", 0)) - int(anio_ref))
-        cercania = max(0.0, 1.0 - dist / 60.0)
-        base = sug.get("r_verificada")
-        if base is None or not np.isfinite(base):
-            base = sug.get("puntaje", sug.get("delta_r", 0.0))
-        return base * (0.5 + cercania) * sug.get("plausibilidad", 1.0)
 
-    coherentes = sorted(coherentes, key=_clave, reverse=True)
+    coherentes = sorted(coherentes, key=lambda sug: clave_prioridad_correccion(sug, anio_ref), reverse=True)
     return coherentes, es_marginal
 
 
