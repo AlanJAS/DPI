@@ -2,7 +2,7 @@
 import os
 import numpy as np
 import pandas as pd
-from constantes import TUCSON_VALOR_FIN, TUCSON_VALOR_FALTANTE, TUCSON_MAX_CHARS_ID
+from dpi.formatos.constantes import TUCSON_VALOR_FIN, TUCSON_VALOR_FALTANTE, TUCSON_MAX_CHARS_ID
 import logging
 logger = logging.getLogger(__name__)
 
