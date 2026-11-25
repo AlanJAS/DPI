@@ -34,8 +34,7 @@ def _insertar_en_segmento(self, x, y):
         mejor_idx = hit[0]
         self.guardar_en_historial()
         self.modelo_medicion.insertar(mejor_idx + 1, (x, y), TipoMarca.NORMAL)
-        self.recalcular_todas_las_distancias()
-        self.progreso_modificado.emit()
+        self.notificar_edicion()
 
 
 def _borrar_punto_cercano(self, x, y):
@@ -44,8 +43,7 @@ def _borrar_punto_cercano(self, x, y):
         self.guardar_en_historial()
         self.modelo_medicion.borrar(idx)
         self._limpiar_anclado()
-        self.recalcular_todas_las_distancias()
-        self.progreso_modificado.emit()
+        self.notificar_edicion()
 
 
 def _limpiar_anclado(self):

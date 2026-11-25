@@ -435,6 +435,10 @@ class VistaInteractiva(QGraphicsView):
         distancias = anchos_puntos(self.modelo_medicion.captura(), self.pixeles_por_mm)
         self.mediciones_actualizadas.emit(distancias)
 
+    def notificar_edicion(self):
+        self.recalcular_todas_las_distancias()
+        self.progreso_modificado.emit()
+
     _dist_punto_segmento = staticmethod(dist_punto_segmento)
 
     def _tolerancia_punto(self) -> float:
