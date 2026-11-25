@@ -4,6 +4,7 @@ modulo_codatacion.py — Panel de Co-datación Visual
 Permite comparar series dendrocronológicas, detectar anillos faltantes o
 sobrantes mediante búsqueda exhaustiva, y aplicar correcciones en memoria.
 """
+from modulo_configuracion_ui import ajustes_ui
 
 import modulo_codatacion_ui
 
@@ -14,7 +15,7 @@ import logging
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
-from modulo_dialogos_archivo import ultima_carpeta
+from modulo_configuracion_ui import ultima_carpeta
 from modulo_widgets import (
     _ensanchar_dialogo, _agregar_hover_anio, _crear_barra_zoom,
     SpinBoxFlechas, SeccionColapsable,
@@ -2403,7 +2404,7 @@ class PanelCodatacion(QWidget):
         """Recuerda tipo y tamaño de letra entre sesiones."""
         try:
             from PyQt6.QtCore import QSettings
-            a = QSettings("MoiCedrus", "DPI")
+            a = ajustes_ui()
             a.setValue("informe/fuente",
                        self.combo_fuente_informe.currentData())
             a.setValue("informe/tamano", self.spin_fuente_informe.value())
@@ -2413,7 +2414,7 @@ class PanelCodatacion(QWidget):
     def _restaurar_pref_fuente(self):
         try:
             from PyQt6.QtCore import QSettings
-            a = QSettings("MoiCedrus", "DPI")
+            a = ajustes_ui()
             fam = a.value("informe/fuente", "", type=str)
             tam = a.value("informe/tamano", 0, type=int)
             if fam:
@@ -2517,7 +2518,7 @@ class PanelCodatacion(QWidget):
                     continue
         try:
             from PyQt6.QtCore import QSettings
-            QSettings("MoiCedrus", "DPI").setValue(
+            ajustes_ui().setValue(
                 "codatacion/carpeta_nulo", os.path.dirname(rutas[0]))
         except Exception:
             pass
@@ -2534,7 +2535,7 @@ class PanelCodatacion(QWidget):
     def _ultima_carpeta_nulo(self) -> str:
         try:
             from PyQt6.QtCore import QSettings
-            r = QSettings("MoiCedrus", "DPI").value(
+            r = ajustes_ui().value(
                 "codatacion/carpeta_nulo", "", type=str)
             return r if r and os.path.isdir(r) else ""
         except Exception:

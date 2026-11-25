@@ -12,6 +12,7 @@ lo que da correlaciones comparables con las suyas.
 """
 
 from __future__ import annotations
+from modulo_configuracion_ui import ajustes_ui
 
 import os
 
@@ -300,7 +301,7 @@ class PestanaCofecha(QWidget):
     # Memoria de la última carpeta usada
     # ------------------------------------------------------------------
     def _ajustes(self) -> QSettings:
-        return QSettings("MoiCedrus", "DPI")
+        return ajustes_ui()
 
     def _ultima_carpeta(self, clave: str = "cofecha/carpeta") -> str:
         ruta = self._ajustes().value(clave, "", type=str)

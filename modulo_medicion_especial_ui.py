@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from collections.abc import Callable
 import os
 import logging
-from modulo_dialogos_archivo import ultima_carpeta
+from modulo_configuracion_ui import ultima_carpeta
 import math
 import cv2
 from modulo_modelo_medicion import PuntoMedicion, TipoMarca

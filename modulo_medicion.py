@@ -6,6 +6,7 @@ Contiene:
   - VistaInteractiva: lienzo con herramientas de marcado, calibración y edición.
   - PestanaImagen: pestaña completa por imagen con panel de co-datación en vivo.
 """
+from modulo_configuracion_ui import ajustes_ui
 
 from modulo_medicion_especial_ui import (ContextoRadio, ContextoImagen,
     ControlPith, ControlEWLW, ControlIntensidad)
@@ -22,7 +23,7 @@ from modulo_sesion_medicion import guardar_sesion, leer_sesion
 
 import cv2
 import numpy as np
-from modulo_dialogos_archivo import ultima_carpeta
+from modulo_configuracion_ui import ultima_carpeta
 import modulo_transformacion as _tr
 from modulo_modelo_medicion import ModeloSesionMedicion, RadioMedicion
 import pandas as pd
@@ -639,7 +640,7 @@ class PestanaImagen(QWidget):
         """Guarda brillo/contraste de la banda activa en el perfil de especie."""
         try:
             especie = self._especie_activa
-            settings = QSettings("MoiCedrus", "DPI")
+            settings = ajustes_ui()
             key = f"banda/{especie}/{self._banda_actual}"
             settings.setValue(f"{key}/brillo", self._slider_brillo.value())
             settings.setValue(f"{key}/contraste", self._slider_contraste.value())
@@ -650,7 +651,7 @@ class PestanaImagen(QWidget):
         """Restaura brillo/contraste guardados para la especie+banda actual."""
         try:
             especie = self._especie_activa
-            settings = QSettings("MoiCedrus", "DPI")
+            settings = ajustes_ui()
             key = f"banda/{especie}/{self._banda_actual}"
             brillo = settings.value(f"{key}/brillo", 0, type=int)
             contraste = settings.value(f"{key}/contraste", 100, type=int)

@@ -7,6 +7,7 @@ Pestañas:
   🧭 Cronología           — generación de cronologías a partir de series .rwl
   📊 Co-Datación          — cofechado estadístico de series contra cronología
 """
+from modulo_configuracion_ui import ajustes_ui
 
 import sys
 import os
@@ -44,7 +45,7 @@ class VentanaAnillos(QMainWindow):
             self.setWindowIcon(icono_app())
         self.setGeometry(100, 100, 1400, 800)
         # Restaurar tema guardado (o detectar tema del sistema)
-        _cfg = QSettings("MoiCedrus", "DendroAnillos")
+        _cfg = ajustes_ui(ventana_principal=True)
         _saved = _cfg.value("tema_oscuro", None)
         if _saved is None:
             # Primera ejecución: arrancar con el tema del escritorio.
@@ -245,7 +246,7 @@ class VentanaAnillos(QMainWindow):
         """Guarda el orden actual de las pestañas (por su texto) para
         restaurarlo la próxima vez que se abra el programa."""
         orden = [self._tabs.tabText(i) for i in range(self._tabs.count())]
-        QSettings("MoiCedrus", "DendroAnillos").setValue(
+        ajustes_ui(ventana_principal=True).setValue(
             "orden_pestanas", orden)
 
     def _restaurar_orden_pestanas(self):
@@ -259,7 +260,7 @@ class VentanaAnillos(QMainWindow):
         currentChanged del propio QTabWidget para evitar parpadeos durante el
         reordenamiento, sin afectar la sincronización etiqueta↔contenido.
         """
-        guardado = QSettings("MoiCedrus", "DendroAnillos").value(
+        guardado = ajustes_ui(ventana_principal=True).value(
             "orden_pestanas")
         if not guardado:
             return
@@ -308,7 +309,7 @@ class VentanaAnillos(QMainWindow):
     def _alternar_tema(self):
         self._modo_oscuro = not self._modo_oscuro
         self._aplicar_estilo()
-        QSettings("MoiCedrus", "DendroAnillos").setValue(
+        ajustes_ui(ventana_principal=True).setValue(
             "tema_oscuro", str(self._modo_oscuro).lower())
 
     def closeEvent(self, event):
@@ -328,7 +329,7 @@ class VentanaAnillos(QMainWindow):
                     QMessageBox.StandardButton.No) != QMessageBox.StandardButton.Yes:
                     event.ignore()
                     return
-        cfg = QSettings("MoiCedrus", "DendroAnillos")
+        cfg = ajustes_ui(ventana_principal=True)
         cfg.setValue("tema_oscuro", str(self._modo_oscuro).lower())
         # Recordar tamaño/posición y si quedó maximizada, para reabrir la
         # ventana como el usuario la dejó (antes siempre volvía a 1400x800).
@@ -339,7 +340,7 @@ class VentanaAnillos(QMainWindow):
 
     def _restaurar_geometria(self):
         """Restaura tamaño/posición y estado maximizado de la sesión previa."""
-        cfg = QSettings("MoiCedrus", "DendroAnillos")
+        cfg = ajustes_ui(ventana_principal=True)
         geo = cfg.value("ventana_geometria")
         if geo is not None:
             try:
@@ -422,7 +423,7 @@ class VentanaAnillos(QMainWindow):
     # ── Imágenes ──────────────────────────────────────────────────────────
 
     def _abrir_imagenes(self):
-        cfg = QSettings("MoiCedrus", "DendroAnillos")
+        cfg = ajustes_ui(ventana_principal=True)
         ultima_carpeta = cfg.value("ultima_carpeta", "")
         rutas, _ = QFileDialog.getOpenFileNames(
             self, "Seleccionar imagen(es)", ultima_carpeta,
