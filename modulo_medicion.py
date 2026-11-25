@@ -9,11 +9,12 @@ Contiene:
 
 import os
 import math
-from modulo_calculo_medicion import anchos_anillos, anios_medicion
+from modulo_calculo_medicion import anchos_puntos
 import json
 import re
 import logging
-import copy
+from modulo_datos_medicion import (mediciones_desde_anchos, mediciones_radio,
+                                   normalizar_radio)
 
 import cv2
 import numpy as np
@@ -249,7 +250,6 @@ class PestanaImagen(QWidget):
         super().__init__()
         self._ventana_padre = ventana_padre
         self.ruta_imagen_actual = ruta_imagen
-        self.datos_medidos: list[dict] = []
         self.caminos_guardados: dict = {}
         self.serie_maestra: pd.DataFrame | None = None
         self.nombre_maestra: str = "Ninguna"
@@ -1517,43 +1517,32 @@ class PestanaImagen(QWidget):
     # Gestión de años (médula / corteza)
     # -------------------------------------------------------------------------
 
-    def _recalcular_anios(self, ancla: str):
-        """
-        Recalcula los años de todas las mediciones a partir del ancla dada.
-        ancla: 'medula' o 'corteza'
-        """
-        if not self.datos_medidos:
-            return
-        n = len(self.datos_medidos)
-        med_a_cor = self.combo_dir.currentIndex() == 0
+    @property
+    def datos_medidos(self):
+        """Proyección calculada; nunca se conserva ni se modifica como estado."""
+        if not all(hasattr(self, n) for n in ("vista", "spin_medula",
+                                                "spin_corteza", "combo_dir")):
+            return []
+        modelo = self.vista.modelo_medicion
+        anchos = anchos_puntos(modelo.captura(), self.vista.pixeles_por_mm)
+        return mediciones_desde_anchos(
+            anchos, self.spin_medula.value(), self.spin_corteza.value(),
+            self.combo_dir.currentIndex() == 0)
 
+    def _recalcular_anios(self, ancla: str):
+        n = len(self.datos_medidos)
+        if not n:
+            return
         self.spin_medula.blockSignals(True)
         self.spin_corteza.blockSignals(True)
-
-        if ancla == "medula":
-            a_med = self.spin_medula.value()
-            for i in range(n):
-                anio = (a_med + i) if med_a_cor else (a_med + n - 1 - i)
-                self.datos_medidos[i]["anio"] = anio
-            # La corteza es el ÚLTIMO punto medido solo si la dirección es
-            # médula→corteza; si es corteza→médula, la corteza es el PRIMER
-            # punto medido. Antes se asumía siempre datos_medidos[-1], lo que
-            # ponía en el spinbox de corteza el año de la MÉDULA cuando la
-            # dirección era corteza→médula, y las etiquetas de la imagen
-            # (que usan el spinbox de corteza) corrían hacia el pasado.
-            anio_corteza = (self.datos_medidos[-1]["anio"] if med_a_cor
-                            else self.datos_medidos[0]["anio"])
-            self.spin_corteza.setValue(anio_corteza)
-        else:  # ancla == "corteza"
-            a_cor = self.spin_corteza.value()
-            for i in range(n):
-                anio = (a_cor - n + 1 + i) if med_a_cor else (a_cor - i)
-                self.datos_medidos[i]["anio"] = anio
-            anio_medula = self.datos_medidos[0]["anio"] if med_a_cor else self.datos_medidos[-1]["anio"]
-            self.spin_medula.setValue(anio_medula)
-
-        self.spin_medula.blockSignals(False)
-        self.spin_corteza.blockSignals(False)
+        try:
+            if ancla == "medula":
+                self.spin_corteza.setValue(self.spin_medula.value() + n - 1)
+            else:
+                self.spin_medula.setValue(self.spin_corteza.value() - n + 1)
+        finally:
+            self.spin_medula.blockSignals(False)
+            self.spin_corteza.blockSignals(False)
         self._guardar_estado()
         self.metadatos_cambiados.emit()
         self._actualizar_grafico_rt()
@@ -1573,40 +1562,25 @@ class PestanaImagen(QWidget):
     # -------------------------------------------------------------------------
 
     def _sincronizar_mediciones(self, lista_anchos: list[float]):
+        n = len(lista_anchos)
         self.spin_medula.blockSignals(True)
         self.spin_corteza.blockSignals(True)
-
-        n = len(lista_anchos)
-        # Ajusta la lista de datos al tamaño actual
-        while len(self.datos_medidos) < n:
-            self.datos_medidos.append({"anio": 0, "ancho_mm": 0.0})
-        while len(self.datos_medidos) > n:
-            self.datos_medidos.pop()
-
-        if n == 0:
-            self.label_estado.setText("Listo para el primer anillo.")
-        else:
-            med_a_cor = self.combo_dir.currentIndex() == 0
-            a_med = self.spin_medula.value()
-            a_cor = self.spin_corteza.value()
-            for i in range(n):
-                anio = (a_med + i) if med_a_cor else (a_cor - i)
-                self.datos_medidos[i]["anio"] = anio
-                self.datos_medidos[i]["ancho_mm"] = lista_anchos[i]
-
-            anio_extremo = self.datos_medidos[-1]["anio"]
-            if med_a_cor:
-                self.spin_corteza.setValue(anio_extremo)
+        try:
+            if not n:
+                self.label_estado.setText("Listo para el primer anillo.")
             else:
-                self.spin_medula.setValue(anio_extremo)
-
-            ultimo = self.datos_medidos[-1]
-            self.label_estado.setText(
-                f"Último: {ultimo['ancho_mm']:.3f} mm (año {ultimo['anio']}) | Total: {n}"
-            )
-
-        self.spin_medula.blockSignals(False)
-        self.spin_corteza.blockSignals(False)
+                if self.combo_dir.currentIndex() == 0:
+                    extremo = self.spin_medula.value() + n - 1
+                    self.spin_corteza.setValue(extremo)
+                else:
+                    extremo = self.spin_corteza.value() - n + 1
+                    self.spin_medula.setValue(extremo)
+                self.label_estado.setText(
+                    f"Último: {lista_anchos[-1]:.3f} mm (año {extremo}) | Total: {n}"
+                )
+        finally:
+            self.spin_medula.blockSignals(False)
+            self.spin_corteza.blockSignals(False)
         self.metadatos_cambiados.emit()
         self._actualizar_grafico_rt()
         self.vista.redibujar_todo()
@@ -2091,46 +2065,23 @@ class PestanaImagen(QWidget):
             return "#5cb85c" if r >= 0.4 else "#f0ad4e" if r >= 0.0 else "#d9534f"
 
         # ── Recopilar series propias ──────────────────────────────────────
-        # IMPORTANTE: recalcular anchos desde coordenadas+es_salto en tiempo real
-        # para evitar usar datos_medidos obsoletos (que pueden haber sido guardados
-        # con bugs de EW/LW anteriores). La función _anchos_desde_coords usa la
-        # misma lógica que recalcular_todas_las_distancias.
-        def _anchos_desde_coords(coords, saltos, anio_medula, anio_corteza,
-                                  med_a_cor, ppm):
-            """Recalcula anchos y años desde coordenadas (misma lógica que recalcular)."""
-            anchos = anchos_anillos(coords, saltos, ppm)
-            return anios_medicion(len(anchos), anio_medula, anio_corteza, med_a_cor), anchos
-
         entradas = []
         for i, (nombre, datos) in enumerate(self.caminos_guardados.items()):
-            dm = datos.get("datos_medidos", [])
+            dm = mediciones_radio(datos, self.vista.pixeles_por_mm)
             if not dm:
                 continue
             color = self._colores_radios[i % len(self._colores_radios)]
-            # Recalcular desde coordenadas si están disponibles
-            coords_g = datos.get("coords", [])
-            saltos_g = datos.get("es_salto", [])
-            if coords_g and saltos_g and len(coords_g) >= 2:
-                anio_ini = dm[0]["anio"] if dm else 0
-                anio_fin = dm[-1]["anio"] if dm else 0
-                med_a_cor = anio_fin >= anio_ini
-                ppm = self.vista.pixeles_por_mm
-                anios_g, anchos_g = _anchos_desde_coords(
-                    [tuple(c) for c in coords_g], saltos_g,
-                    anio_ini, anio_ini, med_a_cor, ppm)
-            else:
-                anios_g  = [d["anio"]     for d in dm]
-                anchos_g = [d["ancho_mm"] for d in dm]
-            entradas.append((nombre, anios_g, anchos_g,
+            entradas.append((nombre, [d["anio"] for d in dm],
+                             [d["ancho_mm"] for d in dm],
                              color, Qt.PenStyle.SolidLine))
 
-        if self.datos_medidos:
+        dm = self.datos_medidos
+        if dm:
             nombre_act = self.input_codigo.text().strip() or "En medición"
             color_act  = self._colores_radios[
                 len(self.caminos_guardados) % len(self._colores_radios)]
-            entradas.append((nombre_act,
-                             [d["anio"]     for d in self.datos_medidos],
-                             [d["ancho_mm"] for d in self.datos_medidos],
+            entradas.append((nombre_act, [d["anio"] for d in dm],
+                             [d["ancho_mm"] for d in dm],
                              color_act, Qt.PenStyle.SolidLine))
 
         # ── Determinar maestra ────────────────────────────────────────────
@@ -2389,18 +2340,6 @@ class PestanaImagen(QWidget):
         self.caminos_guardados[nombre] = {
             "coords": list(self.vista.coordenadas_anillos),
             "es_salto": list(self.vista.es_salto),
-            # deepcopy: cada radio guardado tiene SU PROPIA copia inmutable de
-            # los anchos+años. Antes era list() shallow, que compartía los
-            # dicts con la lista viva — si después algo modificaba esos dicts
-            # (por ejemplo si datos_medidos = datos["datos_medidos"] en
-            # _editar_camino apuntaba a los mismos), el guardado se
-            # corrompía silenciosamente.
-            "datos_medidos": copy.deepcopy(self.datos_medidos),
-            # Guardar el año de médula/corteza y dirección EXPLÍCITAMENTE
-            # (no solo derivados de datos_medidos[0]/[-1]) para evitar
-            # ambigüedad al restaurar — si la dirección era corteza→médula,
-            # los extremos se interpretan al revés. Con estos valores
-            # explícitos, el restore en _editar_camino es robusto.
             "anio_medula": self.spin_medula.value(),
             "anio_corteza": self.spin_corteza.value(),
             "dir_idx": self.combo_dir.currentIndex(),
@@ -2411,7 +2350,6 @@ class PestanaImagen(QWidget):
         self.lista_caminos.addItem(item)
 
         self.vista.limpiar_historial()
-        self.datos_medidos.clear()
         self.vista.modelo_medicion.limpiar()
         self.vista.redibujar_todo()
 
@@ -2440,19 +2378,14 @@ class PestanaImagen(QWidget):
                 return
 
         nombre = items[0].text()
-        datos = self.caminos_guardados.pop(nombre)
+        datos = normalizar_radio(self.caminos_guardados[nombre])
+        if not datos.get("coords"):
+            return QMessageBox.warning(self, "Aviso", "El radio no tiene coordenadas editables.")
+        self.caminos_guardados.pop(nombre)
 
         self.vista.limpiar_historial()
-        self.datos_medidos.clear()
         self.vista.modelo_medicion.limpiar()
         self.vista.redibujar_todo()
-
-        # deepcopy: la lista en datos["datos_medidos"] viene del save
-        # (que ya hizo deepcopy). Aún así, deepcopy acá protege contra
-        # mutaciones futuras de la lista activa que podrían corromper
-        # otros radios guardados que compartieran refs (legacy data).
-        self.datos_medidos = copy.deepcopy(datos["datos_medidos"])
-        self.vista.cargar_camino_activo(datos["coords"], datos["es_salto"])
 
         if nombre in self.vista.items_caminos_inactivos:
             # Remover TODOS los items del radio inactivo, incluyendo los
@@ -2475,35 +2408,21 @@ class PestanaImagen(QWidget):
 
         self.lista_caminos.takeItem(self.lista_caminos.row(items[0]))
 
-        # Restaurar año/dir/etc. Usa los valores EXPLÍCITOS guardados si
-        # existen (saves nuevos), si no cae al método legacy de derivar de
-        # datos_medidos[0]/[-1] (saves viejos sin esos campos).
         self.spin_medula.blockSignals(True)
         self.spin_corteza.blockSignals(True)
         self.combo_dir.blockSignals(True)
-
-        if "dir_idx" in datos:
+        try:
             self.combo_dir.setCurrentIndex(datos["dir_idx"])
-        if "anio_medula" in datos and "anio_corteza" in datos:
-            # Saves nuevos: valores guardados explícitamente
             self.spin_medula.setValue(datos["anio_medula"])
             self.spin_corteza.setValue(datos["anio_corteza"])
-        elif self.datos_medidos:
-            # Saves legacy: derivar de los extremos del datos_medidos
-            med_a_cor = self.combo_dir.currentIndex() == 0
-            if med_a_cor:
-                self.spin_medula.setValue(self.datos_medidos[0]["anio"])
-                self.spin_corteza.setValue(self.datos_medidos[-1]["anio"])
-            else:
-                self.spin_corteza.setValue(self.datos_medidos[0]["anio"])
-                self.spin_medula.setValue(self.datos_medidos[-1]["anio"])
-
-        self.combo_dir.blockSignals(False)
-        self.spin_medula.blockSignals(False)
-        self.spin_corteza.blockSignals(False)
+            self.vista.cargar_camino_activo(datos["coords"], datos["es_salto"])
+        finally:
+            self.combo_dir.blockSignals(False)
+            self.spin_medula.blockSignals(False)
+            self.spin_corteza.blockSignals(False)
 
         self.input_codigo.setText(nombre)
-        self._actualizar_grafico_rt()
+        self.vista.recalcular_todas_las_distancias()
         # IMPORTANTE: emitir metadatos_cambiados para que main_anillos.py
         # sincronice los spinboxes/combo GLOBALES del top bar con los locales
         # (ocultos) recién restaurados. Sin esto, el usuario sigue viendo
@@ -2936,7 +2855,8 @@ class PestanaImagen(QWidget):
         else:
             anomalias = dict(self.caminos_guardados[seleccion].get("anomalias", {}))
             codigo = seleccion
-            datos_med = self.caminos_guardados[seleccion].get("datos_medidos", [])
+            datos_med = mediciones_radio(self.caminos_guardados[seleccion],
+                                         self.vista.pixeles_por_mm)
 
         # Normalizar claves de año a int (al venir de JSON pueden ser str)
         anomalias = {int(k): v for k, v in anomalias.items()}
@@ -3021,7 +2941,6 @@ class PestanaImagen(QWidget):
                 "camino_activo": {
                     "coordenadas": [list(c) for c in self.vista.coordenadas_anillos],
                     "es_salto": list(self.vista.es_salto),
-                    "datos_medidos": self.datos_medidos,
                     "anio_medula": self.spin_medula.value(),
                     "anio_corteza": self.spin_corteza.value(),
                     "dir_idx": self.combo_dir.currentIndex(),
@@ -3053,7 +2972,10 @@ class PestanaImagen(QWidget):
                 # este momento.
                 self._dpi_modo = "guardado"
 
-            self.caminos_guardados = datos.get("caminos_guardados", {})
+            self.caminos_guardados = {
+                nombre: normalizar_radio(radio)
+                for nombre, radio in datos.get("caminos_guardados", {}).items()
+            }
             self.lista_caminos.clear()
             for nombre in self.caminos_guardados:
                 item = QListWidgetItem(nombre)
@@ -3064,19 +2986,24 @@ class PestanaImagen(QWidget):
 
             activo = datos.get("camino_activo", {})
             if activo:
+                activo = normalizar_radio(activo)
                 self.spin_medula.blockSignals(True)
                 self.spin_corteza.blockSignals(True)
-                self.input_codigo.setText(activo.get("codigo", self.input_codigo.text()))
-                self.combo_dir.setCurrentIndex(activo.get("dir_idx", 0))
-                self.spin_medula.setValue(activo.get("anio_medula", activo.get("anio_inicio", 0)))
-                self.spin_corteza.setValue(activo.get("anio_corteza", activo.get("anio_actual", 0)))
-                self.datos_medidos = activo.get("datos_medidos", [])
-                self.vista.limpiar_historial()
-                self.vista.cargar_camino_activo(
-                    activo.get("coordenadas", []), activo.get("es_salto", [])
-                )
-                self.spin_medula.blockSignals(False)
-                self.spin_corteza.blockSignals(False)
+                self.combo_dir.blockSignals(True)
+                try:
+                    self.input_codigo.setText(activo.get("codigo", self.input_codigo.text()))
+                    self.combo_dir.setCurrentIndex(activo["dir_idx"])
+                    self.spin_medula.setValue(activo["anio_medula"])
+                    self.spin_corteza.setValue(activo["anio_corteza"])
+                    self.vista.limpiar_historial()
+                    self.vista.cargar_camino_activo(
+                        activo.get("coordenadas", []), activo.get("es_salto", [])
+                    )
+                finally:
+                    self.combo_dir.blockSignals(False)
+                    self.spin_medula.blockSignals(False)
+                    self.spin_corteza.blockSignals(False)
+                self.vista.recalcular_todas_las_distancias()
 
             self._actualizar_grafico_rt()
             return True
@@ -3111,7 +3038,8 @@ class PestanaImagen(QWidget):
             coords_export = self.vista.coordenadas_anillos
             saltos_export = self.vista.es_salto
         else:
-            datos = self.caminos_guardados[seleccion]["datos_medidos"]
+            datos = mediciones_radio(self.caminos_guardados[seleccion],
+                                     self.vista.pixeles_por_mm)
             codigo = seleccion
             anom_data = self.caminos_guardados[seleccion].get("anomalias", {})
             anomalias_export = anom_data
@@ -4042,7 +3970,8 @@ class PestanaImagen(QWidget):
         ppm      = self.vista.pixeles_por_mm
         banda    = self._bi_banda
         canales  = list(self._bi_canales)
-        n_anillos = len(self.datos_medidos)
+        anios_capturados = [d["anio"] for d in self.datos_medidos]
+        n_anillos = len(anios_capturados)
 
         dlg = _DialogoProgreso("Calculando intensidad de color", parent=self)
         dlg.show()
@@ -4079,7 +4008,7 @@ class PestanaImagen(QWidget):
             dlg.close()
             self._bi_worker = None  # liberar referencia
             for k in range(min(len(resultados), n_anillos)):
-                resultados[k]["anio"] = self.datos_medidos[k]["anio"]
+                resultados[k]["anio"] = anios_capturados[k]
             self._bi_datos = resultados
             self.btn_guardar_bi.setEnabled(bool(resultados))
             self.btn_graficar_bi.setEnabled(bool(resultados))
