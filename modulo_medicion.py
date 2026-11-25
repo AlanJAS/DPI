@@ -638,29 +638,30 @@ class PestanaImagen(QWidget):
     # -------------------------------------------------------------------------
 
     def set_modo(self, modo: ModoMedicion):
-        # Caso especial: si estamos en ModoMedicion.SELECCIONAR con selección
-        # activa y el usuario hace clic en alguno de los botones de
-        # acción de la barra (Borrar / Salto / Quiebre), se ejecuta la
-        # operación en BULK sobre la selección en vez de cambiar el modo
-        # — exactamente lo que pidió el usuario para evitar duplicar
-        # botones en el panel flotante.
-        if (self.vista.modo_actual == ModoMedicion.SELECCIONAR
-                and self.vista._puntos_seleccionados):
-            if modo == ModoMedicion.BORRAR:
-                self.vista._ejecutar_borrar_seleccionados()
-                modo = ModoMedicion.MEDIR  # tras la acción volver a MEDIR
-            elif modo == ModoMedicion.SALTO:
-                self.vista._ejecutar_convertir_a_salto()
-                modo = ModoMedicion.MEDIR
-            elif modo == ModoMedicion.ESPACIO:
-                self.vista._ejecutar_convertir_a_quiebre()
-                modo = ModoMedicion.MEDIR
+        modo = self.vista.aplicar_accion_seleccion(modo)
+        self.vista.cambiar_modo(modo)
+        self._reflejar_modo_vista(modo)
 
+    def _reflejar_modo_vista(self, modo):
         btn = self._botones_modo.get(modo)
         if btn:
             btn.setChecked(True)
-        self.vista.cambiar_modo(modo)
         self.vista.setFocus()
+
+    def _datacion_activa(self):
+        if not all(hasattr(self, n) for n in ("spin_medula", "spin_corteza", "combo_dir")):
+            return None
+        return self.spin_medula.value(), self.spin_corteza.value(), self.combo_dir.currentIndex() == 0
+
+    def _tipo_anomalia_activo(self):
+        combo = getattr(self, "combo_tipo_anomalia", None)
+        return combo.currentData() if combo is not None else None
+
+    def _configuracion_pith(self):
+        return self._pith_n_int, self._pith_metodo_calculo
+
+    def _origen_calibracion(self, origen):
+        self._dpi_modo = origen
 
     def _deshacer(self):
         self.vista.deshacer_ultimo()

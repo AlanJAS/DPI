@@ -227,10 +227,20 @@ class VistaInteractiva(QGraphicsView):
 
     mediciones_actualizadas = pyqtSignal(list)
     progreso_modificado = pyqtSignal()
+    estado_cambiado = pyqtSignal(str)
+    modo_cambiado = pyqtSignal(object)
+    anomalias_modificadas = pyqtSignal()
+    confirmar_pith_solicitado = pyqtSignal()
+    origen_calibracion_cambiado = pyqtSignal(str)
+    guardado_solicitado = pyqtSignal()
+    autodeteccion_solicitada = pyqtSignal(object, object, object, object)
 
-    def __init__(self, escena: QGraphicsScene, pestana_padre: "PestanaImagen"):
-        super().__init__(escena, pestana_padre)
-        self._pestana = pestana_padre
+    def __init__(self, escena: QGraphicsScene, parent=None, *, modelo=None,
+                 datacion=lambda: None, tipo_anomalia=lambda: None,
+                 configuracion_pith=lambda: (5, "rg"), mediciones=lambda: ()):
+        super().__init__(escena, parent)
+        self._obtener_datacion = datacion
+        self._obtener_tipo_anomalia = tipo_anomalia
 
         self.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
@@ -254,7 +264,7 @@ class VistaInteractiva(QGraphicsView):
         )
 
         # Estado de medición
-        self.modelo_medicion = pestana_padre.modelo_sesion.activo if hasattr(pestana_padre, "modelo_sesion") else ModeloMedicion()
+        self.modelo_medicion = modelo if modelo is not None else ModeloMedicion()
         self.puntos_calibracion: list[tuple[float, float]] = []
         # Items visuales de calibración (puntos, línea, texto) — se limpian
         # al cancelar/aceptar/reiniciar la calibración.
@@ -310,10 +320,7 @@ class VistaInteractiva(QGraphicsView):
             self.scene, self.viewport, self._escala_vista,
             lambda: self.coordenadas_anillos, lambda: self.pixeles_por_mm,
             lambda: (self._datacion_render() or (0, 0, True))[2],
-            lambda: (getattr(pestana_padre, '_pith_n_int', 5),
-                     getattr(pestana_padre, '_pith_metodo_calculo', 'rg')),
-            lambda: pestana_padre.datos_medidos,
-            lambda mensaje: pestana_padre.label_estado.setText(mensaje))
+            configuracion_pith, mediciones, self.estado_cambiado.emit)
 
         # ── Herramienta de selección múltiple ──
         # Permite al usuario seleccionar varios anillos a la vez (clic
@@ -382,6 +389,22 @@ class VistaInteractiva(QGraphicsView):
     # Modos
     # -------------------------------------------------------------------------
 
+    def _cambiar_modo_usuario(self, modo):
+        self.cambiar_modo(modo)
+        self.modo_cambiado.emit(modo)
+
+    def aplicar_accion_seleccion(self, modo):
+        """Aplica acciones masivas desde la barra sin exponer la selección."""
+        if self.modo_actual != ModoMedicion.SELECCIONAR or not self._puntos_seleccionados:
+            return modo
+        acciones = {ModoMedicion.BORRAR: self._ejecutar_borrar_seleccionados,
+                    ModoMedicion.SALTO: self._ejecutar_convertir_a_salto,
+                    ModoMedicion.ESPACIO: self._ejecutar_convertir_a_quiebre}
+        if modo in acciones:
+            acciones[modo]()
+            return ModoMedicion.MEDIR
+        return modo
+
     def cambiar_modo(self, nuevo_modo: ModoMedicion):
         modo_anterior = self.modo_actual  # capturar antes de asignar
         self.modo_actual = nuevo_modo
@@ -434,9 +457,6 @@ class VistaInteractiva(QGraphicsView):
             self._limpiar_seleccion_completa()
             self._mostrar_panel_seleccion(False)
 
-        if nuevo_modo not in (ModoMedicion.MEDIR, ModoMedicion.SALTO) and self._linea_guia:
-            self.scene().removeItem(self._linea_guia)
-            self._linea_guia = None
         if nuevo_modo not in (ModoMedicion.MEDIR, ModoMedicion.SALTO) and self._linea_guia:
             self.scene().removeItem(self._linea_guia)
             self._linea_guia = None
@@ -628,11 +648,7 @@ class VistaInteractiva(QGraphicsView):
             return 0.8
 
     def _datacion_render(self):
-        try:
-            return (self._pestana.spin_medula.value(), self._pestana.spin_corteza.value(),
-                    self._pestana.combo_dir.currentIndex() == 0)
-        except AttributeError:
-            return None
+        return self._obtener_datacion()
 
     def redibujar_todo(self):
         self._render.redibujar_todo(self.modelo_medicion.captura(), self.pixeles_por_mm,
@@ -641,12 +657,10 @@ class VistaInteractiva(QGraphicsView):
 
     def _anio_en_indice(self, idx: int) -> int | None:
         """Devuelve el año calendario del punto en coordenadas_anillos[idx], o None."""
-        try:
-            anio_medula = self._pestana.spin_medula.value()
-            anio_corteza = self._pestana.spin_corteza.value()
-            medula_a_corteza = self._pestana.combo_dir.currentIndex() == 0
-        except Exception:
+        datacion = self._datacion_render()
+        if datacion is None:
             return None
+        anio_medula, anio_corteza, medula_a_corteza = datacion
         anios, _ = anios_por_punto(self.modelo_medicion.captura(),
             self.pixeles_por_mm, anio_medula, anio_corteza, medula_a_corteza)
         return anios[idx] if 0 <= idx < len(anios) else None
@@ -1001,7 +1015,7 @@ class VistaInteractiva(QGraphicsView):
             if modo_previo not in (ModoMedicion.MEDIR, ModoMedicion.SALTO):
                 self.modo_actual = modo_previo
                 try:
-                    self._pestana._botones_modo[modo_previo].setChecked(True)
+                    self.modo_cambiado.emit(modo_previo)
                 except Exception:
                     pass
 
@@ -1050,7 +1064,7 @@ class VistaInteractiva(QGraphicsView):
 
         # Obtener tipo activo desde el combo de la pestaña
         try:
-            tipo_activo = self._pestana.combo_tipo_anomalia.currentData()
+            tipo_activo = self._obtener_tipo_anomalia()
         except Exception:
             return
         if not tipo_activo:
@@ -1066,7 +1080,7 @@ class VistaInteractiva(QGraphicsView):
 
         self._dibujar_anomalias()
         try:
-            self._pestana._anomalias_modificadas()
+            self.anomalias_modificadas.emit()
         except Exception:
             pass
 
@@ -1109,13 +1123,10 @@ class VistaInteractiva(QGraphicsView):
         coords = self.coordenadas_anillos
         if not coords or len(coords) < 2:
             return mapa
-        try:
-            pestana = self._pestana
-            anio_medula = pestana.spin_medula.value()
-            anio_corteza = pestana.spin_corteza.value()
-            med_a_cor = pestana.combo_dir.currentIndex() == 0
-        except Exception:
+        datacion = self._datacion_render()
+        if datacion is None:
             return mapa
+        anio_medula, anio_corteza, med_a_cor = datacion
 
         anios, cierres = anios_por_punto(self.modelo_medicion.captura(),
             self.pixeles_por_mm, anio_medula, anio_corteza, med_a_cor)
@@ -1172,7 +1183,7 @@ class VistaInteractiva(QGraphicsView):
         if hit is None:
             if not coords:
                 try:
-                    self._pestana.label_estado.setText(
+                    self.estado_cambiado.emit(
                         "↔ Mide al menos un punto antes de insertar un quiebre.")
                 except Exception:
                     pass
@@ -1192,7 +1203,7 @@ class VistaInteractiva(QGraphicsView):
                 self.recalcular_todas_las_distancias()
                 self.progreso_modificado.emit()
                 try:
-                    self._pestana.label_estado.setText(
+                    self.estado_cambiado.emit(
                         "↔ Inicio del quiebre marcado. Haz clic en el borde final.")
                 except Exception:
                     pass
@@ -1207,9 +1218,9 @@ class VistaInteractiva(QGraphicsView):
             self.progreso_modificado.emit()
             try:
                 self._resaltar_anclado(len(self.coordenadas_anillos) - 1)
-                self._pestana.label_estado.setText(
+                self.estado_cambiado.emit(
                     "↔ Quiebre marcado. Haz clic en el límite final del anillo.")
-                self._pestana.set_modo(ModoMedicion.MEDIR)
+                self._cambiar_modo_usuario(ModoMedicion.MEDIR)
             except Exception:
                 pass
             return
@@ -1233,7 +1244,7 @@ class VistaInteractiva(QGraphicsView):
             self._espacio_seg1 = seg_idx
             self._idx_espacio_inicio = seg_idx
             try:
-                self._pestana.label_estado.setText(
+                self.estado_cambiado.emit(
                     "↔ Inicio del espacio marcado. Haz clic en el borde final.")
             except Exception:
                 pass
@@ -1258,7 +1269,7 @@ class VistaInteractiva(QGraphicsView):
 
         if math.hypot(p1[0]-p2[0], p1[1]-p2[1]) < 2:
             try:
-                self._pestana.label_estado.setText("↔ Puntos demasiado cercanos. Cancelado.")
+                self.estado_cambiado.emit("↔ Puntos demasiado cercanos. Cancelado.")
             except Exception:
                 pass
             return
@@ -1267,7 +1278,7 @@ class VistaInteractiva(QGraphicsView):
         for j in range(s1 + 1, s2 + 1):
             if j < len(self.es_salto) and self.es_salto[j] is False:
                 try:
-                    self._pestana.label_estado.setText(
+                    self.estado_cambiado.emit(
                         "↔ El espacio no puede cruzar un límite de anillo.")
                 except Exception:
                     pass
@@ -1308,9 +1319,9 @@ class VistaInteractiva(QGraphicsView):
         self.recalcular_todas_las_distancias()
         self.progreso_modificado.emit()
         try:
-            self._pestana.label_estado.setText(
+            self.estado_cambiado.emit(
                 "↔ Quiebre insertado. Tramo amarillo no cuenta. Ctrl+Z para deshacer.")
-            self._pestana.set_modo(ModoMedicion.MEDIR)
+            self._cambiar_modo_usuario(ModoMedicion.MEDIR)
         except Exception:
             pass
 
@@ -1328,7 +1339,7 @@ class VistaInteractiva(QGraphicsView):
         hit = self._segmento_mas_cercano(x, y) if len(coords) >= 2 else None
         if hit is None:
             try:
-                self._pestana.label_estado.setText(
+                self.estado_cambiado.emit(
                     "🍂 Haz clic sobre la línea azul del anillo a dividir.")
             except Exception:
                 pass
@@ -1339,7 +1350,7 @@ class VistaInteractiva(QGraphicsView):
         val_seg = self.es_salto[seg_idx + 1] if seg_idx + 1 < len(self.es_salto) else False
         if _es_amarillo(val_seg):
             try:
-                self._pestana.label_estado.setText(
+                self.estado_cambiado.emit(
                     "🍂 No se puede insertar EW/LW en un tramo de quiebre o salto.")
             except Exception:
                 pass
@@ -1356,7 +1367,7 @@ class VistaInteractiva(QGraphicsView):
         for j in range(ini_anillo + 1, fin_anillo):
             if j < len(self.es_salto) and _es_ewlw(self.es_salto[j]):
                 try:
-                    self._pestana.label_estado.setText(
+                    self.estado_cambiado.emit(
                         "🍂 Este anillo ya tiene un límite EW/LW. "
                         "Usa 🖐 Mover para reposicionarlo.")
                 except Exception:
@@ -1375,7 +1386,7 @@ class VistaInteractiva(QGraphicsView):
         self.recalcular_todas_las_distancias()
         self.progreso_modificado.emit()
         try:
-            self._pestana.label_estado.setText(
+            self.estado_cambiado.emit(
                 "🍂 Límite EW/LW insertado. Usa 🖐 Mover para ajustarlo. "
                 "Ctrl+Z para deshacer.")
         except Exception:
@@ -1393,15 +1404,15 @@ class VistaInteractiva(QGraphicsView):
         if self.modo_actual == ModoMedicion.PITH:
             if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
                 try:
-                    self._pestana._confirmar_estimacion_pith()
+                    self.confirmar_pith_solicitado.emit()
                 except Exception:
                     pass
                 return
             if event.key() == Qt.Key.Key_Escape:
                 self._limpiar_items_pith()
                 try:
-                    self._pestana.set_modo(ModoMedicion.MEDIR)
-                    self._pestana.label_estado.setText("Estimación cancelada.")
+                    self._cambiar_modo_usuario(ModoMedicion.MEDIR)
+                    self.estado_cambiado.emit("Estimación cancelada.")
                 except Exception:
                     pass
                 return
@@ -1410,7 +1421,7 @@ class VistaInteractiva(QGraphicsView):
                 self._idx_espacio_inicio = None
                 self._limpiar_espacio()
                 try:
-                    self._pestana.label_estado.setText("↔ Selección de espacio cancelada.")
+                    self.estado_cambiado.emit("↔ Selección de espacio cancelada.")
                 except Exception:
                     pass
                 return
@@ -1424,7 +1435,7 @@ class VistaInteractiva(QGraphicsView):
             if event.key() == Qt.Key.Key_Escape:
                 self._limpiar_seleccion_completa()
                 try:
-                    self._pestana.set_modo(ModoMedicion.MEDIR)
+                    self._cambiar_modo_usuario(ModoMedicion.MEDIR)
                 except Exception:
                     pass
                 return
@@ -1486,7 +1497,7 @@ class VistaInteractiva(QGraphicsView):
         # Solo hay un punto: pedir el segundo
         if len(self.puntos_calibracion) == 1:
             try:
-                self._pestana.label_estado.setText(
+                self.estado_cambiado.emit(
                     "📏 Calibración: Haz clic en el segundo punto (final de la distancia conocida).")
             except Exception:
                 pass
@@ -1614,7 +1625,7 @@ class VistaInteractiva(QGraphicsView):
             # Marcar el origen del DPI como "calibrado por regla"
             # para que el diálogo de info lo refleje correctamente.
             try:
-                self._pestana._dpi_modo = "regla"
+                self.origen_calibracion_cambiado.emit("regla")
             except Exception:
                 pass
             QMessageBox.information(
@@ -1625,7 +1636,7 @@ class VistaInteractiva(QGraphicsView):
             )
             # La señal sincroniza años, gráfico y escena antes del guardado.
             self.recalcular_todas_las_distancias()
-            self._pestana._guardar_estado()
+            self.guardado_solicitado.emit()
             # Actualizar la etiqueta de la línea con los mm calibrados así
             # el usuario tiene un recordatorio visual de que la imagen
             # ya está calibrada y a qué escala.
@@ -1635,7 +1646,7 @@ class VistaInteractiva(QGraphicsView):
             self._limpiar_items_calibracion()
 
         self._objetivo_calibracion_mm = None
-        self._pestana.set_modo(ModoMedicion.MEDIR)
+        self._cambiar_modo_usuario(ModoMedicion.MEDIR)
         self.progreso_modificado.emit()
 
     def _actualizar_etiqueta_calibracion(self, dist_px: float, dist_mm: float):
@@ -1769,7 +1780,7 @@ class VistaInteractiva(QGraphicsView):
 
         if es_salto_modo:
             self._limpiar_anclado()
-            self._pestana.set_modo(ModoMedicion.MEDIR)
+            self._cambiar_modo_usuario(ModoMedicion.MEDIR)
 
         self.progreso_modificado.emit()
 
@@ -2107,10 +2118,7 @@ class VistaInteractiva(QGraphicsView):
         self._items_autodetect.append(linea)
 
         # Delegar a la pestaña con información del ancla
-        self._pestana._ejecutar_autodeteccion(
-            p1, p2, self._imagen_bgr,
-            idx_ancla=self._idx_ancla_autodetect,
-        )
+        self.autodeteccion_solicitada.emit(p1, p2, self._imagen_bgr, self._idx_ancla_autodetect)
 
         # Limpiar y volver a Medir
         for item in self._items_autodetect:

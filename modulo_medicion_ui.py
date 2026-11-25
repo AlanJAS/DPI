@@ -575,7 +575,16 @@ def _construir_splitter_principal(self) -> QWidget:
     # Splitter interno para vista principal + vista dividida
     self._splitter_vistas = QSplitter(Qt.Orientation.Horizontal)
     self.escena = QGraphicsScene()
-    self.vista = VistaInteractiva(self.escena, self)
+    self.vista = VistaInteractiva(self.escena, self, modelo=self.modelo_sesion.activo,
+        datacion=self._datacion_activa, tipo_anomalia=self._tipo_anomalia_activo,
+        configuracion_pith=self._configuracion_pith, mediciones=lambda: self.datos_medidos)
+    self.vista.estado_cambiado.connect(self.label_estado.setText)
+    self.vista.modo_cambiado.connect(self._reflejar_modo_vista)
+    self.vista.anomalias_modificadas.connect(self._anomalias_modificadas)
+    self.vista.confirmar_pith_solicitado.connect(self._confirmar_estimacion_pith)
+    self.vista.origen_calibracion_cambiado.connect(self._origen_calibracion)
+    self.vista.guardado_solicitado.connect(self._guardar_estado)
+    self.vista.autodeteccion_solicitada.connect(self._ejecutar_autodeteccion)
     self.vista.mediciones_actualizadas.connect(self._sincronizar_mediciones)
     self._timer_autoguardado = QTimer(self)
     self._timer_autoguardado.setSingleShot(True)
