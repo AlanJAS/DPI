@@ -39,6 +39,15 @@ logger = logging.getLogger(__name__)
 # MATEMÁTICA DE AJUSTE DE CÍRCULO
 # =============================================================================
 
+def ajuste_degenerado(puntos, radio):
+    """Detecta un radio mayor que 50 veces la separación máxima medida."""
+    seg_max = 0.0
+    for i, p_i in enumerate(puntos):
+        for p_j in puntos[i + 1:]:
+            seg_max = max(seg_max, math.hypot(p_j[0]-p_i[0], p_j[1]-p_i[1]))
+    return seg_max > 0 and radio > seg_max * 50
+
+
 def ajustar_circulo_minimos_cuadrados(
     puntos: list[tuple[float, float]]
 ) -> tuple[float, float, float] | None:
