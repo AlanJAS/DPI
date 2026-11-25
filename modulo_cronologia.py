@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from modulo_estadistica import (
     serie_anual, agrupar_por_arbol, rbar_entre_arboles, correlaciones_pares, calcular_eps, pearson,
+    BIWEIGHT_C, media_biweight,
 )
 
 
@@ -13,42 +14,9 @@ def _bloques_anuales(serie):
     return [s.iloc[a:b] for a, b in zip([0, *cortes], [*cortes, len(s)]) if a < b]
 
 
-def _biweight_mean(values, c: float = 9.0, minimo: int = 6) -> float:
-    """Media biponderada de Tukey, al modo de ARSTAN.
-
-    Dos reglas verificadas contra corridas reales de ARSTAN:
-
-    **Mínimo de seis observaciones.** Con menos se devuelve la MEDIANA. Se
-    estableció con una corrida sobre un archivo de exactamente tres series: en
-    los 198 años con las tres presentes, la cronología cruda de ARSTAN es
-    exactamente la mediana, con r = 1,000000 y diferencia cero. No es
-    aproximación, es identidad. La razón es sensata: con pocos datos la
-    desviación absoluta mediana es un estimador pésimo de la escala —con tres
-    valores es la menor de las dos distancias al central— y la ponderación
-    resultante es arbitraria.
-
-    **Constante 9**, alineada con `tbrm` de dplR, que es la referencia
-    publicada del área.
-
-    Medido sobre la colección de 19 series contra la corrida real, la
-    diferencia media con la cronología cruda de ARSTAN baja de 0,0218 a
-    0,0094 y la correlación sube de 0,99699 a 0,99937.
-    """
-    x = np.asarray(values, dtype=float)
-    x = x[np.isfinite(x)]
-    if len(x) == 0:
-        return np.nan
-    if len(x) < max(int(minimo), 1):
-        return float(np.median(x))
-    m = np.median(x)
-    mad = np.median(np.abs(x - m))
-    if mad <= 0:
-        return float(m)
-    u = (x - m) / (c * mad + 1e-6)
-    w = np.where(np.abs(u) <= 1, (1 - u ** 2) ** 2, 0.0)
-    if w.sum() <= 0:
-        return float(m)
-    return float(np.sum(w * x) / np.sum(w))
+# Adaptador histórico: el cálculo reside únicamente en modulo_estadistica.
+def _biweight_mean(values, c: float = BIWEIGHT_C, minimo: int = 6) -> float:
+    return media_biweight(values, c=c, minimo=minimo)
 
 
 from scipy.linalg import solveh_banded
@@ -1098,7 +1066,8 @@ def _construir_cronologia_desde_series(
     tipo = (tipo_cronologia or "raw").lower()
 
     if agg in {"biweight", "robusta", "robust"}:
-        valores = df.apply(lambda row: _biweight_mean(row.dropna().values), axis=1)
+        valores = pd.Series(media_biweight(df.to_numpy(dtype=float), axis=1),
+                            index=df.index)
     elif agg in {"median", "mediana"}:
         valores = df.median(axis=1, skipna=True)
     else:

@@ -5,6 +5,64 @@ from constantes import OVERLAP_MINIMO_GRAFICO
 from modulo_codigos import clave_codigo_dendro
 
 
+BIWEIGHT_C = 9.0
+
+
+def media_biweight(valores, c: float = BIWEIGHT_C, minimo: int = 6, *, axis=None):
+    """Media biponderada de Tukey, escalar o vectorizada por un eje.
+
+    Excluye NaN e infinitos. Sin observaciones devuelve NaN; con menos de
+    seis (por defecto), MAD nula o sin pesos válidos devuelve la mediana.
+    Usa C=9, escala C*MAD + 1e-6 y corte inclusivo, como en tbrm de dplR.
+    El umbral de seis conserva la regla de cronología validada con ARSTAN.
+    Con axis=None devuelve float; con un eje, un ndarray de resultados.
+    """
+    x = np.asarray(valores, dtype=float)
+    if not np.isfinite(c) or c <= 0:
+        raise ValueError("La constante biweight debe ser positiva y finita")
+    minimo = max(int(minimo), 1)
+    if axis is None:
+        filas = x.reshape(1, x.size)
+        forma = ()
+    else:
+        x = np.moveaxis(x, axis, -1)
+        forma = x.shape[:-1]
+        filas = x.reshape(int(np.prod(forma, dtype=np.intp)), x.shape[-1])
+
+    finito = np.isfinite(filas)
+    conteo = finito.sum(axis=1)
+    seguro = np.where(finito, filas, np.nan)
+    resultado = np.full(len(filas), np.nan)
+    hay = conteo > 0
+    if hay.any():
+        resultado[hay] = np.nanmedian(seguro[hay], axis=1)
+
+    candidatos = np.flatnonzero(conteo >= minimo)
+    if candidatos.size:
+        datos = seguro[candidatos]
+        mediana = resultado[candidatos]
+        with np.errstate(over="ignore", invalid="ignore"):
+            mad = np.nanmedian(np.abs(datos - mediana[:, None]), axis=1)
+            escala = c * mad + 1e-6
+        usable = (mad > 0) & np.isfinite(escala) & (escala > 0)
+        indices = candidatos[usable]
+        if indices.size:
+            datos = datos[usable]
+            with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+                u = (datos - mediana[usable, None]) / escala[usable, None]
+                u = np.where(np.abs(u) <= 1, u, np.nan)
+                pesos = np.where(np.isfinite(u), (1 - u * u) ** 2, 0.0)
+                suma = pesos.sum(axis=1)
+                numerador = (pesos * np.where(np.isfinite(datos), datos, 0.0)).sum(axis=1)
+                media = numerador / suma
+            validos = (suma > 0) & np.isfinite(media)
+            resultado[indices[validos]] = media[validos]
+
+    if axis is None:
+        return float(resultado[0])
+    return resultado.reshape(forma)
+
+
 def centrar_escalar_correlacion(x):
     """Traslación y escala positivas comunes; conserva los no finitos como NaN."""
     x = np.asarray(x, dtype=float)

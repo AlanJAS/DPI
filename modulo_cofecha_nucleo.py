@@ -31,10 +31,8 @@ from __future__ import annotations
 import numpy as np
 from modulo_indice_anual import validar_anios
 from modulo_estadistica import (pearson, pearson_desde_sumas,
-                                centrar_escalar_correlacion)
-
-# Constante de sintonía del biweight (la misma de Cook & Kairiukstis)
-BIWEIGHT_C = 9.0
+                                centrar_escalar_correlacion,
+                                BIWEIGHT_C, media_biweight)
 
 
 # ---------------------------------------------------------------------------
@@ -149,74 +147,8 @@ class Maestro:
 
 
 def _media_biweight(mat: np.ndarray, c: float = BIWEIGHT_C) -> np.ndarray:
-    """Media biweight por año (robusta a series aberrantes)."""
-    finito = np.isfinite(mat)
-    conteo = finito.sum(axis=1)
-    seguro = np.where(finito, mat, np.nan)
-    with np.errstate(invalid="ignore"):
-        mediana = np.full(mat.shape[0], np.nan)
-        hay = conteo > 0
-        if hay.any():
-            mediana[hay] = np.nanmedian(seguro[hay], axis=1)
-        mad = np.full(mat.shape[0], np.nan)
-        if hay.any():
-            mad[hay] = np.nanmedian(
-                np.abs(seguro[hay] - mediana[hay, None]), axis=1)
-
-    # Alineada con `tbrm` de dplR (src/tbrm.c), que es la referencia del área:
-    #   div_const = mediana(|x − mediana|) · C + 1e-6
-    #   u = (x − mediana) / div_const;  si |u| ≤ 1:  w = (1 − u²)²
-    #
-    # Dos detalles que veníamos haciendo distinto: dplR suma 1e-6 a la escala,
-    # lo que evita la división por cero cuando la MAD es nula sin tener que
-    # tratar ese caso aparte; y el corte del peso es INCLUSIVO (|u| ≤ 1), no
-    # estricto. Son diferencias chicas, pero esta media es la agregación por
-    # omisión de la pestaña de cronología y conviene que dé lo mismo que dplR.
-    # MÍNIMO DE SEIS OBSERVACIONES para usar la biponderada; con menos se
-    # devuelve la MEDIANA.
-    #
-    # Es lo que hace ARSTAN, y se estableció con una corrida suya sobre un
-    # archivo de exactamente tres series: en los 198 años con las tres
-    # presentes, su cronología cruda es **exactamente la mediana**, con
-    # r = 1,000000 y diferencia cero. No es aproximación: es identidad.
-    #
-    # La razón es sensata. Con pocos datos la desviación absoluta mediana es
-    # un estimador pésimo de la escala —con tres valores es directamente la
-    # menor de las dos distancias al central— y la ponderación resultante es
-    # arbitraria. La mediana es más honesta ahí.
-    #
-    # El umbral se midió sobre la colección de 19 series, comparando con la
-    # corrida real: la diferencia media con la cronología cruda de ARSTAN baja
-    # de 0,0218 a 0,0094, y la correlación sube de 0,99699 a 0,99937.
-    escala_v = mad * c + 1e-6
-    usable = np.isfinite(escala_v) & (escala_v > 0) & (conteo >= 6)
-    pesos = finito.astype(float)          # media simple donde no aplica
-    if usable.any():
-        escala = np.where(usable, escala_v, np.nan)[:, None]
-        with np.errstate(invalid="ignore", divide="ignore"):
-            u = (mat - mediana[:, None]) / escala
-        w = np.where(np.abs(u) <= 1, (1.0 - u * u) ** 2, 0.0)
-        w = np.where(finito & np.isfinite(w), w, 0.0)
-        pesos = np.where(usable[:, None], w, pesos)
-
-    # Donde no se usó la biponderada (menos de seis series), la mediana.
-    out_med = np.full(mat.shape[0], np.nan)
-    hay_alguno = conteo > 0
-    if hay_alguno.any():
-        with np.errstate(invalid="ignore"):
-            out_med[hay_alguno] = np.nanmedian(mat[hay_alguno], axis=1)
-
-    suma = pesos.sum(axis=1)
-    muertos = suma <= 0
-    if muertos.any():
-        pesos[muertos] = finito[muertos].astype(float)
-        suma = pesos.sum(axis=1)
-
-    x0 = np.where(finito, mat, 0.0)
-    with np.errstate(invalid="ignore", divide="ignore"):
-        out = np.where(suma > 0, (pesos * x0).sum(axis=1) / suma, np.nan)
-    # Donde no se aplicó la biponderada, manda la mediana.
-    return np.where(usable, out, out_med)
+    """Adaptador por filas para el maestro robusto de COFECHA."""
+    return media_biweight(mat, c=c, axis=1)
 
 
 def verificar_leave_one_out(mat: np.ndarray, muestras: int = 12,
