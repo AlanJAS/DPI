@@ -1626,93 +1626,11 @@ class PanelCodatacion(QWidget):
     # -------------------------------------------------------------------------
 
     def _transformar_para_correlacion(self, serie_mm: pd.Series, es_crono: bool) -> pd.Series:
-        """Transformación para calcular la r de correlación, gobernada por el
-        botón modo COFECHA.
-
-        Punto CLAVE (corrige un bug grave): para que la r coincida con COFECHA,
-        la serie y la cronología deben quedar en el MISMO espacio. Una
-        cronología residual se construyó con spline+AR (sin log); si a la
-        serie se le aplicaba `aplicar_modo_cofecha` (spline+LOG+AR), quedaban
-        en espacios distintos y la r se desplomaba (p. ej. 0.90 → 0.51, o peor
-        con datos reales). La solución es estandarizar la SERIE cruda con el
-        MISMO método que usó la cronología activa, y NO re-procesar la
-        cronología (ya está estandarizada).
-
-        - Modo COFECHA apagado: sin transformación (la serie tal como se subió).
-        - Modo COFECHA encendido:
-            • Cronología (es_crono=True): se usa tal cual (ya estandarizada;
-              re-procesarla la dañaría). El checkbox 'Cronología' fuerza a
-              estandarizarla igual, para el caso de una cronología cargada
-              SIN estandarizar (anchos crudos en mm).
-            • Serie cruda (es_crono=False): se estandariza con el método de la
-              cronología activa (residual/standard + spline), quedando en su
-              mismo espacio. Si no hay cronología activa comparable, se usa la
-              estandarización COFECHA clásica (simétrica entre dos series).
-          El checkbox 'Serie' permite desactivar la estandarización de la
-          serie (usarla cruda) si el usuario ya la subió estandarizada.
-        """
-        s_raw = pd.to_numeric(serie_mm, errors="coerce").astype(float).dropna()
-        if not self.btn_modo_cofecha.isChecked():
-            return s_raw
-
-        if es_crono:
-            # Por defecto la cronología ya vive en su espacio estandarizado
-            # (índice residual/standard), así que NO se re-procesa: aplicarle
-            # spline+log+AR encima la dañaría y desplomaría la r.
-            #
-            # El checkbox 'Cronología' es la salida de escape para el caso en
-            # que la cronología cargada NO esté estandarizada (p. ej. una
-            # cronología de anchos crudos en mm): ahí sí hay que estandarizarla
-            # para poder compararla. Por eso el valor por defecto es apagado.
-            if not self.chk_cof_crono.isChecked():
-                return s_raw
-            try:
-                res = aplicar_modo_cofecha(serie_mm, **self._modo_cofecha_params)
-                if res is not None and not res.empty:
-                    return res
-            except Exception:
-                pass
-            return s_raw
-
-        # Serie cruda: solo estandarizar si el checkbox 'Serie' está activo.
-        if not self.chk_cof_serie.isChecked():
-            return s_raw
-
-        meta = self.meta_cronologia or {}
-        tipo = (meta.get("tipo_cronologia") or "").lower()
-        metodo = meta.get("metodo_estandarizacion") or "spline"
-
-        # Si el tipo no está en la metadata (p. ej. una cronología cargada
-        # desde un archivo plano sin encabezado de tipo), inferirlo del espacio
-        # de la cronología activa. Una cronología residual/standard vive en
-        # torno a media 1 (índice adimensional); una serie COFECHA clásica vive
-        # en torno a 0 (log-residual). Sin esta inferencia, la serie se
-        # transformaba con log-COFECHA (media 0) contra una cronología en media
-        # 1 —espacios distintos— y la r se desplomaba a casi 0.
-        if tipo not in ("residual", "standard") and self.cronologia_activa is not None:
-            try:
-                mcol = meta.get("columna_valor")
-                dfc = self.cronologia_activa
-                if not mcol or mcol not in dfc.columns:
-                    mcol = dfc.columns[0]
-                media_crono = float(
-                    pd.to_numeric(dfc[mcol], errors="coerce").dropna().mean())
-                if 0.5 < media_crono < 1.5:
-                    tipo = "residual"
-            except Exception:
-                pass
-
-        if tipo in ("residual", "standard"):
-            try:
-                aplicar_log = bool(meta.get("aplicar_log", False))
-                res = _normalizar_serie_para_tipo(
-                    serie_mm, tipo, metodo, aplicar_log=aplicar_log)
-                if res is not None and not res.empty:
-                    return res
-            except Exception:
-                pass
-        # Sin cronología activa comparable: COFECHA clásico (simétrico).
-        return aplicar_modo_cofecha(serie_mm, **self._modo_cofecha_params)
+        return _tr.transformar_para_correlacion(
+            serie_mm, es_crono, activo=self.btn_modo_cofecha.isChecked(),
+            aplicar_serie=self.chk_cof_serie.isChecked(), aplicar_crono=self.chk_cof_crono.isChecked(),
+            meta=self.meta_cronologia, cronologia=self.cronologia_activa,
+            parametros=self._modo_cofecha_params)
 
     def _serie_para_glk(self, serie_mm: pd.Series, es_crono: bool) -> pd.Series:
         """Serie para calcular GLK y t-BP.
@@ -1722,7 +1640,7 @@ class PanelCodatacion(QWidget):
         calculan sobre los datos CRUDOS y no necesitan la estandarización
         COFECHA. Esto los mantiene estables y comparables con el uso clásico.
         """
-        return pd.to_numeric(serie_mm, errors="coerce").astype(float).dropna()
+        return _tr.serie_numerica(serie_mm)
 
     def _preparar_diferencias_log(self, n1: str, n2: str):
         """Prepara las series transformadas de un par para cofechado."""
