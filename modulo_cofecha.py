@@ -341,6 +341,8 @@ def _pares_por_desfase(col: np.ndarray, maestro: np.ndarray,
     las acumuladas listas, la correlación de cualquier segmento en cualquier
     desfase sale en tiempo constante.
     """
+    col = _nuc.centrar_escalar_correlacion(col)[0]
+    maestro = _nuc.centrar_escalar_correlacion(maestro)[0]
     n = col.size
     fuera = np.full(n, np.nan)
     acum = {}

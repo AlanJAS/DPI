@@ -5,18 +5,77 @@ from constantes import OVERLAP_MINIMO_GRAFICO
 from modulo_codigos import clave_codigo_dendro
 
 
+def centrar_escalar_correlacion(x):
+    """Traslación y escala positivas comunes; conserva los no finitos como NaN."""
+    x = np.asarray(x, dtype=float)
+    valido = np.isfinite(x)
+    z = np.full(x.shape, np.nan)
+    if not valido.any():
+        return z, 1.0, 1.0
+    v = x[valido]
+    with np.errstate(over="ignore", invalid="ignore", under="ignore"):
+        d = v - v[0]
+        escala_previa = 1.0
+        if not np.isfinite(d).all():
+            escala_previa = float(np.max(np.abs(v)))
+            v = v / escala_previa
+            d = v - v[0]
+        escala = float(np.max(np.abs(d))) or 1.0
+        z[valido] = d / escala
+    return z, escala_previa, escala
+
+
 def pearson(a, b, *, tolerancia=0.0):
-    """Pearson sobre pares alineados; NaN si no es calculable."""
+    """Pearson sobre pares alineados; NaN si no es calculable.
+
+    La tolerancia se expresa en unidades originales (desviación poblacional).
+    """
     a, b = np.asarray(a, dtype=float), np.asarray(b, dtype=float)
     if a.ndim != 1 or a.shape != b.shape or a.size < 2:
         return float("nan")
     if not (np.isfinite(a).all() and np.isfinite(b).all()):
         return float("nan")
-    sa, sb = np.std(a), np.std(b)
-    if sa == 0 or sb == 0 or sa < tolerancia or sb < tolerancia:
+    a, pa, ea = centrar_escalar_correlacion(a)
+    b, pb, eb = centrar_escalar_correlacion(b)
+    a -= a.mean()
+    b -= b.mean()
+    na, nb = np.linalg.norm(a), np.linalg.norm(b)
+    if na == 0 or nb == 0:
         return float("nan")
-    r = float(np.corrcoef(a, b)[0, 1])
-    return r if np.isfinite(r) else float("nan")
+    if tolerancia > 0:
+        with np.errstate(over="ignore", under="ignore"):
+            sa = (na / np.sqrt(a.size) * ea) * pa
+            sb = (nb / np.sqrt(b.size) * eb) * pb
+        if sa < tolerancia or sb < tolerancia:
+            return float("nan")
+    r = float(np.dot(a / na, b / nb))
+    return float(np.clip(r, -1.0, 1.0)) if np.isfinite(r) else float("nan")
+
+
+def pearson_desde_sumas(n, sx, sy, sxx, syy, sxy):
+    """Pearson escalar o vectorizado a partir de momentos comunes.
+
+    No recupera precisión perdida en los momentos de entrada. Devuelve NaN
+    si no hay varianza positiva o el resultado es numéricamente inconsistente.
+    """
+    if all(np.isscalar(v) for v in (n, sx, sy, sxx, syy, sxy)):
+        import math
+        if n < 2:
+            return float("nan")
+        vx = sxx - sx * (sx / n)
+        vy = syy - sy * (sy / n)
+        if not (vx > 0 and vy > 0):
+            return float("nan")
+        r = ((sxy - sx * (sy / n)) / math.sqrt(vx)) / math.sqrt(vy)
+        if not math.isfinite(r) or abs(r) > 1 + 1e-8:
+            return float("nan")
+        return max(-1.0, min(1.0, r))
+    with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+        vx = sxx - sx * (sx / n)
+        vy = syy - sy * (sy / n)
+        r = ((sxy - sx * (sy / n)) / np.sqrt(vx)) / np.sqrt(vy)
+    valido = (n >= 2) & (vx > 0) & (vy > 0) & np.isfinite(r) & (np.abs(r) <= 1 + 1e-8)
+    return np.where(valido, np.clip(r, -1.0, 1.0), np.nan)
 
 
 def serie_anual(serie):
@@ -601,13 +660,7 @@ def correlaciones_pares(mat, min_overlap=10):
     for k in np.flatnonzero(dudosos):
         i, j = iu[0][k], iu[1][k]
         m = valido[:, i] & valido[:, j]
-        x, y = mat[m, i], mat[m, j]
-        with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
-            x = x / max(np.max(np.abs(x)), np.finfo(float).tiny) if not np.isfinite(np.ptp(x)) else x - x[0]
-            y = y / max(np.max(np.abs(y)), np.finfo(float).tiny) if not np.isfinite(np.ptp(y)) else y - y[0]
-            x = x / max(np.max(np.abs(x)), np.finfo(float).tiny)
-            y = y / max(np.max(np.abs(y)), np.finfo(float).tiny)
-            rs[k] = pearson(x, y)
+        rs[k] = pearson(mat[m, i], mat[m, j])
     return np.clip(rs[suficientes & np.isfinite(rs)], -1.0, 1.0)
 
 

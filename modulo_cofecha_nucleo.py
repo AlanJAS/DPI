@@ -31,6 +31,8 @@ Las tres ideas que hacen la diferencia:
 from __future__ import annotations
 
 import numpy as np
+from modulo_estadistica import (pearson, pearson_desde_sumas,
+                                centrar_escalar_correlacion)
 
 # Constante de sintonía del biweight (la misma de Cook & Kairiukstis)
 BIWEIGHT_C = 9.0
@@ -250,9 +252,12 @@ class AcumuladosPar:
     cero y no cuentan en n.
     """
 
-    __slots__ = ("n", "sx", "sy", "sxx", "syy", "sxy")
+    __slots__ = ("n", "sx", "sy", "sxx", "syy", "sxy", "_x", "_y")
 
     def __init__(self, x: np.ndarray, y: np.ndarray):
+        self._x = np.asarray(x, dtype=float).copy()
+        self._y = np.asarray(y, dtype=float).copy()
+        x, y = self._x, self._y
         ok = np.isfinite(x) & np.isfinite(y)
         xv = np.where(ok, x, 0.0)
         yv = np.where(ok, y, 0.0)
@@ -282,20 +287,19 @@ class AcumuladosPar:
 
     def r(self, a: int, b: int):
         """Correlación y tamaño de muestra de la ventana [a, b)."""
-        n = self.n[b] - self.n[a]
+        n, sx, sy, sxx, syy, sxy = self.sumas(a, b)
         if n < 3:
             return float("nan"), int(n)
-        sx = self.sx[b] - self.sx[a]
-        sy = self.sy[b] - self.sy[a]
-        sxx = self.sxx[b] - self.sxx[a]
-        syy = self.syy[b] - self.syy[a]
-        sxy = self.sxy[b] - self.sxy[a]
-        vx = sxx - sx * sx / n
-        vy = syy - sy * sy / n
-        if vx <= 0 or vy <= 0:
-            return float("nan"), int(n)
-        r = (sxy - sx * sy / n) / np.sqrt(vx * vy)
-        return (float(r) if np.isfinite(r) else float("nan")), int(n)
+        r = pearson_desde_sumas(n, sx, sy, sxx, syy, sxy)
+        vx = sxx - sx * (sx / n)
+        vy = syy - sy * (sy / n)
+        tol = 64 * np.finfo(float).eps
+        if (not np.isfinite(r) or vx <= tol * self.sxx[b]
+                or vy <= tol * self.syy[b]):
+            x, y = self._x[a:b], self._y[a:b]
+            ok = np.isfinite(x) & np.isfinite(y)
+            r = pearson(x[ok], y[ok])
+        return r, int(n)
 
 
 def r_quitando_cada_punto(x: np.ndarray, y: np.ndarray):
@@ -313,22 +317,19 @@ def r_quitando_cada_punto(x: np.ndarray, y: np.ndarray):
     if n < 5:
         return np.array([], dtype=int), np.array([]), float("nan")
 
+    xv = centrar_escalar_correlacion(xv)[0]
+    yv = centrar_escalar_correlacion(yv)[0]
     sx, sy = xv.sum(), yv.sum()
     sxx, syy, sxy = (xv * xv).sum(), (yv * yv).sum(), (xv * yv).sum()
-
-    def _r(n_, sx_, sy_, sxx_, syy_, sxy_):
-        vx = sxx_ - sx_ * sx_ / n_
-        vy = syy_ - sy_ * sy_ / n_
-        with np.errstate(invalid="ignore", divide="ignore"):
-            out = (sxy_ - sx_ * sy_ / n_) / np.sqrt(vx * vy)
-        return np.where((vx > 0) & (vy > 0), out, np.nan)
-
-    r_total = float(_r(n, sx, sy, sxx, syy, sxy))
+    r_total = pearson(xv, yv)
     if not np.isfinite(r_total):
         return np.array([], dtype=int), np.array([]), float("nan")
 
-    r_sin = _r(n - 1, sx - xv, sy - yv, sxx - xv * xv,
-               syy - yv * yv, sxy - xv * yv)
+    r_sin = pearson_desde_sumas(n - 1, sx - xv, sy - yv, sxx - xv * xv,
+                                syy - yv * yv, sxy - xv * yv)
+    # Los casos degenerados se recalculan con centrado local.
+    for i in np.flatnonzero(~np.isfinite(r_sin)):
+        r_sin[i] = pearson(np.delete(x[ok], i), np.delete(y[ok], i))
     efecto = r_total - r_sin
     return np.flatnonzero(ok), efecto, r_total
 
@@ -390,9 +391,4 @@ def r_de_sumas(*bloques):
         sxx += b[3]; syy += b[4]; sxy += b[5]
     if n < 5:
         return float("nan"), int(n)
-    vx = sxx - sx * sx / n
-    vy = syy - sy * sy / n
-    if vx <= 0 or vy <= 0:
-        return float("nan"), int(n)
-    r = (sxy - sx * sy / n) / np.sqrt(vx * vy)
-    return (float(r) if np.isfinite(r) else float("nan")), int(n)
+    return pearson_desde_sumas(n, sx, sy, sxx, syy, sxy), int(n)

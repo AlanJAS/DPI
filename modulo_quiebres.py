@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+from modulo_estadistica import pearson, centrar_escalar_correlacion
 
 import modulo_cofecha_nucleo as _nuc
 
@@ -57,6 +58,9 @@ def _alinear(serie_std: pd.Series, crono_std: pd.Series):
 
 def _acumulados_por_desfase(x, y, max_desfase):
     """Sumas acumuladas del par para cada desfase, listas para combinar."""
+    # Centrar antes de desplazar: todos los bloques comparten referencia.
+    x = centrar_escalar_correlacion(x)[0]
+    y = centrar_escalar_correlacion(y)[0]
     n = x.size
     acum = {}
     for k in range(-max_desfase, max_desfase + 1):
@@ -449,9 +453,7 @@ def informe_quiebre(serie_std: pd.Series, crono_std: pd.Series,
             return float("nan"), len(com)
         x = movida.loc[com].to_numpy(dtype=float)
         y = c.loc[com].to_numpy(dtype=float)
-        if np.std(x) < 1e-12 or np.std(y) < 1e-12:
-            return float("nan"), len(com)
-        return float(np.corrcoef(x, y)[0, 1]), len(com)
+        return pearson(x, y, tolerancia=1e-12), len(com)
 
     # El tramo antiguo se mueve -delta (delta = anillos a insertar)
     r_izq, n_izq = _r_tramo(izq, -int(q["delta"]))
@@ -722,8 +724,7 @@ def evaluar_con_sustitutas(serie_std: pd.Series, crono_std: pd.Series,
     x = s.to_numpy(dtype=float)
     phi = 0.0
     if len(x) > 5 and np.std(x) > 0:
-        z = x - x.mean()
-        phi = float(np.corrcoef(z[:-1], z[1:])[0, 1])
+        phi = pearson(x[:-1], x[1:])
         if not np.isfinite(phi):
             phi = 0.0
 

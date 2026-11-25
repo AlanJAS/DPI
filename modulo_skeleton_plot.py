@@ -6,7 +6,7 @@ import pandas as pd
 import pyqtgraph as pg
 from modulo_widgets import _agregar_hover_anio
 import modulo_transformacion as _tr
-from modulo_estadistica import gleichlaufigkeit, glk_significance, t_baillie_pilcher
+from modulo_estadistica import gleichlaufigkeit, glk_significance, t_baillie_pilcher, pearson
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFileDialog, QMessageBox, QSpinBox, QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QDialog, QComboBox, QCheckBox, QSlider
 from PyQt6.QtGui import QColor
 from PyQt6.QtCore import Qt, QEvent
@@ -675,7 +675,7 @@ class VentanaSkeletonPlot(QWidget):
                 a = la.loc[seg].to_numpy()
                 b = lb.loc[seg].to_numpy()
                 if np.std(a) > 1e-9 and np.std(b) > 1e-9:
-                    r = float(np.corrcoef(a, b)[0, 1])
+                    r = pearson(a, b)
                     if np.isfinite(r):
                         reg = pg.LinearRegionItem(
                             values=[seg_ini, seg_fin], movable=False,
@@ -773,7 +773,7 @@ class VentanaSkeletonPlot(QWidget):
         lb = _tr.transformar(b, metodo)
         cidx = la.index.intersection(lb.index)
         if len(cidx) >= 5 and la.loc[cidx].std() > 0 and lb.loc[cidx].std() > 0:
-            r = float(np.corrcoef(la.loc[cidx], lb.loc[cidx])[0, 1])
+            r = pearson(la.loc[cidx], lb.loc[cidx])
         else:
             r = float("nan")
         glk, n_glk = gleichlaufigkeit(a, b, min_overlap=5)

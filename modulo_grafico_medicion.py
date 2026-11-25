@@ -2,6 +2,7 @@
 import numpy as np
 import pandas as pd
 import modulo_transformacion as _tr
+from modulo_estadistica import pearson
 
 
 def serie_medicion(anios, anchos):
@@ -47,31 +48,14 @@ def correlacion_deslizante(anios_a, anchos_a, anios_b, anchos_b, ventana: int, m
         return [], []
 
     años_centro, r_vals = [], []
-    paso = max(1, ventana // 2)   # solapamiento = mitad de la ventana
-
-    if n_ov <= ventana:
-        # Serie corta: una sola ventana con todo el solapamiento disponible
-        a_seg = da.loc[overlap].values
-        b_seg = db.loc[overlap].values
-        if np.std(a_seg) > 1e-9 and np.std(b_seg) > 1e-9:
-            r = float(np.corrcoef(a_seg, b_seg)[0, 1])
-            if not np.isnan(r):
-                centro = overlap[n_ov // 2]
-                años_centro.append(centro)
-                r_vals.append(r)
-    else:
-        # Ventana deslizante con paso = ventana/2
-        k = 0
-        while k + ventana <= n_ov:
-            seg = overlap[k: k + ventana]
-            a_seg = da.loc[seg].values
-            b_seg = db.loc[seg].values
-            if np.std(a_seg) > 1e-9 and np.std(b_seg) > 1e-9:
-                r = float(np.corrcoef(a_seg, b_seg)[0, 1])
-                if not np.isnan(r):
-                    centro = seg[ventana // 2]
-                    años_centro.append(centro)
-                    r_vals.append(r)
-            k += paso
-
+    paso = max(1, ventana // 2)
+    largo = min(ventana, n_ov)
+    a = da.loc[overlap].to_numpy(dtype=float)
+    b = db.loc[overlap].to_numpy(dtype=float)
+    tolerancia = np.nextafter(1e-9, np.inf)  # conserva la condición estricta >
+    for k in range(0, n_ov - largo + 1, paso):
+        r = pearson(a[k:k + largo], b[k:k + largo], tolerancia=tolerancia)
+        if np.isfinite(r):
+            años_centro.append(overlap[k + largo // 2])
+            r_vals.append(r)
     return años_centro, r_vals

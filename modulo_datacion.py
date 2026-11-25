@@ -172,10 +172,7 @@ def alineamiento_optimo_anillos(serie_a, serie_b, shift_base,
                             and da_by_year[y] != 0):
                         agree += 1
                     tot += 1
-            if len(avals) > 2 and np.std(avals) > 0 and np.std(bvals) > 0:
-                r = float(np.corrcoef(avals, bvals)[0, 1])
-            else:
-                r = float("nan")
+            r = _est.pearson(avals, bvals) if len(avals) > 2 else float("nan")
             glk = agree / tot if tot else float("nan")
             segmentos.append({
                 "serie_ini": int(ys[0]), "serie_fin": int(ys[-1]),
@@ -426,9 +423,7 @@ def _buscar_y_priorizar(ref, problema, mitad_ventana, max_corr,
                     return -np.inf
                 a = d_ref.loc[com].to_numpy(dtype=float)
                 b = d2.loc[com].to_numpy(dtype=float)
-                if np.std(a) == 0 or np.std(b) == 0:
-                    return -np.inf
-                r = float(np.corrcoef(a, b)[0, 1])
+                r = _est.pearson(a, b)
                 return r if np.isfinite(r) else -np.inf
 
             def _r_real(sug):
@@ -851,9 +846,7 @@ def diagnosticar_datacion(serie_std: pd.Series, crono_std: pd.Series,
             return np.nan, len(comun)
         x = va[m][ia]
         y = vb[ib]
-        if np.std(x) == 0 or np.std(y) == 0:
-            return np.nan, len(comun)
-        return float(np.corrcoef(x, y)[0, 1]), len(comun)
+        return _est.pearson(x, y), len(comun)
 
     ini, fin = int(ya.min()), int(ya.max())
     # VENTANAS ADAPTATIVAS: una ventana fija de 40 años deja fuera cualquier
@@ -1028,7 +1021,7 @@ def diagnosticar_datacion(serie_std: pd.Series, crono_std: pd.Series,
         y = vb[ib]
         if np.std(x) == 0 or np.std(y) == 0:
             return np.nan, 0
-        return float(np.corrcoef(x, y)[0, 1]), len(com)
+        return _est.pearson(x, y), len(com)
 
     lo = max(int(ya.min()), int(yb.min()))
     hi = min(int(ya.max()), int(yb.max()))
@@ -1316,7 +1309,7 @@ def aplicar_modo_cofecha(serie_mm, rigidez_spline=32, aplicar_log=True,
     if aplicar_ar and len(valores) > 4:
         c = valores - np.mean(valores)
         if np.std(c) > 0:
-            phi = np.corrcoef(c[1:], c[:-1])[0, 1]
+            phi = _est.pearson(c[1:], c[:-1])
             if np.isnan(phi):
                 phi = 0.0
             phi = float(np.clip(phi, -0.99, 0.99))
