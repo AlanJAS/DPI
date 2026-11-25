@@ -108,7 +108,11 @@ def cargar_json(archivo):
                 raise ValueError(f"Clave JSON duplicada: {clave!r}")
             resultado[clave] = valor
         return resultado
-    return json.load(archivo, object_pairs_hook=pares_unicos)
+
+    def constante_invalida(valor):
+        raise ValueError(f"Constante JSON inválida: {valor}")
+
+    return json.load(archivo, object_pairs_hook=pares_unicos, parse_constant=constante_invalida)
 
 
 def guardar_json(ruta: str, datos, *, indent: int | None = 2,
