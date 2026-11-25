@@ -102,5 +102,5 @@ class ExportadorDendro:
 
             QMessageBox.information(self._parent, "Éxito", f"Exportado a:\n{ruta}")
         except Exception as exc:
-            logger.error("Error al exportar: %s", exc)
+            logger.exception("Error al exportar")
             QMessageBox.critical(self._parent, "Error", f"Fallo al exportar:\n{exc}")

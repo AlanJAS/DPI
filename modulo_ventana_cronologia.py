@@ -1,6 +1,7 @@
 """Componentes de la interfaz de co-datación de DPI."""
 
 import os
+import logging
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
@@ -22,6 +23,9 @@ from modulo_formatos import _guardar_metadatos_cronologia, _exportar_cronologia_
 from modulo_series_ui_util import _html_curvas_negativas, _mostrar_dialogo_eps_rbar, _ultima_carpeta
 from modulo_dialogos_series import DialogoCurvasNegativas
 from modulo_comparacion_ui import DialogoComparacionMultiple, VentanaTablaOffset
+
+
+logger = logging.getLogger(__name__)
 
 
 class VentanaCronologia(QWidget):
@@ -616,11 +620,13 @@ class VentanaCronologia(QWidget):
                         for sid, df in series_ext.items():
                             if sid not in self._series_cronologia:
                                 self._series_cronologia[sid] = df.copy()
-                    except Exception:
+                    except (ValueError, OSError) as exc:
+                        logger.debug("Tucson no reconocido, probando formato tabular: %s", exc)
                         df, sid = leer_tabular(ruta)
                         if sid not in self._series_cronologia:
                             self._series_cronologia[sid] = df.copy()
             except Exception as exc:
+                logger.exception("No se pudo cargar serie de cronología")
                 QMessageBox.warning(self, "Error", f"No se pudo cargar:\n{exc}")
         # Marcar automáticamente todas las series tras cargarlas.
         self.refresh_series(marcar_todas=True)
