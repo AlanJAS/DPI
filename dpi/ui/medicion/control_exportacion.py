@@ -4,7 +4,7 @@ from dpi.medicion.datos import mediciones_radio
 from dpi.medicion.anomalias import tabla_eventos
 from dpi.medicion.modelo import TipoMarca
 from dpi.formatos.pos import leer_pos, escribir_pos
-from dpi.formatos.planillas import _escribir_excel
+from dpi.formatos.planillas import escribir_excel
 from dpi.formatos.exportacion import asegurar_extension
 from dpi.formatos.tabular import exportar_tabular
 from dpi.infraestructura.escritura import ruta_atomica
@@ -155,7 +155,7 @@ def _exportar_anomalias(self):
 
         ext = os.path.splitext(ruta)[1].lower()
         if ext == ".xlsx":
-            _escribir_excel(df, ruta)
+            escribir_excel(df, ruta)
         else:
             with ruta_atomica(ruta) as temporal:
                 df.to_csv(temporal, index=False, sep="\t" if ext == ".txt" else ";")

@@ -20,7 +20,7 @@ class CompatibilidadPaquetes(unittest.TestCase):
             "wid": ("leer_wid",),
             "tucson": ("leer_tucson_multi", "escribir_tucson"),
             "compacto": ("leer_formato_compacto",),
-            "planillas": ("_leer_planilla", "_escribir_excel"),
+            "planillas": ("leer_planilla", "escribir_excel"),
             "tabular": ("leer_tabular", "escribir_tabla"),
             "cronologias": ("_leer_cronologia_guardada",),
             "deteccion": ("leer_dendro_auto", "leer_series_auto"),

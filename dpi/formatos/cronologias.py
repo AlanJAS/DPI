@@ -5,7 +5,7 @@ import pandas as pd
 import dpi.infraestructura.json_seguro as _js
 import logging
 logger = logging.getLogger(__name__)
-from dpi.formatos.planillas import _es_planilla, _leer_planilla, _escribir_excel
+from dpi.formatos.planillas import es_planilla, leer_planilla, escribir_excel
 from dpi.formatos.tucson import leer_archivo_tucson, escribir_tucson
 _CAMPOS_POR_ANIO = ("sample_depth", "EPS_movil", "Rbar_movil")
 
@@ -53,8 +53,8 @@ def _exportar_cronologia_df(df: pd.DataFrame, ruta: str, codigo: str = "CRONO"):
         escribir_tucson(pd.to_numeric(df_out[col], errors="coerce"),
                         ruta, codigo=codigo)
         return
-    if _es_planilla(ext):
-        _escribir_excel(df_out, ruta, index=True)
+    if es_planilla(ext):
+        escribir_excel(df_out, ruta, index=True)
     elif ext == ".csv":
         with ruta_atomica(ruta) as temporal:
             df_out.to_csv(temporal, index=True)
@@ -68,8 +68,8 @@ def _leer_cronologia_guardada(ruta: str) -> tuple[pd.DataFrame, dict]:
     if ext == ".rwl":
         df, _ = leer_archivo_tucson(ruta)
         df = df.reset_index()
-    elif _es_planilla(ext):
-        df = _leer_planilla(ruta)
+    elif es_planilla(ext):
+        df = leer_planilla(ruta)
     elif ext == ".csv":
         df = pd.read_csv(ruta)
         if df.shape[1] < 2:

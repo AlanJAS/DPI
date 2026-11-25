@@ -14,7 +14,7 @@ from PyQt6.QtCore import Qt, QEvent
 from estilos import SECUNDARIO_QSS, color_secundario
 import estilos_graficos as _gr
 from dpi.ciencia.datacion import score_compuesto, alineamiento_optimo_anillos
-from dpi.formatos.planillas import _es_planilla
+from dpi.formatos.planillas import es_planilla
 from dpi.formatos.tucson import leer_tucson_multi
 from dpi.formatos.compacto import leer_formato_compacto
 from dpi.formatos.wid import leer_wid
@@ -135,7 +135,7 @@ class VentanaSkeletonPlot(QWidget):
                         except Exception:
                             series_extraidas = self._leer_tabular_via_panel(
                                 ruta, base_nombre)
-                elif ext in (".csv", ".tsv") or _es_planilla(ext):
+                elif ext in (".csv", ".tsv") or es_planilla(ext):
                     series_extraidas = self._leer_tabular_via_panel(
                         ruta, base_nombre)
                 else:

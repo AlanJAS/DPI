@@ -15,7 +15,7 @@ from estilos import color_secundario
 import estilos_graficos as _gr
 from dpi.ciencia.comparacion_nucleo import resumir_desfases
 from dpi.ciencia.datacion import score_compuesto, _serie_transformada_para_comparar
-from dpi.formatos.planillas import _es_planilla
+from dpi.formatos.planillas import es_planilla
 from dpi.formatos.exportacion import asegurar_extension
 from dpi.formatos.tucson import leer_tucson_multi
 from dpi.formatos.compacto import leer_formato_compacto
@@ -620,7 +620,7 @@ class VentanaCronologia(QWidget):
                     df, sid = leer_wid(ruta)
                     if sid not in self._series_cronologia:
                         self._series_cronologia[sid] = df.copy()
-                elif ext in (".csv", ".tsv") or _es_planilla(ext):
+                elif ext in (".csv", ".tsv") or es_planilla(ext):
                     df, sid = leer_tabular(ruta)
                     if sid not in self._series_cronologia:
                         self._series_cronologia[sid] = df.copy()

@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFile
 from PyQt6.QtCore import Qt
 from estilos import color_secundario
 import estilos_graficos as _gr
-from dpi.formatos.planillas import _es_planilla, _escribir_excel
+from dpi.formatos.planillas import es_planilla, escribir_excel
 from dpi.formatos.exportacion import asegurar_extension
 from dpi.infraestructura.escritura import ruta_atomica
 
@@ -266,8 +266,8 @@ def _mostrar_dialogo_eps_rbar(parent, meta: dict, nombre_cronologia: str):
                 "Rbar": [rbar_dict.get(a, float("nan")) for a in todos_anios],
             })
             ext = os.path.splitext(ruta)[1].lower()
-            if _es_planilla(ext):
-                _escribir_excel(df_export, ruta)
+            if es_planilla(ext):
+                escribir_excel(df_export, ruta)
             else:
                 with ruta_atomica(ruta) as temporal:
                     df_export.to_csv(temporal, index=False,

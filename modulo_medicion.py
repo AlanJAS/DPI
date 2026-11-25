@@ -32,7 +32,7 @@ from dpi.infraestructura.imagen import leer_imagen_bgr, detectar_dpi, preparar_b
 from dpi.formatos.wid import leer_wid
 from dpi.formatos.deteccion import leer_dendro_auto
 from dpi.formatos.pos import leer_pos, escribir_pos
-from dpi.formatos.planillas import _escribir_excel
+from dpi.formatos.planillas import escribir_excel
 from dpi.formatos.exportacion import asegurar_extension
 from dpi.formatos.tabular import exportar_tabular
 from dpi.formatos.tucson import exportar_tucson_ewlw, _escribir_tucson

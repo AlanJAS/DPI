@@ -1,6 +1,6 @@
 """Operaciones extraídas sin modificar sus algoritmos."""
 import os
-from dpi.formatos.planillas import _es_planilla
+from dpi.formatos.planillas import es_planilla
 from dpi.formatos.tucson import leer_tucson_multi, leer_archivo_tucson
 from dpi.formatos.compacto import leer_formato_compacto
 from dpi.formatos.wid import leer_wid
@@ -28,7 +28,7 @@ def leer_dendro_auto(ruta: str):
         return leer_wid(ruta)
 
     # Planillas: no son texto, van directo al lector tabular
-    if _es_planilla(ext):
+    if es_planilla(ext):
         return leer_tabular(ruta)
 
     primeras_lineas, _ = _inspeccionar_texto(ruta)
@@ -77,7 +77,7 @@ def leer_series_auto(ruta: str) -> dict:
     """Detecta archivos de series múltiples sin leer planillas como texto."""
     ext = os.path.splitext(ruta)[1].lower()
     nombre = os.path.splitext(os.path.basename(ruta))[0]
-    if _es_planilla(ext) or ext in (".csv", ".tsv"):
+    if es_planilla(ext) or ext in (".csv", ".tsv"):
         return leer_como_columnas_o_tabular(ruta, nombre)
     if ext == ".wid":
         df, sid = leer_wid(ruta)

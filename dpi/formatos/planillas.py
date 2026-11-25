@@ -4,14 +4,14 @@ from dpi.infraestructura.escritura import ruta_atomica
 import pandas as pd
 EXTS_PLANILLA = (".xlsx", ".xls", ".ods")
 
-def _es_planilla(ruta_o_ext: str) -> bool:
+def es_planilla(ruta_o_ext: str) -> bool:
     """True si la ruta (o extensión) corresponde a una planilla Excel/ODS."""
     valor = os.fspath(ruta_o_ext).lower() if ruta_o_ext is not None else ""
     ext = valor if valor in EXTS_PLANILLA else os.path.splitext(valor)[1]
     return ext in EXTS_PLANILLA
 
 
-def _leer_planilla(ruta: str, **kwargs):
+def leer_planilla(ruta: str, **kwargs):
     """Lee una planilla .xlsx/.xls/.ods con el motor adecuado.
 
     pandas elige el motor por extensión, pero solo si el módulo está
@@ -35,7 +35,7 @@ def _leer_planilla(ruta: str, **kwargs):
     return pd.read_excel(ruta, **kwargs)
 
 
-def _escribir_excel(df, ruta: str, index: bool = False):
+def escribir_excel(df, ruta: str, index: bool = False):
     """Escribe un DataFrame a .xlsx/.ods eligiendo un motor disponible.
 
     pandas necesita openpyxl o xlsxwriter para .xlsx, y odfpy para .ods. Si no

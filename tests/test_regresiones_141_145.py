@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from dpi.infraestructura.json_seguro import guardar_json
-from dpi.formatos.planillas import _es_planilla
+from dpi.formatos.planillas import es_planilla
 
 
 class Regresiones(unittest.TestCase):
@@ -17,7 +17,7 @@ class Regresiones(unittest.TestCase):
             self.assertEqual(list(Path(carpeta).iterdir()), [ruta])
 
     def test_planilla_ruta_relativa_oculta(self):
-        self.assertTrue(_es_planilla(".datos/serie.xlsx"))
-        self.assertTrue(_es_planilla(Path("serie.ODS")))
-        self.assertTrue(_es_planilla(".xls"))
-        self.assertFalse(_es_planilla("serie.csv"))
+        self.assertTrue(es_planilla(".datos/serie.xlsx"))
+        self.assertTrue(es_planilla(Path("serie.ODS")))
+        self.assertTrue(es_planilla(".xls"))
+        self.assertFalse(es_planilla("serie.csv"))

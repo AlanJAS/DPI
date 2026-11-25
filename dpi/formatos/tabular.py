@@ -2,14 +2,14 @@
 import os
 from dpi.infraestructura.escritura import ruta_atomica
 import pandas as pd
-from dpi.formatos.planillas import _es_planilla, _leer_planilla, _escribir_excel
+from dpi.formatos.planillas import es_planilla, leer_planilla, escribir_excel
 
 def leer_tabular(ruta: str) -> tuple[pd.DataFrame, str]:
     """Lee CSV/TSV/TXT/Excel con detección automática de header, decimal, separador."""
     ext = os.path.splitext(ruta)[1].lower()
 
     def _leer_excel(con_header):
-        return _leer_planilla(ruta, header=0 if con_header else None)
+        return leer_planilla(ruta, header=0 if con_header else None)
 
     def _leer_csv(con_header, decimal="."):
         try:
@@ -25,7 +25,7 @@ def leer_tabular(ruta: str) -> tuple[pd.DataFrame, str]:
                 encoding="utf-8", encoding_errors="replace",
             )
 
-    if _es_planilla(ext):
+    if es_planilla(ext):
         df_sondeo = _leer_excel(con_header=False)
     else:
         df_sondeo = _leer_csv(con_header=False)
@@ -43,7 +43,7 @@ def leer_tabular(ruta: str) -> tuple[pd.DataFrame, str]:
             tiene_header = True
             break
 
-    if _es_planilla(ext):
+    if es_planilla(ext):
         df = _leer_excel(con_header=tiene_header)
     else:
         df = _leer_csv(con_header=tiene_header)
@@ -51,7 +51,7 @@ def leer_tabular(ruta: str) -> tuple[pd.DataFrame, str]:
     if not tiene_header:
         df.columns = [f"col{i}" for i in range(df.shape[1])]
 
-    if not _es_planilla(ext) and df.shape[1] >= 2:
+    if not es_planilla(ext) and df.shape[1] >= 2:
         test_col = df.iloc[:, 1]
         if pd.to_numeric(test_col, errors="coerce").isna().all() and len(test_col):
             try:
@@ -156,8 +156,8 @@ def _leer_crudo_tabular(ruta: str) -> pd.DataFrame:
     """Lee la tabla cruda de un archivo (primera hoja si es planilla)."""
     ext = os.path.splitext(ruta)[1].lower()
 
-    if _es_planilla(ext):
-        return _leer_planilla(ruta)
+    if es_planilla(ext):
+        return leer_planilla(ruta)
 
     try:
         df_raw = pd.read_csv(ruta, sep=None, engine="python",
@@ -190,10 +190,10 @@ def leer_columna_multi_hojas(ruta: str) -> dict[str, pd.DataFrame]:
     {nombre_hoja: df_indexado}; para archivos de texto devuelve una sola
     entrada con clave "".
     """
-    if not _es_planilla(ruta):
+    if not es_planilla(ruta):
         return {"": leer_columna_multi(ruta)}
 
-    hojas = _leer_planilla(ruta, sheet_name=None)  # dict {hoja: df}
+    hojas = leer_planilla(ruta, sheet_name=None)  # dict {hoja: df}
     if not isinstance(hojas, dict):
         hojas = {"": hojas}
 
@@ -227,7 +227,7 @@ def exportar_tabular(id_serie: str, anios: list, anchos: list, ruta: str,
         with ruta_atomica(ruta) as temporal:
             df.to_csv(temporal, index=False)
     else:
-        _escribir_excel(df, ruta)
+        escribir_excel(df, ruta)
 
 
 def leer_como_columnas_o_tabular(ruta: str, base_nombre: str) -> dict:
@@ -267,8 +267,8 @@ def leer_como_columnas_o_tabular(ruta: str, base_nombre: str) -> dict:
 def escribir_tabla(df, ruta, *, separador_csv=";", decimal=",", precision="%.6f"):
     """Escritura tabular común, con formato decimal explícito por consumidor."""
     ext = os.path.splitext(ruta)[1].lower()
-    if _es_planilla(ext):
-        _escribir_excel(df, ruta)
+    if es_planilla(ext):
+        escribir_excel(df, ruta)
     elif ext in (".csv", ".txt", ".tsv"):
         with ruta_atomica(ruta) as temporal:
             df.to_csv(temporal, index=False, sep=separador_csv if ext == ".csv" else "\t",

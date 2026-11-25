@@ -85,7 +85,7 @@ from dpi.ciencia.datacion import (
 # pandas. Incluye .ods (LibreOffice / OpenDocument), que necesita el módulo
 # 'odfpy'. Se usa en todo el módulo para no repetir la lista y para que un
 # .ods nunca caiga por error al parser de texto (CSV), que devolvería basura.
-from dpi.formatos.planillas import EXTS_PLANILLA, _es_planilla, _leer_planilla, _escribir_excel
+from dpi.formatos.planillas import EXTS_PLANILLA, es_planilla, leer_planilla, escribir_excel
 from dpi.formatos.exportacion import asegurar_extension
 
 
@@ -510,7 +510,7 @@ class PanelCodatacion(QWidget):
             # planilla .ods/.xlsx es un ZIP binario y leerla como texto puede
             # dar falsos positivos).
             primeras = ""
-            if not _es_planilla(ext):
+            if not es_planilla(ext):
                 with open(ruta, 'r', encoding='utf-8', errors='replace') as f:
                     primeras = f.read(500)
             if "=N" in primeras and "=I" in primeras:
