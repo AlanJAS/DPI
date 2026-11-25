@@ -43,6 +43,9 @@ import dpi.ui.medicion.herramientas.ewlw as ewlw
 import dpi.ui.medicion.herramientas.marcado as marcado
 
 
+import dpi.ui.medicion.herramientas.autodetectar as autodetectar
+
+
 class VistaInteractiva(QGraphicsView):
     """
     Vista de imagen con herramientas de marcado de anillos.
@@ -1020,165 +1023,16 @@ class VistaInteractiva(QGraphicsView):
     # -------------------------------------------------------------------------
 
     def iniciar_autodetect(self, imagen_bgr: np.ndarray):
-        """
-        Activa el modo auto-detección y cachea la imagen BGR.
-        Comportamiento:
-          - Si hay puntos existentes: 1er clic ancla un punto, 2do clic define el extremo.
-          - Si la serie está vacía: 1er clic = un extremo, 2do clic = el otro.
-
-        Fix de foco: después de cambiar el modo, forzar foco en la vista
-        y procesar eventos pendientes. Sin esto, el primer click sobre la
-        imagen se "pierde" — el foco se queda en el botón/popup que invocó
-        este método, y el mousePressEvent del primer click no llega
-        limpio a la vista. El usuario tenía que hacer dos clicks para
-        cada punto, que era exactamente lo que reportó como bug.
-        """
-        self._imagen_bgr = imagen_bgr
-        self._puntos_autodetect = []
-        self._idx_ancla_autodetect = None   # índice del punto anclado (si existe)
-        for item in self._items_autodetect:
-            self.scene().removeItem(item)
-        self._items_autodetect.clear()
-        self.cambiar_modo(ModoMedicion.AUTODETECT)
-        # Forzar foco en la vista y procesar eventos pendientes — sin esto
-        # el primer click se pierde porque el botón "🔍 Auto-detectar" del
-        # top bar retiene el foco hasta el siguiente evento.
-        self.setFocus()
-        from PyQt6.QtWidgets import QApplication
-        QApplication.processEvents()
+        '\n        Activa el modo auto-detección y cachea la imagen BGR.\n        Comportamiento:\n          - Si hay puntos existentes: 1er clic ancla un punto, 2do clic define el extremo.\n          - Si la serie está vacía: 1er clic = un extremo, 2do clic = el otro.\n\n        Fix de foco: después de cambiar el modo, forzar foco en la vista\n        y procesar eventos pendientes. Sin esto, el primer click sobre la\n        imagen se "pierde" — el foco se queda en el botón/popup que invocó\n        este método, y el mousePressEvent del primer click no llega\n        limpio a la vista. El usuario tenía que hacer dos clicks para\n        cada punto, que era exactamente lo que reportó como bug.\n        '
+        return autodetectar.iniciar_autodetect(self, imagen_bgr)
 
     def _paso_autodetect(self, x: float, y: float):
-        """
-        Máquina de estados del modo auto-detección.
+        '\n        Máquina de estados del modo auto-detección.\n\n        Con puntos existentes:\n          Clic 1: si cae sobre un punto existente → ancla ese punto (amarillo).\n                  Si no hay ninguno cerca → trata como extremo libre.\n          Clic 2: define el otro extremo → lanza detección entre ancla y este punto.\n\n        Sin puntos:\n          Clic 1: primer extremo (verde).\n          Clic 2: segundo extremo → lanza detección entre los dos.\n        '
+        return autodetectar._paso_autodetect(self, x, y)
 
-        Con puntos existentes:
-          Clic 1: si cae sobre un punto existente → ancla ese punto (amarillo).
-                  Si no hay ninguno cerca → trata como extremo libre.
-          Clic 2: define el otro extremo → lanza detección entre ancla y este punto.
-
-        Sin puntos:
-          Clic 1: primer extremo (verde).
-          Clic 2: segundo extremo → lanza detección entre los dos.
-        """
-        pen_verde = QPen(QColor("#00FF88")); pen_verde.setCosmetic(True); pen_verde.setWidthF(3.0)
-        brush_verde = QBrush(QColor("#00FF88"))
-        pen_amarillo = QPen(QColor("#FFD700")); pen_amarillo.setCosmetic(True); pen_amarillo.setWidthF(3.0)
-        brush_nulo = QBrush(Qt.BrushStyle.NoBrush)
-
-        coords = self.coordenadas_anillos
-
-        # ── Primer clic ───────────────────────────────────────────────────────
-        if len(self._puntos_autodetect) == 0:
-            idx_cercano = self._indice_punto_mas_cercano(x, y)
-
-            if idx_cercano is not None and coords:
-                # Anclar punto existente
-                self._idx_ancla_autodetect = idx_cercano
-                ax, ay = coords[idx_cercano]
-                marker = self.scene().addEllipse(ax - 10, ay - 10, 20, 20,
-                                                  pen_amarillo, brush_nulo)
-                self._items_autodetect.append(marker)
-                self._puntos_autodetect.append(coords[idx_cercano])
-            else:
-                # Extremo libre
-                self._idx_ancla_autodetect = None
-                marker = self.scene().addEllipse(x - 8, y - 8, 16, 16,
-                                                  pen_verde, brush_verde)
-                self._items_autodetect.append(marker)
-                self._puntos_autodetect.append((x, y))
-            return
-
-        # ── Segundo clic: definir extremo y lanzar detección ─────────────────
-        marker2 = self.scene().addEllipse(x - 8, y - 8, 16, 16, pen_verde, brush_verde)
-        self._items_autodetect.append(marker2)
-        self._puntos_autodetect.append((x, y))
-
-        p1 = self._puntos_autodetect[0]
-        p2 = self._puntos_autodetect[1]
-
-        # Línea visual del segmento a detectar
-        pen_linea = QPen(QColor("#00FF88")); pen_linea.setCosmetic(True); pen_linea.setWidthF(2.0)
-        pen_linea.setStyle(Qt.PenStyle.DashLine)
-        linea = self.scene().addLine(p1[0], p1[1], p2[0], p2[1], pen_linea)
-        self._items_autodetect.append(linea)
-
-        # Delegar a la pestaña con información del ancla
-        self.autodeteccion_solicitada.emit(p1, p2, self._imagen_bgr, self._idx_ancla_autodetect)
-
-        # Limpiar y volver a Medir
-        for item in self._items_autodetect:
-            self.scene().removeItem(item)
-        self._items_autodetect.clear()
-        self._puntos_autodetect.clear()
-        self._idx_ancla_autodetect = None
-        self.cambiar_modo(ModoMedicion.MEDIR)
-
-    def colocar_puntos_autodetectados(
-        self,
-        coordenadas: list[tuple[float, float]],
-        idx_ancla: int | None = None,
-        reemplazar_tramo: bool = False,
-    ):
-        """
-        Inserta los puntos detectados respetando el ancla.
-
-        idx_ancla=None      → append al final (comportamiento original).
-        idx_ancla=i         → inserta a continuación del punto i, en la
-                              dirección correcta detectada automáticamente.
-        reemplazar_tramo    → si True, borra los puntos existentes entre
-                              el ancla y el extremo antes de insertar.
-        """
-        if not coordenadas:
-            return
-        self.guardar_en_historial()
-
-        if idx_ancla is None:
-            # Sin ancla: añadir al final
-            for coord in coordenadas:
-                self.modelo_medicion.agregar(coord, TipoMarca.NORMAL)
-        else:
-            n = len(self.coordenadas_anillos)
-            # Detectar dirección: ¿los nuevos puntos van después o antes del ancla?
-            # Comparar distancia del primer punto detectado al vecino derecho vs izquierdo
-            ax, ay = self.coordenadas_anillos[idx_ancla]
-            fx, fy = coordenadas[0]   # primer punto detectado (el más cercano al ancla)
-            d_der = math.hypot(fx - self.coordenadas_anillos[min(idx_ancla+1, n-1)][0],
-                               fy - self.coordenadas_anillos[min(idx_ancla+1, n-1)][1]) if idx_ancla < n-1 else float('inf')
-            d_izq = math.hypot(fx - self.coordenadas_anillos[max(idx_ancla-1, 0)][0],
-                               fy - self.coordenadas_anillos[max(idx_ancla-1, 0)][1]) if idx_ancla > 0 else float('inf')
-            insertar_despues = d_der <= d_izq or idx_ancla == 0
-
-            if insertar_despues:
-                insert_at = idx_ancla + 1
-                if reemplazar_tramo:
-                    # Determinar cuántos puntos hay hasta el extremo detectado
-                    ultimo_x, ultimo_y = coordenadas[-1]
-                    fin_tramo = insert_at
-                    for k in range(insert_at, n):
-                        kx, ky = self.coordenadas_anillos[k]
-                        if math.hypot(kx - ultimo_x, ky - ultimo_y) < self._tolerancia_punto() * 3:
-                            fin_tramo = k + 1
-                            break
-                    self.modelo_medicion.borrar(slice(insert_at, fin_tramo))
-            else:
-                insert_at = idx_ancla
-                coordenadas = list(reversed(coordenadas))
-                if reemplazar_tramo:
-                    ultimo_x, ultimo_y = coordenadas[-1]
-                    ini_tramo = 0
-                    for k in range(insert_at - 1, -1, -1):
-                        kx, ky = self.coordenadas_anillos[k]
-                        if math.hypot(kx - ultimo_x, ky - ultimo_y) < self._tolerancia_punto() * 3:
-                            ini_tramo = k
-                            break
-                    self.modelo_medicion.borrar(slice(ini_tramo, insert_at))
-                    insert_at = ini_tramo
-
-            for i, coord in enumerate(coordenadas):
-                self.modelo_medicion.insertar(insert_at + i, coord, TipoMarca.NORMAL)
-
-        self.recalcular_todas_las_distancias()
-        self.progreso_modificado.emit()
+    def colocar_puntos_autodetectados(self, coordenadas: list[tuple[float, float]], idx_ancla: int | None=None, reemplazar_tramo: bool=False):
+        '\n        Inserta los puntos detectados respetando el ancla.\n\n        idx_ancla=None      → append al final (comportamiento original).\n        idx_ancla=i         → inserta a continuación del punto i, en la\n                              dirección correcta detectada automáticamente.\n        reemplazar_tramo    → si True, borra los puntos existentes entre\n                              el ancla y el extremo antes de insertar.\n        '
+        return autodetectar.colocar_puntos_autodetectados(self, coordenadas, idx_ancla, reemplazar_tramo)
 
     # -------------------------------------------------------------------------
     # Caminos inactivos (otros radios guardados)
