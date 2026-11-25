@@ -19,6 +19,7 @@ import cv2
 import numpy as np
 from modulo_dialogos_archivo import ultima_carpeta
 import modulo_transformacion as _tr
+from modulo_grafico_medicion import correlacion_deslizante
 from modulo_modelo_medicion import ModeloMedicion, PuntoMedicion
 import pandas as pd
 import pyqtgraph as pg
@@ -1867,57 +1868,8 @@ class PestanaImagen(QWidget):
         return float(r) if np.isfinite(r) else None
 
     def _r_deslizante(self, anios_a, anchos_a, anios_b, anchos_b, ventana: int):
-        """
-        Correlación deslizante estilo COFECHA.
-
-        Calcula r de Pearson (sobre diff-log) en cada ventana de `ventana` años,
-        avanzando de la mitad de la ventana en la mitad (solapamiento 50%).
-        Cuando la serie tiene menos de `ventana` años, usa todos los años
-        disponibles como única ventana (ventana creciente al inicio).
-
-        Devuelve dos listas paralelas: (años_centro, r_vals).
-        Los años_centro son el año central de cada ventana.
-        """
-        MIN_VENTANA = 10
-        if len(anios_a) < MIN_VENTANA or len(anios_b) < MIN_VENTANA:
-            return [], []
-
-        da = self._transformar_corr(anios_a, anchos_a)
-        db = self._transformar_corr(anios_b, anchos_b)
-        overlap = sorted(da.index.intersection(db.index))
-        n_ov = len(overlap)
-        if n_ov < MIN_VENTANA:
-            return [], []
-
-        años_centro, r_vals = [], []
-        paso = max(1, ventana // 2)   # solapamiento = mitad de la ventana
-
-        if n_ov <= ventana:
-            # Serie corta: una sola ventana con todo el solapamiento disponible
-            a_seg = da.loc[overlap].values
-            b_seg = db.loc[overlap].values
-            if np.std(a_seg) > 1e-9 and np.std(b_seg) > 1e-9:
-                r = float(np.corrcoef(a_seg, b_seg)[0, 1])
-                if not np.isnan(r):
-                    centro = overlap[n_ov // 2]
-                    años_centro.append(centro)
-                    r_vals.append(r)
-        else:
-            # Ventana deslizante con paso = ventana/2
-            k = 0
-            while k + ventana <= n_ov:
-                seg = overlap[k: k + ventana]
-                a_seg = da.loc[seg].values
-                b_seg = db.loc[seg].values
-                if np.std(a_seg) > 1e-9 and np.std(b_seg) > 1e-9:
-                    r = float(np.corrcoef(a_seg, b_seg)[0, 1])
-                    if not np.isnan(r):
-                        centro = seg[ventana // 2]
-                        años_centro.append(centro)
-                        r_vals.append(r)
-                k += paso
-
-        return años_centro, r_vals
+        return correlacion_deslizante(anios_a, anchos_a, anios_b, anchos_b,
+                                     ventana, self.metodo_correlacion())
 
     def _seleccionar_maestra_externa(self):
         """Apunta el combo de maestra a la referencia externa cargada."""
